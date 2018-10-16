@@ -2,6 +2,7 @@
   "name": "@geoblocks/edittrack",
   "version": "0.0.1",
   "description": "Geoblocks edittrack",
+  "module": "src/index.js",
   "scripts": {
     "karma": "karma start test/karma.config.js",
     "karma-single": "npm run karma -- --single-run",

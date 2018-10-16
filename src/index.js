@@ -1,1 +1,1 @@
-export * from './TrackManager.js';
+export {default} from './TrackManager.js';

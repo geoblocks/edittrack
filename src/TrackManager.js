@@ -29,7 +29,6 @@ class TrackManager {
    * @param {Object} options
    * @property {ol.proj.Projection} projection
    * @property {ol.Map} map
-   * @property {ol.source.Vector} source
    * @property {ol.layer.Vector} trackLayer
    * @property {geoblocks.Router} router
    * @property {geoblocks.Profiler} profiler
