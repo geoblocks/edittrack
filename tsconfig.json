@@ -11,11 +11,11 @@
     /* Strict Type-Checking Options */
     "strict": false,
     "noImplicitAny": false, // FIXME: enable this as soon as possible
-    "strictNullChecks": true,
+    "strictNullChecks": false,
     "strictFunctionTypes": true,
-    "strictPropertyInitialization": true,
+    "strictPropertyInitialization": false,
     "noImplicitThis": true,
-    "alwaysStrict": true,
+    "alwaysStrict": false,
 
     /* Additional Checks */
     "noUnusedLocals": true,
