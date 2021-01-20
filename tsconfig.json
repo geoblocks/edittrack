@@ -2,20 +2,20 @@
   "compilerOptions": {
     /* Basic Options */
     "target": "ES2017",      
-    "module": "commonjs",
-    "lib": ["es2017", "dom"],
+    "module": "ES2020",
+    "lib": ["es2020", "dom"],
     "allowJs": true,         
     "checkJs": true,         
     "noEmit": true,          
 
     /* Strict Type-Checking Options */
-    "strict": false,
-    "noImplicitAny": false, // FIXME: enable this as soon as possible
+    "strict": true,
+    "noImplicitAny": true,
     "strictNullChecks": false,
     "strictFunctionTypes": true,
     "strictPropertyInitialization": false,
     "noImplicitThis": true,
-    "alwaysStrict": false,
+    "alwaysStrict": true,
 
     /* Additional Checks */
     "noUnusedLocals": true,

@@ -1,5 +1,9 @@
-/** @typedef {import("./TrackData.js").default} TrackData */
-/** @typedef {import('ol/geom/Point').default} Point */
+/**
+ * @typedef {import("./TrackData.js").default} TrackData
+ * @typedef {import('ol/geom/Point').default} Point
+ * @typedef {import('ol/geom/LineString').default} LineString
+ * @typedef {import('ol/geom/Geometry').default} Geometry
+ */
 
 
 /**
@@ -34,21 +38,21 @@ class TrackUpdater {
 
   /**
    * @private
-   * @param {import("ol/Feature").default} segment
-   * @param {import("ol/Feature").default} pointFrom
-   * @param {import("ol/Feature").default} pointTo
+   * @param {import('ol/Feature').default<LineString>} segment
+   * @param {import('ol/Feature').default<Point>} pointFrom
+   * @param {import('ol/Feature').default<Point>} pointTo
    */
   updateStraightLineSegmentGeometry_(segment, pointFrom, pointTo) {
     console.assert(!segment.get('snapped'));
-    /** @type {import("ol/geom/LineString").default} */(segment.getGeometry()).setCoordinates([
-      /** @type {import("ol/geom/Point").default} */(pointFrom.getGeometry()).getCoordinates(),
-      /** @type {import("ol/geom/Point").default} */(pointTo.getGeometry()).getCoordinates()
+    segment.getGeometry().setCoordinates([
+      pointFrom.getGeometry().getCoordinates(),
+      pointTo.getGeometry().getCoordinates()
     ]);
   }
 
   /**
-   * @param {import("ol/Feature").default<Point>} modifiedControlPoint
-   * @return {Promise}
+   * @param {import('ol/Feature').default<Point>} modifiedControlPoint
+   * @return {Promise<any>}
    */
   computeAdjacentSegmentsProfile(modifiedControlPoint) {
     const promises = [];
@@ -65,7 +69,7 @@ class TrackUpdater {
   }
 
   /**
-   * @param {import("ol/Feature").default<Point>} modifiedControlPoint
+   * @param {import('ol/Feature').default<Point>} modifiedControlPoint
    * @param {string} subtype
    */
   changeAdjacentSegmentsStyling(modifiedControlPoint, subtype) {
@@ -81,11 +85,12 @@ class TrackUpdater {
   }
 
   /**
-   * @param {import("ol/Feature").default<Point>} modifiedControlPoint
-   * @return {Promise}
+   * @param {import('ol/Feature').default<Point>} modifiedControlPoint
+   * @return {Promise<any>}
    */
   updateAdjacentSegmentsGeometries(modifiedControlPoint) {
     const routedSegments = [];
+    /** @type {function[]} */
     const straightSegments = [];
 
     if (modifiedControlPoint) {

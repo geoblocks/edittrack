@@ -14,10 +14,12 @@ import {debounce, setZ} from './util.js';
 import GeometryType from 'ol/geom/GeometryType';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
+/** @typedef {import('ol/MapBrowserEvent').default} MapBrowserEvent */
 
 
 /**
- * @typedef {Object} Options
+ * @typedef Options
+ * @type {Object}
  * @property {import("ol/Map").default} map
  * @property {import("ol/layer/Vector").default} trackLayer
  * @property {geoblocks.Router} router
@@ -182,7 +184,7 @@ class TrackManager {
      */
     this.modifyInProgress_ = false;
 
-    const debouncedMapToProfileUpdater = debounce((event) => {
+    const debouncedMapToProfileUpdater = debounce(/** @param {MapBrowserEvent} event */ (event) => {
       this.lastCoordinates_ = event.coordinate;
       const hoverOnFeature = this.map_.hasFeatureAtPixel(event.pixel, {
         layerFilter: layer => layer === options.trackLayer,
@@ -342,9 +344,12 @@ class TrackManager {
     this.notifyTrackChangeEventListeners_();
   }
 
-  onTrackHovered_(coordinates) {
+  /**
+   * @param {number} distance
+   */
+  onTrackHovered_(distance) {
     // notify observers
-    this.notifyTrackHoverEventListener_(coordinates);
+    this.notifyTrackHoverEventListener_(distance);
   }
 
   deleteLastPoint() {
@@ -460,11 +465,11 @@ class TrackManager {
   }
 
   /**
-   * @param {import("ol/coordinate").Coordinate} coordinates
+   * @param {number} distance
    * @private
    */
-  notifyTrackHoverEventListener_(coordinates) {
-    this.trackHoverEventListeners_.forEach(handler => handler(coordinates));
+  notifyTrackHoverEventListener_(distance) {
+    this.trackHoverEventListeners_.forEach(handler => handler(distance));
   }
 }
 

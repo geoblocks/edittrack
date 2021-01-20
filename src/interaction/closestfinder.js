@@ -27,6 +27,7 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
   const coordinatess = line.getCoordinates();
   let previous = coordinatess[0];
 
+  /** @type {ClosestPoint} */
   const best = {
     distanceFromStart: 0,
     distanceFromSearched: Number.POSITIVE_INFINITY,

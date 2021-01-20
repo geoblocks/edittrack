@@ -3,3 +3,13 @@ rules:
   no-console: 0
   comma-dangle: 0
   valid-jsdoc: 0
+env:
+  es6: true,
+  jquery: true
+
+parserOptions:
+  ecmaVersion: 11
+  ecmaFeatures:
+    generators: false
+    objectLiteralDuplicateProperties: false
+  sourceType: module

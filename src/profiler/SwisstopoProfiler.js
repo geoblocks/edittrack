@@ -1,4 +1,6 @@
 import GeoJSONFormat from 'ol/format/GeoJSON.js';
+
+// @ts-ignore
 import EPSG_2056 from '@geoblocks/proj/src/EPSG_2056.js';
 
 // https://api3.geo.admin.ch/services/sdiservices.html#profile

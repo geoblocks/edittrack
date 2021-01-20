@@ -105,6 +105,9 @@ class TrackData {
    * @return {LineString}
    */
   getLineString() {
+    /**
+     * @type {import('ol/coordinate').Coordinate[]}
+     */
     let coordinates = [];
     for (const feature of this.segments_) {
       const segment = feature.getGeometry().getCoordinates();

@@ -6,7 +6,11 @@ import {clamp, lerp} from 'ol/math.js';
  * @param {number} [delay]
  */
 export function debounce(fn, delay = 0) {
+  /**
+   * @type {number}
+   */
   let id;
+  // @ts-ignore
   return (...args) => {
     if (id !== undefined) {
       clearTimeout(id);
