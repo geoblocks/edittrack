@@ -1,3 +1,4 @@
+/** @typedef {import('ol/geom/LineString').default} LineString */
 
 /**
  * @typedef {Object} Options
@@ -21,7 +22,7 @@ export default class Fallback {
   }
 
   /**
-   * @param {import("ol/Feature").default} segment
+   * @param {import("ol/Feature").default<LineString>} segment
    * @return {Promise<void>}
    */
   computeProfile(segment) {
@@ -30,6 +31,7 @@ export default class Fallback {
 
     // execute the promises in sequence, the first resolved will be returned. All the following
     // will execute "identity" function instead of the real function.
-    return functions.reduce((cur, next) => cur.then(val => val, next), Promise.reject());
+    // @ts-ignore don't know why TSC is unhappy with this nice code
+    return functions.reduce((cur, nextFn) => cur.then(val => val, nextFn), Promise.reject());
   }
 }

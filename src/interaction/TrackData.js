@@ -2,19 +2,21 @@ import {equals} from 'ol/coordinate.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
 
+/** @typedef {import('ol/geom/Point').default} Point */
+
 
 class TrackData {
 
   constructor() {
     /**
      * @private
-     * @type {Array<Feature>}
+     * @type {Array<Feature<Point>>}
      */
     this.controlPoints_ = [];
 
     /**
      * @private
-     * @type {Array<Feature>}
+     * @type {Array<Feature<LineString>>}
      */
     this.segments_ = [];
   }
@@ -27,9 +29,11 @@ class TrackData {
     for (const feature of features) {
       const type = feature.get('type');
       if (type === 'segment') {
-        this.segments_.push(feature);
+        console.assert(feature.getGeometry().getType() === 'LineString');
+        this.segments_.push(/** @type {Feature<LineString>} */ (feature));
       } else if (type === 'controlPoint') {
-        this.controlPoints_.push(feature);
+        console.assert(feature.getGeometry().getType() === 'Point');
+        this.controlPoints_.push(/** @type {Feature<Point>} */ (feature));
       }
     }
     this.segments_.sort(sortByIndex);
@@ -40,8 +44,8 @@ class TrackData {
 
 
   /**
-   * @param {Feature} controlPoint
-   * @return {{before: Feature|undefined, after: Feature|undefined}}
+   * @param {Feature<Point>} controlPoint
+   * @return {{before: Feature<LineString>|undefined, after: Feature<LineString>|undefined}}
    */
   getAdjacentSegments(controlPoint) {
     let before = undefined;
@@ -59,8 +63,8 @@ class TrackData {
   }
 
   /**
-   * @param {Feature} controlPoint
-   * @return {?Feature}
+   * @param {Feature<Point>} controlPoint
+   * @return {?Feature<Point>}
    */
   getControlPointBefore(controlPoint) {
     const index = this.controlPoints_.indexOf(controlPoint);
@@ -71,8 +75,8 @@ class TrackData {
   }
 
   /**
-   * @param {Feature} controlPoint
-   * @return {?Feature}
+   * @param {Feature<Point>} controlPoint
+   * @return {?Feature<Point>}
    */
   getControlPointAfter(controlPoint) {
     const index = this.controlPoints_.indexOf(controlPoint);
@@ -83,14 +87,14 @@ class TrackData {
   }
 
   /**
-   * @return {Array<Feature>}
+   * @return {Feature<Point>[]}
    */
   getControlPoints() {
     return this.controlPoints_;
   }
 
   /**
-   * @return {Array<Feature>}
+   * @return {Array<Feature<LineString>>}
    */
   getSegments() {
     return this.segments_;
@@ -114,9 +118,9 @@ class TrackData {
   }
 
   /**
-   * @param {Feature} point
+   * @param {Feature<Point>} point
    * @param {number} index
-   * @return {Feature|undefined}
+   * @return {Feature<LineString>|undefined}
    */
   insertControlPointAt(point, index) {
     let removed = undefined;
@@ -153,8 +157,8 @@ class TrackData {
 
   /**
    * Add a new control point at the end.
-   * @param {Feature} point
-   * @return {{pointFrom: Feature, pointTo: Feature, segment: Feature|undefined}}
+   * @param {Feature<Point>} point
+   * @return {{pointFrom: Feature<Point>, pointTo: Feature<Point>, segment: Feature<LineString>|undefined}}
    */
   pushControlPoint(point) {
     this.insertControlPointAt(point, this.controlPoints_.length);
@@ -183,8 +187,8 @@ class TrackData {
    * Deletes the supplied point and all adjacent segments.
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
-   * @param {Feature} point Point to delete.
-   * @return {{deleted: Array<Feature>, pointBefore: ?Feature, pointAfter: ?Feature, newSegment: ?Feature}}
+   * @param {Feature<Point>} point Point to delete.
+   * @return {{deleted: Array<Feature>, pointBefore: ?Feature<Point>, pointAfter: ?Feature<Point>, newSegment: ?Feature<LineString>}}
    */
   deleteControlPoint(point) {
     const deleteIndex = this.controlPoints_.indexOf(point);
@@ -298,17 +302,17 @@ function sortByIndex(left, right) {
 }
 
 /**
- * @param {Feature} featureFrom
- * @param {Feature} featureTo
- * @return {Feature}
+ * @param {Feature<Point>} featureFrom
+ * @param {Feature<Point>} featureTo
+ * @return {Feature<LineString>}
  */
 function createStraightSegment(featureFrom, featureTo) {
-  const segment = new Feature({
-    geometry: new LineString([
-      featureFrom.getGeometry().getCoordinates(),
-      featureTo.getGeometry().getCoordinates()
-    ])
-  });
+  const geometry = new LineString([
+    featureFrom.getGeometry().getCoordinates(),
+    featureTo.getGeometry().getCoordinates()
+  ]);
+
+  const segment = /** @type {Feature<LineString>} */ (new Feature({geometry}));
   segment.set('type', 'segment');
 
   return segment;

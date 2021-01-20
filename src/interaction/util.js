@@ -1,4 +1,5 @@
 import {clamp, lerp} from 'ol/math.js';
+/** @typedef {import('ol/geom/LineString').default} LineString */
 
 /**
  * @param {Function} fn
@@ -69,7 +70,7 @@ export function closestPointOnASegment(a, b, p) {
 
 
 /**
- * @param {import("ol/Feature").FeatureLike} straightSegment
+ * @param {import("ol/Feature").default<LineString>} straightSegment
  * @param {number} first
  * @param {number} last
  */

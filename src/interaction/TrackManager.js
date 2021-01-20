@@ -11,6 +11,10 @@ import TrackUpdater from './TrackUpdater.js';
 import {findClosestPointInLines} from './closestfinder.js';
 
 import {debounce, setZ} from './util.js';
+import GeometryType from 'ol/geom/GeometryType';
+
+/** @typedef {import('ol/geom/LineString').default} LineString */
+
 
 /**
  * @typedef {Object} Options
@@ -84,7 +88,8 @@ class TrackManager {
      */
     this.trackData_ = new TrackData();
 
-    console.assert(options.router);
+    console.assert(!!options.router);
+
     /**
      * @type {geoblocks.Router}
      * @private
@@ -110,16 +115,18 @@ class TrackManager {
      * @private
      */
     this.drawTrack_ = new Draw({
-      type: 'Point',
+      type: GeometryType.POINT,
       source: this.source_,
       style: options.style,
       // don't draw when trying to delete a feature
-      toggleCondition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
+      condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
     });
     this.drawTrack_.setActive(false);
 
     this.drawTrack_.on('drawend', (event) => {
-      const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(event.feature);
+      console.assert(event.feature.getGeometry().getType() === 'Point');
+      const feature = /** @type {Feature<Point>} */ (event.feature);
+      const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
       if (segment) {
         this.source_.addFeature(segment);
         if (this.snapping) {
@@ -130,7 +137,7 @@ class TrackManager {
                 const {before} = this.trackData_.getAdjacentSegments(pointFrom);
                 if (before && !before.get('snapped')) {
                   // move the last point of the previous straight segment
-                  const geometry = before.getGeometry();
+                  const geometry = /** @type {LineString} */ (before.getGeometry());
                   const coordinates = geometry.getCoordinates();
                   console.assert(coordinates.length === 2, 'Previous segment is not a straight line');
                   geometry.setCoordinates([coordinates[0], segment.getGeometry().getFirstCoordinate()]);
@@ -153,13 +160,13 @@ class TrackManager {
 
     /**
      * @private
-     * @type {?Feature}
+     * @type {?Feature<Point>}
      */
     this.modifiedControlPoint_ = null;
 
     /**
      * @private
-     * @type {?Feature}
+     * @type {?Feature<LineString>}
      */
     this.modifiedSegment_ = null;
 
@@ -182,9 +189,6 @@ class TrackManager {
         hitTolerance: 20
       });
       if (hoverOnFeature && this.trackData_.getSegments().length > 0) {
-        /**
-         * @const {Array<import("ol/geom/LineString").default>}
-         */
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
         const best = findClosestPointInLines(segments, this.lastCoordinates_, {tolerance: 1, interpolate: true});
         this.onTrackHovered_(best ? best.distanceFromStart : undefined);
@@ -201,8 +205,8 @@ class TrackManager {
     this.modifyTrack_ = new Modify({
       source: this.source_,
       style: () => null,
-      // don't modify when trying to delte a feature
-      toggleCondition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
+      // don't modify when trying to delete a feature
+      condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
       // deleteCondition: () => false,
     });
     this.modifyTrack_.setActive(false);
@@ -211,12 +215,14 @@ class TrackManager {
       if (this.modifyInProgress_) {
         const type = feature.get('type');
         if (type === 'controlPoint') {
+          console.assert(feature.getGeometry().getType() === 'LineString');
           // moving an existing point
           console.assert(this.modifiedControlPoint_ ? this.modifiedControlPoint_ === feature : true);
-          this.modifiedControlPoint_ = feature;
+          this.modifiedControlPoint_ = /** @type {Feature<Point>} */ (feature);
         } else if (type === 'segment') {
           // adding a new point to an existing segment
-          this.modifiedSegment_ = feature;
+          console.assert(feature.getGeometry().getType() === 'LineString');
+          this.modifiedSegment_ = /** @type {Feature<LineString>} */ (feature);
         }
       }
     });
@@ -237,16 +243,16 @@ class TrackManager {
       } else if (modifiedSegment) {
         const indexOfSegment = this.trackData_.getSegments().indexOf(modifiedSegment);
         console.assert(indexOfSegment >= 0);
-        const controlPoint = new Feature({
+        const controlPoint = /** @type {Feature<Point>} */ (new Feature({
           geometry: new Point(this.lastCoordinates_)
-        });
+        }));
         this.source_.addFeature(controlPoint);
         const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
-        console.assert(removed);
+        console.assert(!!removed);
         this.source_.removeFeature(removed);
 
         const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
-        console.assert(before && after);
+        console.assert(!!before && !!after);
         this.source_.addFeatures([before, after]);
 
         this.updater_.updateAdjacentSegmentsGeometries(controlPoint).then(() => {
@@ -268,10 +274,12 @@ class TrackManager {
     });
 
     this.deletePoint_.on('select', (feature) => {
-      const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(feature.selected[0]);
+      const selected = /** @type {Feature<Point>} */ (feature.selected[0]);
+      console.assert(selected.getGeometry().getType() === 'Point');
+      const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
       // remove deleted features from source
-      deleted.forEach(feature => this.source_.removeFeature(feature));
+      deleted.forEach(f => this.source_.removeFeature(f));
 
       // add newly created segment to source
       if (newSegment) {

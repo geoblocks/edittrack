@@ -1,7 +1,6 @@
-/**
- * @typedef TrackData
- * @type {import("./TrackData.js").default}
- */
+/** @typedef {import("./TrackData.js").default} TrackData */
+/** @typedef {import('ol/geom/Point').default} Point */
+
 
 /**
  * @typedef {Object} Options
@@ -48,7 +47,7 @@ class TrackUpdater {
   }
 
   /**
-   * @param {import("ol/Feature").default} modifiedControlPoint
+   * @param {import("ol/Feature").default<Point>} modifiedControlPoint
    * @return {Promise}
    */
   computeAdjacentSegmentsProfile(modifiedControlPoint) {
@@ -66,7 +65,7 @@ class TrackUpdater {
   }
 
   /**
-   * @param {import("ol/Feature").default} modifiedControlPoint
+   * @param {import("ol/Feature").default<Point>} modifiedControlPoint
    * @param {string} subtype
    */
   changeAdjacentSegmentsStyling(modifiedControlPoint, subtype) {
@@ -82,7 +81,7 @@ class TrackUpdater {
   }
 
   /**
-   * @param {import("ol/Feature").default} modifiedControlPoint
+   * @param {import("ol/Feature").default<Point>} modifiedControlPoint
    * @return {Promise}
    */
   updateAdjacentSegmentsGeometries(modifiedControlPoint) {

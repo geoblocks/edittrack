@@ -1,9 +1,10 @@
 import {distance} from 'ol/coordinate.js';
+/** @typedef {import('ol/geom/LineString').default} LineString */
 
 export default class ExtractFromSegment {
 
   /**
-   * @param {import("ol/Feature").default} segment
+   * @param {import("ol/Feature").default<LineString>} segment
    * @return {Promise<void>}
    */
   computeProfile(segment) {

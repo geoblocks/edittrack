@@ -1,5 +1,7 @@
 import {toLonLat} from 'ol/proj.js';
 import PolyLineFormat from 'ol/format/Polyline.js';
+import GeometryLayout from 'ol/geom/GeometryLayout';
+/** @typedef {import('ol/geom/LineString').default} LineString */
 
 /**
  * @typedef {Object} Options
@@ -31,7 +33,7 @@ export default class GraphHopper {
      * @type {PolyLineFormat}
      */
     this.polylineFormat_ = new PolyLineFormat({
-      geometryLayout: 'XYZ'
+      geometryLayout: GeometryLayout.XYZ
     });
 
   }
@@ -48,7 +50,7 @@ export default class GraphHopper {
     const pointFromCoordinates = pointFromGeometry.getCoordinates();
     const pointToCoordinates = pointToGeometry.getCoordinates();
 
-    const coordinates = [pointFromCoordinates, pointToCoordinates].map(coordinates => toLonLat(coordinates.slice(0, 2), this.mapProjection_));
+    const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), this.mapProjection_));
     const coordinateString = coordinates.map(c => `point=${c.reverse().join(',')}`).join('&');
 
     return fetch(`${this.url_}&${coordinateString}`)
@@ -56,12 +58,12 @@ export default class GraphHopper {
       .then(json => {
         if (json.paths) {
           const path = json.paths[0];
-          const resultGeometry = this.polylineFormat_.readGeometry(path.points, {
+          const resultGeometry = /** @type{LineString} */ (this.polylineFormat_.readGeometry(path.points, {
             featureProjection: this.mapProjection_
-          });
+          }));
           const resultCoordinates = fixupElevation(resultGeometry.getCoordinates());
           const segmentGeometry = /** @type {import("ol/geom/LineString").default} */ (segment.getGeometry());
-          segmentGeometry.setCoordinates(resultCoordinates, 'XYZ');
+          segmentGeometry.setCoordinates(resultCoordinates, GeometryLayout.XYZ);
 
           segment.setProperties({
             snapped: true
@@ -77,8 +79,8 @@ export default class GraphHopper {
 
 
 /**
- * @param {import("ol/coordinate").Coordinate} coordinates
- * @return {import("ol/coordinate").Coordinate}
+ * @param {import("ol/coordinate").Coordinate[]} coordinates
+ * @return {import("ol/coordinate").Coordinate[]}
  */
 function fixupElevation(coordinates) {
   for (let i = 0, ii = coordinates.length; i < ii; i++) {

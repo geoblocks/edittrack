@@ -46,5 +46,8 @@
   "peerDependencies": {
     "proj4": "^2.4.4",
     "ol": "^5.1.3"
+  },
+  "dependencies": {
+    "@geoblocks/proj": "^0.4.2"
   }
 }
