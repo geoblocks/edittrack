@@ -8,19 +8,19 @@ class TrackData {
   constructor() {
     /**
      * @private
-     * @type {Array.<Feature>}
+     * @type {Array<Feature>}
      */
     this.controlPoints_ = [];
 
     /**
      * @private
-     * @type {Array.<Feature>}
+     * @type {Array<Feature>}
      */
     this.segments_ = [];
   }
 
   /**
-   * @param {Array.<Feature>} features
+   * @param {Array<Feature>} features
    */
   restoreFeatures(features) {
     this.clear();
@@ -41,7 +41,7 @@ class TrackData {
 
   /**
    * @param {Feature} controlPoint
-   * @return {{before: Feature, after: Feature}}
+   * @return {{before: Feature|undefined, after: Feature|undefined}}
    */
   getAdjacentSegments(controlPoint) {
     let before = undefined;
@@ -60,7 +60,7 @@ class TrackData {
 
   /**
    * @param {Feature} controlPoint
-   * @return {Feature}
+   * @return {?Feature}
    */
   getControlPointBefore(controlPoint) {
     const index = this.controlPoints_.indexOf(controlPoint);
@@ -72,7 +72,7 @@ class TrackData {
 
   /**
    * @param {Feature} controlPoint
-   * @return {Feature}
+   * @return {?Feature}
    */
   getControlPointAfter(controlPoint) {
     const index = this.controlPoints_.indexOf(controlPoint);
@@ -83,14 +83,14 @@ class TrackData {
   }
 
   /**
-   * @return {Array.<Feature>}
+   * @return {Array<Feature>}
    */
   getControlPoints() {
     return this.controlPoints_;
   }
 
   /**
-   * @return {Array.<Feature>}
+   * @return {Array<Feature>}
    */
   getSegments() {
     return this.segments_;
@@ -109,6 +109,7 @@ class TrackData {
       const overlap = coordinates.length > 0 && equals(segment[0], coordinates[coordinates.length - 1]);
       coordinates = coordinates.concat(segment.slice(overlap ? 1 : 0));
     }
+    console.assert(isXYZ(coordinates));
     return new LineString(coordinates);
   }
 
@@ -153,7 +154,7 @@ class TrackData {
   /**
    * Add a new control point at the end.
    * @param {Feature} point
-   * @return {{pointFrom: Feature, pointTo: Feature, segment: Feature}}
+   * @return {{pointFrom: Feature, pointTo: Feature, segment: Feature|undefined}}
    */
   pushControlPoint(point) {
     this.insertControlPointAt(point, this.controlPoints_.length);
@@ -183,7 +184,7 @@ class TrackData {
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
    * @param {Feature} point Point to delete.
-   * @return {{deleted: Array.<Feature>, pointBefore: Feature, pointAfter: Feature, newSegment: Feature}}
+   * @return {{deleted: Array<Feature>, pointBefore: ?Feature, pointAfter: ?Feature, newSegment: ?Feature}}
    */
   deleteControlPoint(point) {
     const deleteIndex = this.controlPoints_.indexOf(point);
@@ -233,15 +234,15 @@ class TrackData {
 
     return {
       deleted: deletedFeatures,
-      pointBefore,
-      pointAfter,
-      newSegment
+      pointBefore: pointBefore,
+      pointAfter: pointAfter,
+      newSegment: newSegment
     };
   }
 
   /**
    * Remove the last control point.
-   * @return {Array.<Feature>}
+   * @return {Array<Feature>}
    */
   deleteLastControlPoint() {
     const deletedFeatures = [];
@@ -312,5 +313,20 @@ function createStraightSegment(featureFrom, featureTo) {
 
   return segment;
 }
+
+/**
+ * @param {Array<Array<number>>} coordinates
+ * @return {boolean}
+ */
+function isXYZ(coordinates) {
+  for (let i = 0, ii = coordinates.length; i < ii; i++) {
+    const coord = coordinates[i];
+    if (coord.length !== 3 || !coord.every(num => typeof num === 'number')) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 export default TrackData;

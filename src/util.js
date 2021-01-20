@@ -18,10 +18,10 @@ export function debounce(fn, delay = 0) {
 }
 
 /**
- * @param {ol.Coordinate} a
- * @param {ol.Coordinate} b
+ * @param {import("ol/coordinate").Coordinate} a
+ * @param {import("ol/coordinate").Coordinate} b
  * @param {number} t amount
- * @return {ol.Coordinate} the linearly interpolated coordinates
+ * @return {import("ol/coordinate").Coordinate} the linearly interpolated coordinates
  */
 export function lerpCoordinates(a, b, t) {
   return [
@@ -31,8 +31,8 @@ export function lerpCoordinates(a, b, t) {
 }
 
 /**
- * @param {ol.Coordinate} a
- * @param {ol.Coordinate} b
+ * @param {import("ol/coordinate").Coordinate} a
+ * @param {import("ol/coordinate").Coordinate} b
  * @return {number} the scalar product of the coordinates
  */
 export function scalarProduct(a, b) {
@@ -40,9 +40,9 @@ export function scalarProduct(a, b) {
 }
 
 /**
- * @param {ol.Coordinate} a
- * @param {ol.Coordinate} b
- * @return {ol.Coordinate}
+ * @param {import("ol/coordinate").Coordinate} a
+ * @param {import("ol/coordinate").Coordinate} b
+ * @return {import("ol/coordinate").Coordinate}
  */
 export function substractCoordinates(a, b) {
   return [
@@ -55,9 +55,9 @@ export function substractCoordinates(a, b) {
 // https://math.stackexchange.com/questions/2193720/find-a-point-on-a-line-segment-which-is-the-closest-to-other-point-not-on-the-li
 /**
  * Find the closest point to a point P on the segment [A, B].
- * @param {ol.Coordinate} a
- * @param {ol.Coordinate} b
- * @param {ol.Coordinate} p
+ * @param {import("ol/coordinate").Coordinate} a
+ * @param {import("ol/coordinate").Coordinate} b
+ * @param {import("ol/coordinate").Coordinate} p
  * @return {number} the distance t on the [A, B] segment normalized between [0, 1].
  */
 export function closestPointOnASegment(a, b, p) {
@@ -65,4 +65,25 @@ export function closestPointOnASegment(a, b, p) {
   const v = substractCoordinates(b, a);
   const t = scalarProduct(u, v) / scalarProduct(v, v);
   return clamp(t, 0, 1);
+}
+
+
+/**
+ * @param {import("ol/Feature").FeatureLike} straightSegment
+ * @param {number} first
+ * @param {number} last
+ */
+export function setZ(straightSegment, first, last) {
+  const geometry = straightSegment.getGeometry();
+  const coordinates = geometry.getCoordinates();
+  console.assert(coordinates.length === 2);
+  if (geometry.getLayout() === 'XY') {
+    coordinates[0].push(first);
+    coordinates[1].push(last);
+  } else {
+    coordinates[0][2] = first;
+    coordinates[1][2] = last;
+  }
+  geometry.setCoordinates(coordinates);
+  console.assert(geometry.getLayout() === 'XYZ');
 }
