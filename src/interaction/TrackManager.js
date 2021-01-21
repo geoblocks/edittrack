@@ -24,7 +24,7 @@ import GeometryType from 'ol/geom/GeometryType';
  * @property {import("ol/layer/Vector").default} trackLayer
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
- * @property {import("ol/style/Style").default} style
+ * @property {import("ol/style/Style").default} [style]
  */
 
 /**

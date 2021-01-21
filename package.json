@@ -1,16 +1,12 @@
 {
   "name": "@geoblocks/edittrack",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Geoblocks edittrack",
   "module": "src/index.js",
   "scripts": {
-    "karma": "karma start test/karma.config.js",
-    "karma-single": "npm run karma -- --single-run",
     "eslint": "eslint src",
     "eslint-fix": "eslint src --fix",
-    "build": "webpack --mode production",
-    "build-debug": "webpack --mode development",
-    "start": "webpack-dev-server --mode development --content-base dist/ --watch",
+    "start": "web-dev-server --watch --node-resolve --open /demos/",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",
     "test": "npm run lint && npm run build && npm run build-debug",
@@ -19,33 +15,22 @@
   "author": "",
   "license": "bsd",
   "devDependencies": {
+    "@geoblocks/d3profile": "0.0.5",
+    "@geoblocks/sources": "^0.2.0",
     "@types/ol": "6.4.2",
     "@types/proj4": "^2.3.4",
+    "@web/dev-server": "0.1.4",
     "eslint": "7.18.0",
     "eslint-config-openlayers": "11.0.0",
-    "expect.js": "0.3.1",
-    "karma": "6.0.1",
-    "karma-chrome-launcher": "3.1.0",
-    "karma-coverage": "2.0.3",
-    "karma-firefox-launcher": "2.1.0",
-    "karma-mocha": "2.0.1",
-    "karma-sauce-launcher": "4.3.4",
-    "karma-sourcemap-loader": "^0.3.7",
-    "karma-webpack": "4.0.2",
-    "mocha": "8.2.1",
     "ol": "6.5.0",
     "proj4": "2.7.0",
-    "sinon": "9.2.3",
     "tsconfig-paths": "3.9.0",
     "typedoc": "^0.20.16",
-    "typescript": "4.1.3",
-    "webpack": "4.16.5",
-    "webpack-cli": "3.1.0",
-    "webpack-dev-server": "3.11.2"
+    "typescript": "4.1.3"
   },
   "peerDependencies": {
     "proj4": "^2.4.4",
-    "ol": "^5.1.3"
+    "ol": "^6"
   },
   "dependencies": {
     "@geoblocks/proj": "^0.4.2"
