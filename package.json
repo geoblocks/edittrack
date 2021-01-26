@@ -9,7 +9,6 @@
     "start": "web-dev-server --watch --node-resolve --open /demos/",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",
-    "test": "npm run lint && npm run build && npm run build-debug",
     "doc": "typedoc --out dist/api --theme minimal --readme none --hideGenerator --listInvalidSymbolLinks --toc none --entryPoints src/index.js"
   },
   "author": "",
