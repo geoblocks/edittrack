@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+env:
+  IN_CI: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Npm setup
+        run: npm ci && du -sh node_modules
+
+      - name: Test
+        run: npm run test
+
+      - name: Doc
+        run: npm run doc
