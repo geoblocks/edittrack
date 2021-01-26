@@ -16,6 +16,7 @@ import GeometryType from 'ol/geom/GeometryType';
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/MapBrowserEvent').default} MapBrowserEvent */
 
+/** @typedef {'edit'|''} TrackMode */
 
 /**
  * @typedef Options
@@ -69,7 +70,7 @@ class TrackManager {
 
     /**
      * @private
-     * @type {string}
+     * @type {TrackMode}
      */
     this.mode_ = '';
 
@@ -197,7 +198,7 @@ class TrackManager {
       } else {
         this.onTrackHovered_(undefined);
       }
-    }, 0);
+    }, 10);
 
     this.map_.on('pointermove', debouncedMapToProfileUpdater);
 
@@ -323,14 +324,14 @@ class TrackManager {
   }
 
   /**
-   * @return {string} mode
+   * @return {TrackMode} mode
    */
   get mode() {
     return this.mode_;
   }
 
   /**
-   * @param {string} mode
+   * @param {TrackMode} mode
    */
   set mode(mode) {
     this.drawTrack_.setActive(mode === 'edit');
@@ -407,11 +408,11 @@ class TrackManager {
   }
 
   /**
-   * @return {Array<Feature>}
+   * @return {Feature<LineString>[]}
    */
   getSegments() {
     return this.trackData_.getSegments().map((segment, index) => {
-      const clone = segment.clone();
+      const clone = /** @type {Feature<LineString>} */ (segment.clone());
       clone.set('index', index);
       return clone;
     });

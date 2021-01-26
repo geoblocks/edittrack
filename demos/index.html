@@ -2,19 +2,24 @@
 <html lang="en">
 
 <head>
+  <title>Edit track demo</title>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/css/ol.css" type="text/css">
   <script src="./demo.js" type="module"></script>
   <style>
-    html, body {
+    html, body, main {
       height: 100%;
+      margin: 0;
+    }
+    main {
+      display: flex;
     }
     #map {
-      height: 500px;
-      width: 500px;
+      height: 100vh;
+      width: 100%;
     }
     #profile {
-      height: 200px;
+      height: 150px;
       width: 300px;
     }
   </style>
@@ -22,13 +27,17 @@
 
 <body>
   <main>
+    <div>
+      <div id="profile"></div>
+      <select id="trackmode">
+        <option value="edit">edit</option>
+        <option value="">view</option>
+      </select>
+      <a href="#" id="delete">delete last point</a>
+      <a href="#" id="clear">clear track</a>
+  </div>
     <div id="map"></div>
-    <div id="profile"></div>
   </main>
-
-  <script>
-
-  </script>
 </body>
 
 </html>
