@@ -11,16 +11,6 @@ import d3Elevation from '@geoblocks/d3profile/src/d3Elevation.js';
  * @typedef {import('ol/Map').default} OLMap
  */
 
-
-// FIXME: remove this SwisstopoProfileItem interface / adapter
-/**
- * @typedef {Object} SwisstopoProfileItem
- * @property {number} easting
- * @property {number} northing
- * @property {{COMB: number}} alts
- * @property {number} dist
- */
-
 /**
  * @typedef {Object} ProfileItem
  * @property {number} x
@@ -180,16 +170,16 @@ class Profile {
     let previousDistance = 0;
     for (const segment of segments) {
       /**
-       * @type {SwisstopoProfileItem[]}
+       * @type {[number, number, number, number][]}
        */
       const segmentProfile = segment.get('profile');
       if (segmentProfile) {
-        profile = profile.concat(segmentProfile.map((item) => {
+        profile = profile.concat(segmentProfile.map(item => {
           return {
-            x: item.easting,
-            y: item.northing,
-            ele: item.alts.COMB,
-            dist: previousDistance + item.dist
+            x: item[0],
+            y: item[1],
+            ele: item[2],
+            dist: previousDistance + item[3]
           };
         }));
         previousDistance = profile[profile.length - 1].dist;

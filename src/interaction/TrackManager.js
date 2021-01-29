@@ -151,9 +151,12 @@ class TrackManager {
         } else {
           // compute profile for straight segment and set the elevation to the points
           this.profiler_.computeProfile(segment).then(() => {
+          /**
+           * @type {[number, number, number, number][]}
+           */
             const segmentProfile = segment.get('profile');
             if (segmentProfile) {
-              setZ(segment, segmentProfile[0].alts.COMB, segmentProfile[segmentProfile.length - 1].alts.COMB);
+              setZ(segment, segmentProfile[0][2], segmentProfile[segmentProfile.length - 1][2]);
             }
             this.onTrackChanged_();
           });

@@ -3,6 +3,7 @@ import GeoJSONFormat from 'ol/format/GeoJSON.js';
 // @ts-ignore
 import EPSG_2056 from '@geoblocks/proj/src/EPSG_2056.js';
 
+
 // https://api3.geo.admin.ch/services/sdiservices.html#profile
 
 /**
@@ -10,6 +11,13 @@ import EPSG_2056 from '@geoblocks/proj/src/EPSG_2056.js';
  * @property {import("ol/proj").ProjectionLike} projection
  */
 
+/**
+ * @typedef {Object} SwisstopoProfileItem
+ * @property {number} dist
+ * @property {{COMB: number}} alts
+ * @property {number} easting
+ * @property {number} northing
+ */
 
 /**
  * @implements {geoblocks.Profiler}
@@ -37,7 +45,7 @@ export default class SwisstopoProfiler {
   }
 
   /**
-   * @param {import("ol/Feature").default} segment
+   * @param {import("ol/Feature").default} segment in EPSG:2056 projection
    * @return {Promise<void>}
    */
   computeProfile(segment) {
@@ -54,7 +62,12 @@ export default class SwisstopoProfiler {
     return request
       .then(response => response.json())
       .then((profile) => {
-        segment.set('profile', profile);
+        /**
+         * @param {SwisstopoProfileItem} r
+         * @return {[number, number, number, number]}
+         */
+        const toXYZM = r => [r.easting, r.northing, r.alts.COMB, r.dist];
+        segment.set('profile', profile.map(toXYZM));
       });
   }
 }

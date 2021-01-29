@@ -16,18 +16,11 @@ export default class ExtractFromSegment {
         let accDistance = 0;
         const coordinates = geometry.getCoordinates();
         for (let i = 0, ii = coordinates.length; i < ii; i++) {
-          const coordinate = coordinates[i];
-          profile.push({
-            alts: {
-              COMB: coordinate[2]
-            },
-            dist: accDistance,
-            easting: coordinate[0],
-            northing: coordinate[1]
-          });
-          const prevCoordinate = coordinates[i - 1];
-          if (prevCoordinate) {
-            accDistance += distance(prevCoordinate, coordinate);
+          const coos = coordinates[i];
+          profile.push([coos[0], coos[1], coos[2], accDistance]);
+          const prevCoos = coordinates[i - 1];
+          if (prevCoos) {
+            accDistance += distance(prevCoos, coos);
           }
         }
         segment.set('profile', profile);
