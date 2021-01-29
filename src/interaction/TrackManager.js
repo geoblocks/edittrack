@@ -274,6 +274,7 @@ class TrackManager {
       // only delete if alt-key is being pressed while clicking
       condition: (mapBrowserEvent) => click(mapBrowserEvent) && altKeyAndOptionallyShift(mapBrowserEvent),
       layers: [this.trackLayer_],
+      filter: (feature) => feature.get('type') === 'controlPoint',
     });
 
     this.deletePoint_.on('select', (feature) => {
