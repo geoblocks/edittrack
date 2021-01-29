@@ -218,7 +218,7 @@ class TrackManager {
       if (this.modifyInProgress_) {
         const type = feature.get('type');
         if (type === 'controlPoint') {
-          console.assert(feature.getGeometry().getType() === 'LineString');
+          console.assert(feature.getGeometry().getType() === 'Point');
           // moving an existing point
           console.assert(this.modifiedControlPoint_ ? this.modifiedControlPoint_ === feature : true);
           this.modifiedControlPoint_ = /** @type {Feature<Point>} */ (feature);

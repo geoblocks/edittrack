@@ -19,15 +19,15 @@ import {fromLonLat, toLonLat} from 'ol/proj.js';
 /**
  * @const {string}
  */
-const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foot/route/v1/driving';
+export const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foot/route/v1/driving';
 
 /**
  * @const {string}
  */
-const OSRM_DEFAULT_PROFILE_URL = 'https://router.project-osrm.org/route/v1/driving';
+export const OSRM_DEFAULT_PROFILE_URL = 'https://router.project-osrm.org/route/v1/driving';
 
 
-class OSRMRouter {
+export default class OSRMRouter {
 
   /**
    * @param {Options} options
@@ -107,9 +107,3 @@ class OSRMRouter {
     this.url_ = url;
   }
 }
-
-export default OSRMRouter;
-
-export {OSM_CH_ROUTED_FOOT_PROFILE_URL};
-
-export {OSRM_DEFAULT_PROFILE_URL};
