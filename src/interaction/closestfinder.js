@@ -5,7 +5,7 @@ import {distance} from 'ol/coordinate.js';
  * @typedef {Object} ClosestPoint
  * @property {number} distanceFromStart
  * @property {number} distanceFromSearched
- * @property {ol.Coordinate} coordinates
+ * @property {import("ol/coordinate").Coordinate} coordinates
  * @property {number} [fullLength]
  */
 
@@ -16,8 +16,8 @@ import {distance} from 'ol/coordinate.js';
  */
 
 /**
- * @param {ol.geom.LineString} line
- * @param {ol.Coordinate} searched
+ * @param {import("ol/geom/LineString").default} line
+ * @param {import("ol/coordinate").Coordinate} searched
  * @param {number} previousLineLength
  * @param {boolean} interpolate
  * @return {ClosestPoint}
@@ -27,6 +27,7 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
   const coordinatess = line.getCoordinates();
   let previous = coordinatess[0];
 
+  /** @type {ClosestPoint} */
   const best = {
     distanceFromStart: 0,
     distanceFromSearched: Number.POSITIVE_INFINITY,
@@ -59,8 +60,8 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
 
 
 /**
- * @param {Array<ol.geom.LineString>} lines
- * @param {ol.Coordinate} searched
+ * @param {Array<import("ol/geom/LineString").default>} lines
+ * @param {import("ol/coordinate").Coordinate} searched
  * @param {ClosestLinesOptions} options
  * @return {ClosestPoint}
  */

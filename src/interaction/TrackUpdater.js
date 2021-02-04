@@ -1,16 +1,22 @@
 /**
- * @typedef TrackData
- * @type {import("./TrackData.js").default}
+ * @typedef {import("./TrackData.js").default} TrackData
+ * @typedef {import('ol/geom/Point').default} Point
+ * @typedef {import('ol/geom/LineString').default} LineString
+ * @typedef {import('ol/geom/Geometry').default} Geometry
  */
 
+
+/**
+ * @typedef {Object} Options
+ * @property {TrackData} trackData
+ * @property {geoblocks.Router} router
+ * @property {geoblocks.Profiler} profiler
+ */
 
 class TrackUpdater {
 
   /**
-   * @param {Object} options
-   * @property {TrackData} trackData
-   * @property {geoblocks.Router} router
-   * @property {geoblocks.Profiler} [profiler]
+   * @param {Options} options
    */
   constructor(options) {
     /**
@@ -19,7 +25,7 @@ class TrackUpdater {
     this.trackData_ = options.trackData;
 
     /**
-     * @type {geoblocks.Profiler|undefined}
+     * @type {geoblocks.Profiler}
      */
     this.profiler_ = options.profiler;
 
@@ -32,25 +38,25 @@ class TrackUpdater {
 
   /**
    * @private
-   * @param {ol.Feature} segment
-   * @param {ol.Feature} pointFrom
-   * @param {ol.Feature} pointTo
+   * @param {import('ol/Feature').default<LineString>} segment
+   * @param {import('ol/Feature').default<Point>} pointFrom
+   * @param {import('ol/Feature').default<Point>} pointTo
    */
   updateStraightLineSegmentGeometry_(segment, pointFrom, pointTo) {
     console.assert(!segment.get('snapped'));
-    /** @type {ol.geom.LineString} */(segment.getGeometry()).setCoordinates([
-      /** @type {ol.geom.Point} */(pointFrom.getGeometry()).getCoordinates(),
-      /** @type {ol.geom.Point} */(pointTo.getGeometry()).getCoordinates()
+    segment.getGeometry().setCoordinates([
+      pointFrom.getGeometry().getCoordinates(),
+      pointTo.getGeometry().getCoordinates()
     ]);
   }
 
   /**
-   * @param {ol.Feature} modifiedControlPoint
-   * @return {Promise}
+   * @param {import('ol/Feature').default<Point>} modifiedControlPoint
+   * @return {Promise<any>}
    */
   computeAdjacentSegmentsProfile(modifiedControlPoint) {
     const promises = [];
-    if (modifiedControlPoint && this.profiler_) {
+    if (modifiedControlPoint) {
       const {before, after} = this.trackData_.getAdjacentSegments(modifiedControlPoint);
       if (before) {
         promises.push(this.profiler_.computeProfile(before));
@@ -63,7 +69,7 @@ class TrackUpdater {
   }
 
   /**
-   * @param {ol.Feature} modifiedControlPoint
+   * @param {import('ol/Feature').default<Point>} modifiedControlPoint
    * @param {string} subtype
    */
   changeAdjacentSegmentsStyling(modifiedControlPoint, subtype) {
@@ -79,11 +85,12 @@ class TrackUpdater {
   }
 
   /**
-   * @param {ol.Feature} modifiedControlPoint
-   * @return {Promise}
+   * @param {import('ol/Feature').default<Point>} modifiedControlPoint
+   * @return {Promise<any>}
    */
   updateAdjacentSegmentsGeometries(modifiedControlPoint) {
     const routedSegments = [];
+    /** @type {function[]} */
     const straightSegments = [];
 
     if (modifiedControlPoint) {

@@ -2,18 +2,18 @@
   "compilerOptions": {
     /* Basic Options */
     "target": "ES2017",      
-    "module": "commonjs",
-    "lib": ["es2017", "dom"],
+    "module": "ES2020",
+    "lib": ["es2020", "dom"],
     "allowJs": true,         
     "checkJs": true,         
     "noEmit": true,          
 
     /* Strict Type-Checking Options */
-    "strict": false,
-    "noImplicitAny": false, // FIXME: enable this as soon as possible
-    "strictNullChecks": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": false,
     "strictFunctionTypes": true,
-    "strictPropertyInitialization": true,
+    "strictPropertyInitialization": false,
     "noImplicitThis": true,
     "alwaysStrict": true,
 
@@ -26,7 +26,9 @@
     "baseUrl": "types",
     "typeRoots": ["types"],
 
-    "esModuleInterop": true
+    "esModuleInterop": true,
+
+    "moduleResolution": "Node",
   },
   "include": [
     "src/**/*.js",
