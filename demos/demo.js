@@ -7,7 +7,7 @@ import {View, Map as OLMap} from 'ol';
 import TrackManager from '../src/interaction/TrackManager';
 import GraphHopperRouter from '../src/router/GraphHopper';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../src/profiler/index';
-import Profile from '../src/Profile';
+import Profile from '../src/d3elevation/Profile';
 import {controlPoint, styleFunction} from './style';
 import {Style, Circle, Fill} from 'ol/style';
 

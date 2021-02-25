@@ -4,7 +4,7 @@ import Point from 'ol/geom/Point.js';
 import VectorLayer from 'ol/layer/Vector.js';
 
 // @ts-ignore FIXME: introduce a type declaration
-import d3Elevation from '@geoblocks/d3profile/src/d3Elevation.js';
+import d3Elevation from './d3Elevation.js';
 
 /**
  * @typedef {import('ol/geom/LineString').default} LineString
