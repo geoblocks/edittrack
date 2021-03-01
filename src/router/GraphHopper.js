@@ -1,6 +1,7 @@
 import {toLonLat} from 'ol/proj.js';
-import PolyLineFormat from 'ol/format/Polyline.js';
+import PolyLineXYZMFormat from './PolylineXYZM.js';
 import GeometryLayout from 'ol/geom/GeometryLayout';
+
 /** @typedef {import('ol/geom/LineString').default} LineString */
 
 /**
@@ -30,12 +31,9 @@ export default class GraphHopper {
 
     /**
      * @private
-     * @type {PolyLineFormat}
+     * @type {PolyLineXYZMFormat}
      */
-    this.polylineFormat_ = new PolyLineFormat({
-      geometryLayout: GeometryLayout.XYZ
-    });
-
+    this.polylineFormat_ = new PolyLineXYZMFormat();
   }
 
   /**
@@ -61,9 +59,9 @@ export default class GraphHopper {
           const resultGeometry = /** @type{LineString} */ (this.polylineFormat_.readGeometry(path.points, {
             featureProjection: this.mapProjection_
           }));
-          const resultCoordinates = fixupElevation(resultGeometry.getCoordinates());
+          const resultCoordinates = resultGeometry.getCoordinates();
           const segmentGeometry = /** @type {import("ol/geom/LineString").default} */ (segment.getGeometry());
-          segmentGeometry.setCoordinates(resultCoordinates, GeometryLayout.XYZ);
+          segmentGeometry.setCoordinates(resultCoordinates, GeometryLayout.XYZM);
 
           segment.setProperties({
             snapped: true
@@ -75,17 +73,4 @@ export default class GraphHopper {
         }
       });
   }
-}
-
-
-/**
- * @param {import("ol/coordinate").Coordinate[]} coordinates
- * @return {import("ol/coordinate").Coordinate[]}
- */
-function fixupElevation(coordinates) {
-  for (let i = 0, ii = coordinates.length; i < ii; i++) {
-    const coordinate = coordinates[i];
-    coordinate[2] *= 1000;
-  }
-  return coordinates;
 }
