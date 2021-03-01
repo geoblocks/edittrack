@@ -117,6 +117,18 @@ function main() {
     trackManager.clear();
   });
 
+  document.querySelector('#getTrackData').addEventListener('click', () => {
+    trackManager.getTrackFeature();
+    const features = [
+      ...trackManager.getControlPoints(),
+      ...trackManager.getSegments()
+    ];
+    trackManager.restoreFeatures(features)
+  });
+  document.querySelector('#reverse').addEventListener('click', () => {
+    trackManager.reverse();
+  });
+
   d3Profile.setTrackHoverStyle(new Style({
     image: new Circle({
       fill: new Fill({
