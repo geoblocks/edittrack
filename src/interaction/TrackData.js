@@ -108,13 +108,15 @@ class TrackData {
     /**
      * @type {import('ol/coordinate').Coordinate[]}
      */
-    let coordinates = [];
+    const coordinates = [];
     for (const feature of this.segments_) {
       const segment = feature.getGeometry().getCoordinates();
       // remove the overlap between the last coordinate of a segment and
       // the first coordinate of the next one
       const overlap = coordinates.length > 0 && equals(segment[0], coordinates[coordinates.length - 1]);
-      coordinates = coordinates.concat(segment.slice(overlap ? 1 : 0));
+      for (let i = overlap ? 1 : 0; i < coordinates.length; ++i) {
+        coordinates.push(coordinates[i].slice(0, 3));
+      }
     }
     console.assert(isXYZ(coordinates));
     return new LineString(coordinates);

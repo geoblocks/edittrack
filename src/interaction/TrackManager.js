@@ -401,11 +401,11 @@ class TrackManager {
   }
 
   /**
-   * @return {Array<Feature>}
+   * @return {Feature<Point>[]}
    */
   getControlPoints() {
     return this.trackData_.getControlPoints().map((point, index) => {
-      const clone = point.clone();
+      const clone = /** @type {Feature<Point>} */ (point.clone());
       clone.set('index', index);
       return clone;
     });
