@@ -157,6 +157,11 @@ class TrackData {
       segmentAfter.set('snapped', pointAfter.get('snapped'));
       this.segments_.splice(index - 1, 0, segmentAfter);
     }
+
+    // update indices property
+    for (let i = index; i < this.controlPoints_.length; ++i) {
+      this.controlPoints_[i].set('index', i);
+    }
     return removed;
   }
 
@@ -241,6 +246,10 @@ class TrackData {
     // delete the point
     deletedFeatures.push(...this.controlPoints_.splice(deleteIndex, 1));
 
+    // update indices property
+    for (let i = deleteIndex; i < this.controlPoints_.length; ++i) {
+      this.controlPoints_[i].set('index', i);
+    }
     return {
       deleted: deletedFeatures,
       pointBefore: pointBefore,
@@ -280,6 +289,7 @@ class TrackData {
       this.controlPoints_.reverse();
       this.controlPoints_[0].set('subtype', 'first');
       this.controlPoints_[length - 1].set('subtype', 'last');
+      this.controlPoints_.forEach((p, index) => p.set('index', index));
 
       this.segments_.reverse();
       for (const segment of this.segments_) {
