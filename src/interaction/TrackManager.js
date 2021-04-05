@@ -388,6 +388,7 @@ class TrackManager {
 
   /**
    * @param {Array<Feature>} features
+   * @return {Promise<any>}
    */
   restoreFeatures(features) {
     this.clear();
@@ -395,7 +396,7 @@ class TrackManager {
     this.source_.addFeatures(features);
     const segments = this.trackData_.getSegments();
     const profileRequests = segments.map(segment => this.profiler_.computeProfile(segment));
-    Promise.all(profileRequests).then(() => {
+    return Promise.all(profileRequests).then(() => {
       this.onTrackChanged_();
     });
   }
