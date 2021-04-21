@@ -4,8 +4,8 @@
   "description": "Geoblocks edittrack",
   "module": "src/index.js",
   "scripts": {
-    "eslint": "eslint src",
-    "eslint-fix": "eslint src --fix",
+    "eslint": "eslint src test",
+    "eslint-fix": "eslint src test --fix",
     "start": "web-dev-server --watch --node-resolve --open /demos/",
     "test": "mocha --exit",
     "typecheck": "tsc --pretty",
@@ -17,6 +17,8 @@
   "devDependencies": {
     "@geoblocks/d3profile": "0.0.5",
     "@geoblocks/sources": "^0.2.0",
+    "@types/chai": "^4.2.16",
+    "@types/mocha": "^8.2.2",
     "@types/ol": "6.4.2",
     "@types/proj4": "^2.3.4",
     "@web/dev-server": "^0.1.10",
