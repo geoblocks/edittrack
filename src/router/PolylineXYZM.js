@@ -6,23 +6,6 @@ import LineString from 'ol/geom/LineString.js';
 import {transformGeometryWithOptions} from 'ol/format/Feature.js';
 import {getDistance} from 'ol/sphere.js';
 
-/**
- * @param {Array<number>} flatCoordinates Flat coordinates.
- * @return {number[]} output.
- */
-export function reduceStrideFrom4To3(
-  flatCoordinates) {
-  const end = flatCoordinates.length;
-  const dest = new Array(end / 4 * 3);
-  let i = 0;
-  for (let j = 0; j < end; j += 4) {
-    dest[i++] = flatCoordinates[j];
-    dest[i++] = flatCoordinates[j + 1];
-    dest[i++] = flatCoordinates[j + 2];
-  }
-  return dest;
-}
-
 
 /**
  * This format transforms a 3D polyline to/from a 4D linestring.
@@ -88,9 +71,17 @@ export default class PolylineXYZM extends Polyline {
         this.adaptOptions(opt_options)
       ));
     console.assert(geometry.getStride() === 4);
-    const flatCoordinates = reduceStrideFrom4To3(geometry.getFlatCoordinates());
+    const flatCoordinates = geometry.getFlatCoordinates();
+    const end = flatCoordinates.length;
+    const dest = new Array(end / 4 * 3);
+    let i = 0;
+    for (let j = 0; j < end; j += 4) {
+      // need to flip X and Y
+      dest[i++] = flatCoordinates[j + 1];
+      dest[i++] = flatCoordinates[j];
+      dest[i++] = flatCoordinates[j + 2] / this.zFactor;
+    }
     const stride = 3;
-    flipXY(flatCoordinates, 0, flatCoordinates.length, stride, flatCoordinates);
-    return encodeDeltas(flatCoordinates, stride, 1e5);
+    return encodeDeltas(dest, stride, 1e5);
   }
 }

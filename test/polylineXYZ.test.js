@@ -3,16 +3,7 @@
 import {assert} from 'chai';
 import GeometryLayout from 'ol/geom/GeometryLayout';
 import LineString from 'ol/geom/LineString';
-import PolylineXYZM, {reduceStrideFrom4To3} from '../src/router/PolylineXYZM.js';
-
-
-describe('Flat coordinates operations', () => {
-  it('reduces a 4D flat coordinates to 3D', () => {
-    const flat = [0, 1, 2, 3, 4, 5, 6, 7];
-    const out = reduceStrideFrom4To3(flat);
-    assert.deepEqual(out, [0, 1, 2, 4, 5, 6]);
-  });
-});
+import PolylineXYZM from '../src/router/PolylineXYZM.js';
 
 
 describe('PolylineXYZM', () => {
@@ -22,13 +13,64 @@ describe('PolylineXYZM', () => {
     const p1 = [0, 0, 0, 0];
     const p2 = [1, 1, 1, 1];
     const po1 = format.writeGeometry(new LineString([p1, p2], GeometryLayout.XYZM));
-    assert.equal(po1, '???_ibE_ibE_ibE');
+    assert.equal(po1, '???_ibE_ibEgE');
+  });
+
+  it('writes real-like polyline', () => {
+
+    const coos = [
+      [
+        6.52587,
+        46.63152,
+        492.15999999999997,
+        0], [
+        6.52609,
+        46.63195,
+        492.51,
+        50.67890127603154], [
+        6.52635,
+        46.63233,
+        492.43,
+        97.36433458899549], [
+        6.5264999999999995,
+        46.63228,
+        492.11,
+        110.0957304249026]
+    ];
+    const po1 = format.writeGeometry(new LineString(coos, GeometryLayout.XYZM));
+    assert.equal(po1, '_vr{Guqyf@_c_BuAk@eAkAs@NH]~@');
   });
 
   it('reads 3D polyline', () => {
     const p1 = [0, 0, 0, 0];
-    const p2 = [1, 1, 1000, 157249.59847404022];
-    const geom = format.readGeometry('???_ibE_ibE_ibE');
+    const p2 = [1, 1, 1, 157249.59847404022];
+    const geom = format.readGeometry('???_ibE_ibEgE');
     assert.deepEqual(geom.getCoordinates(), [p1, p2]);
+  });
+
+  it('reads real like polyline', () => {
+    const geom = format.readGeometry('_vr{Guqyf@_c_BuAk@eAkAs@NH]~@');
+    // console.log(geom);
+    const expected = [
+      [
+        6.52587,
+        46.63152,
+        492.15999999999997,
+        0], [
+        6.52609,
+        46.63195,
+        492.51,
+        50.67890127603154], [
+        6.52635,
+        46.63233,
+        492.43,
+        97.36433458899549], [
+        6.5264999999999995,
+        46.63228,
+        492.11,
+        110.0957304249026]
+    ];
+
+    assert.deepEqual(expected, geom.getCoordinates());
   });
 });
