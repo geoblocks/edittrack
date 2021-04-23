@@ -25,7 +25,7 @@ export default class PolylineXYZM extends Polyline {
    * @param {string} text Text.
    * @param {import("ol/format/Feature.js").ReadOptions} [opt_options] Read options.
    * @protected
-   * @return {LineString} Geometr with layout XYZM.
+   * @return {LineString} Geometry with layout XYZM.
    */
   readGeometryFromText(text, opt_options) {
     const stride = 3;
