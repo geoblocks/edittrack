@@ -31,6 +31,7 @@
     "moduleResolution": "Node",
   },
   "include": [
+    "test/**/*.js",
     "src/**/*.js",
     "src/**/*.d.ts",
     "node_modules/@types/openlayers/*",
