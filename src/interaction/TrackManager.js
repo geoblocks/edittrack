@@ -14,7 +14,8 @@ import {debounce, setZ} from './util.js';
 import GeometryType from 'ol/geom/GeometryType';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
-/** @typedef {import('ol/MapBrowserEvent').default} MapBrowserEvent */
+/** @typedef {import('ol/source/Vector').default<any>} VectorSource */
+/** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
 
 /** @typedef {'edit'|''} TrackMode */
 
@@ -22,14 +23,14 @@ import GeometryType from 'ol/geom/GeometryType';
  * @typedef Options
  * @type {Object}
  * @property {import("ol/Map").default} map
- * @property {import("ol/layer/Vector").default} trackLayer
+ * @property {import("ol/layer/Vector").default<VectorSource>} trackLayer
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
  * @property {import("ol/style/Style").default} [style]
  */
 
 /**
- * @param {import("ol/MapBrowserEvent").default} mapBrowserEvent
+ * @param {import("ol/MapBrowserEvent").default<any>} mapBrowserEvent
  * @return {boolean}
  */
 const altKeyAndOptionallyShift = function(mapBrowserEvent) {
@@ -52,13 +53,13 @@ class TrackManager {
     this.map_ = options.map;
 
     /**
-     * @type {import("ol/source/Vector").default}
+     * @type {import("ol/source/Vector").default<any>}
      * @private
      */
     this.source_ = options.trackLayer.getSource();
 
     /**
-     * @type {import("ol/layer/Vector").default}
+     * @type {import("ol/layer/Vector").default<VectorSource>}
      * @private
      */
     this.trackLayer_ = options.trackLayer;
@@ -203,6 +204,7 @@ class TrackManager {
       }
     }, 10);
 
+    // @ts-ignore
     this.map_.on('pointermove', debouncedMapToProfileUpdater);
 
     /**
@@ -387,7 +389,7 @@ class TrackManager {
   }
 
   /**
-   * @param {Array<Feature>} features
+   * @param {Array<Feature<Point|LineString>>} features
    * @return {Promise<any>}
    */
   restoreFeatures(features) {
@@ -425,7 +427,7 @@ class TrackManager {
 
   /**
    * Return the whole track as one line string in a feature.
-   * @return {Feature}
+   * @return {Feature<LineString>}
    */
   getTrackFeature() {
     return new Feature(this.trackData_.getLineString());

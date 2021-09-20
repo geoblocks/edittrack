@@ -16,6 +16,7 @@ export default class PolylineXYZM extends Polyline {
   constructor() {
     super({
       factor: 1e5,
+      // @ts-ignore
       geometryLayout: GeometryLayout.XYZM
     });
     this.zFactor = 1000;
@@ -58,17 +59,17 @@ export default class PolylineXYZM extends Polyline {
 
   /**
    * @param {LineString} geometry 4D Geometry.
-   * @param {import("ol/format/Feature.js").WriteOptions=} opt_options Write options.
+   * @param {import("ol/format/Feature.js").WriteOptions} [options] Write options.
    * @protected
    * @return {string} 3D polyline text.
    */
-  writeGeometryText(geometry, opt_options) {
+  writeGeometryText(geometry, options) {
     geometry =
       /** @type {LineString} */
       (transformGeometryWithOptions(
         geometry,
         true,
-        this.adaptOptions(opt_options)
+        this.adaptOptions(options)
       ));
     console.assert(geometry.getStride() === 4);
     const flatCoordinates = geometry.getFlatCoordinates();

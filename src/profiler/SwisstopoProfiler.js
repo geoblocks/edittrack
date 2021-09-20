@@ -2,6 +2,7 @@ import GeoJSONFormat from 'ol/format/GeoJSON.js';
 
 // @ts-ignore
 import EPSG_2056 from '@geoblocks/proj/src/EPSG_2056.js';
+/** @typedef {import('ol/geom/LineString').default} LineString */
 
 
 // https://api3.geo.admin.ch/services/sdiservices.html#profile
@@ -45,7 +46,7 @@ export default class SwisstopoProfiler {
   }
 
   /**
-   * @param {import("ol/Feature").default} segment in EPSG:2056 projection
+   * @param {import("ol/Feature").default<LineString>} segment in EPSG:2056 projection
    * @return {Promise<void>}
    */
   computeProfile(segment) {

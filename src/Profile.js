@@ -82,7 +82,7 @@ class Profile {
 
     /**
      * @private
-     * @type {Feature}
+     * @type {Feature<Point>}
      */
     this.hoverFeature_ = undefined;
 
@@ -90,6 +90,7 @@ class Profile {
 
     /**
      * @param {ProfileItem} item
+     * @return {number} dist
      */
     function distanceExtractor(item) {
       return item.dist;
@@ -97,6 +98,7 @@ class Profile {
 
     /**
      * @param {ProfileItem} item
+     * @return {number} elevation
      */
     function zExtractor(item) {
       return item.ele;

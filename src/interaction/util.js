@@ -4,6 +4,7 @@ import {clamp, lerp} from 'ol/math.js';
 /**
  * @param {Function} fn
  * @param {number} [delay]
+ * @return {Function}
  */
 export function debounce(fn, delay = 0) {
   /**
