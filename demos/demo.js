@@ -110,6 +110,9 @@ function main() {
   // @ts-ignore
   tmEl.addEventListener('change', evt => trackManager.mode = evt.target.value);
 
+  document.querySelector('#snap').addEventListener('click', () => {
+    trackManager.snapping = ! trackManager.snapping;
+  });
   document.querySelector('#delete').addEventListener('click', () => {
     trackManager.deleteLastPoint();
   });
