@@ -2,8 +2,8 @@
 
 import 'mocha';
 import {assert} from 'chai';
-import GeometryLayout from 'ol/geom/GeometryLayout';
-import LineString from 'ol/geom/LineString';
+import GeometryLayout from 'ol/geom/GeometryLayout.js';
+import LineString from 'ol/geom/LineString.js';
 import PolylineXYZM from '../src/router/PolylineXYZM.js';
 
 
