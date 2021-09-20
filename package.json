@@ -10,7 +10,7 @@
     "test": "mocha --exit",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",
-    "doc": "typedoc --out dist/api --theme minimal --readme none --hideGenerator --listInvalidSymbolLinks --toc none --entryPoints src/index.js"
+    "doc": "typedoc --out dist/api --theme default --readme none --hideGenerator --validation.invalidLink --entryPoints src/index.js"
   },
   "author": "",
   "license": "bsd",
