@@ -1,3 +1,3 @@
-export {default as ExtractFromSegmentProfiler} from './ExtractFromSegment';
-export {default as SwisstopoProfiler} from './SwisstopoProfiler';
-export {default as FallbackProfiler} from './Fallback';
+export {default as ExtractFromSegmentProfiler} from './ExtractFromSegment.js';
+export {default as SwisstopoProfiler} from './SwisstopoProfiler.js';
+export {default as FallbackProfiler} from './Fallback.js';

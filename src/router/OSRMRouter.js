@@ -10,9 +10,9 @@ import {fromLonLat, toLonLat} from 'ol/proj.js';
 /**
  * @typedef {Object} Options
  * @property {ProjectionLike} mapProjection
- * @property {string} options.url The URL profile prefix to use, see *_PROFILE_URL.
- * @property {string} options.extraParams Parameters like access token.
- * @property {number} options.radius
+ * @property {string} url The URL profile prefix to use, see *_PROFILE_URL.
+ * @property {string} extraParams Parameters like access token.
+ * @property {number} radius
  */
 
 

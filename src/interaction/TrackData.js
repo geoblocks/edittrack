@@ -22,7 +22,7 @@ class TrackData {
   }
 
   /**
-   * @param {Array<Feature>} features
+   * @param {Array<Feature<Point|LineString>>} features
    */
   restoreFeatures(features) {
     this.clear();
@@ -198,7 +198,7 @@ class TrackData {
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
    * @param {Feature<Point>} point Point to delete.
-   * @return {{deleted: Array<Feature>, pointBefore: ?Feature<Point>, pointAfter: ?Feature<Point>, newSegment: ?Feature<LineString>}}
+   * @return {{deleted: Array<Feature<Point|LineString>>, pointBefore: ?Feature<Point>, pointAfter: ?Feature<Point>, newSegment: ?Feature<LineString>}}
    */
   deleteControlPoint(point) {
     const deleteIndex = this.controlPoints_.indexOf(point);
@@ -260,7 +260,7 @@ class TrackData {
 
   /**
    * Remove the last control point.
-   * @return {Array<Feature>}
+   * @return {Array<Feature<Point|LineString>>}
    */
   deleteLastControlPoint() {
     const deletedFeatures = [];
@@ -308,8 +308,8 @@ class TrackData {
 }
 
 /**
- * @param {Feature} left
- * @param {Feature} right
+ * @param {Feature<any>} left
+ * @param {Feature<any>} right
  * @return {number}
  */
 function sortByIndex(left, right) {

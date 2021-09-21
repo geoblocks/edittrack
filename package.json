@@ -10,28 +10,28 @@
     "test": "mocha --exit",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",
-    "doc": "typedoc --out dist/api --theme minimal --readme none --hideGenerator --listInvalidSymbolLinks --toc none --entryPoints src/index.js"
+    "doc": "typedoc --out dist/api --theme default --readme none --hideGenerator --validation.invalidLink --entryPoints src/index.js"
   },
   "author": "",
   "license": "bsd",
+  "type": "module",
   "devDependencies": {
     "@geoblocks/d3profile": "0.0.5",
     "@geoblocks/sources": "^0.2.0",
-    "@types/chai": "^4.2.16",
-    "@types/mocha": "^8.2.2",
-    "@types/ol": "6.4.2",
-    "@types/proj4": "^2.3.4",
-    "@web/dev-server": "^0.1.10",
+    "@types/chai": "^4.2.21",
+    "@types/mocha": "^9.0.0",
+    "@types/ol": "^6.5.3",
+    "@types/proj4": "^2.5.2",
+    "@web/dev-server": "^0.1.22",
     "chai": "^4.3.4",
-    "eslint": "^7.23.0",
-    "eslint-config-openlayers": "11.0.0",
-    "esm": "^3.2.25",
-    "mocha": "^8.3.2",
-    "ol": "6.5.0",
-    "proj4": "^2.7.2",
-    "tsconfig-paths": "3.9.0",
-    "typedoc": "^0.20.34",
-    "typescript": "^4.2.3"
+    "eslint": "^7.32.0",
+    "eslint-config-openlayers": "^15.1.0",
+    "mocha": "^9.1.1",
+    "ol": "^6.7.0",
+    "proj4": "^2.7.5",
+    "tsconfig-paths": "^3.11.0",
+    "typedoc": "^0.22.4",
+    "typescript": "^4.4.3"
   },
   "optionalDependencies": {
     "@geoblocks/d3profile": "0.0.5"

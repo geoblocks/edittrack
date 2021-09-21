@@ -3,6 +3,7 @@ import PolyLineXYZMFormat from './PolylineXYZM.js';
 import GeometryLayout from 'ol/geom/GeometryLayout';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
+/** @typedef {import('ol/geom/Point').default} Point */
 
 /**
  * @typedef {Object} Options
@@ -37,9 +38,9 @@ export default class GraphHopper {
   }
 
   /**
-   * @param {import("ol/Feature").default} segment
-   * @param {import("ol/Feature").default} pointFrom
-   * @param {import("ol/Feature").default} pointTo
+   * @param {import("ol/Feature").default<LineString>} segment
+   * @param {import("ol/Feature").default<Point>} pointFrom
+   * @param {import("ol/Feature").default<Point>} pointTo
    * @return {Promise<void>}
    */
   snapSegment(segment, pointFrom, pointTo) {
@@ -56,7 +57,7 @@ export default class GraphHopper {
       .then(json => {
         if (json.paths) {
           const path = json.paths[0];
-          const resultGeometry = /** @type{LineString} */ (this.polylineFormat_.readGeometry(path.points, {
+          const resultGeometry = /** @type {import("ol/geom/LineString").default} */ (this.polylineFormat_.readGeometry(path.points, {
             featureProjection: this.mapProjection_
           }));
           const resultCoordinates = resultGeometry.getCoordinates();
