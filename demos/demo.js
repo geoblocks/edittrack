@@ -4,11 +4,11 @@ import TileLayer from 'ol/layer/Tile.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import {View, Map as OLMap} from 'ol';
-import TrackManager from '../src/interaction/TrackManager';
-import GraphHopperRouter from '../src/router/GraphHopper';
-import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../src/profiler/index';
-import Profile from '../src/Profile';
-import {controlPoint, styleFunction} from './style';
+import TrackManager from '../src/interaction/TrackManager.js';
+import GraphHopperRouter from '../src/router/GraphHopper.js';
+import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../src/profiler/index.js';
+import Profile from '../src/Profile.js';
+import {controlPoint, styleFunction} from './style.js';
 import {Style, Circle, Fill} from 'ol/style';
 
 const RESOLUTIONS = [650, 500, 250, 100, 50, 20, 10, 5, 2.5, 2, 1.5, 1];
@@ -44,7 +44,7 @@ function createSwisstopoMap(target) {
 
   const bgLayer = createSwisstopoLayer('ch.swisstopo.pixelkarte-farbe');
 
-  const map = window['mymap'] = new OLMap({
+  const map = new OLMap({
     target,
     view,
     layers: [
@@ -52,6 +52,7 @@ function createSwisstopoMap(target) {
       trackLayer
     ]
   });
+  window['mymap'] = map;
 
   return {map, trackLayer};
 }
