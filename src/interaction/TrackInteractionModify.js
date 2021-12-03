@@ -146,7 +146,6 @@ export default class Modify extends PointerInteraction {
         case 'segment': {
           // we create a 3 points linestring
           const geometry = this.feature_.getGeometry();
-          console.log(geometry.getType(), this.feature_.getProperties())
           console.assert(geometry.getType() === 'LineString', this.feature_.getProperties());
           const g = /** @type {LineString} */ (geometry);
           this.overlayLineString_  = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()])

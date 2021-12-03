@@ -232,7 +232,6 @@ class TrackManager {
       const type = feature.get('type');
 
       if (type === 'controlPoint') {
-        console.log('end', feature.getProperties())
         this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           this.updater_.computeAdjacentSegmentsProfile(feature).then(() => this.onTrackChanged_());
