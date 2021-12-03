@@ -41,6 +41,19 @@ export const lastControlPoint = new Style({
 /**
  * @type {Style}
  */
+ export const sketchControlPoint = new Style({
+  image: new Circle({
+    radius: 8,
+    fill: new Fill({
+      color: '#ffffffaa'
+    })
+  })
+});
+
+
+/**
+ * @type {Style}
+ */
 export const trackLine = new Style({
   stroke: new Stroke({
     color: 'purple',
@@ -73,6 +86,8 @@ export function styleFromType(type, subtype) {
           return firstControlPoint;
         case 'last':
           return lastControlPoint;
+        case 'sketch':
+          return sketchControlPoint;
         default:
           return controlPoint;
       }

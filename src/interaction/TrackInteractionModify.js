@@ -3,6 +3,7 @@ import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
+import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
 
 /**
@@ -81,6 +82,12 @@ export default class Modify extends PointerInteraction {
 
     this.trackData_ = options.trackData;
 
+    this.pointAtCursor_ = new Point([0, 0]);
+    this.overlay_.getSource().addFeature(new Feature({
+      geometry: this.pointAtCursor_,
+      type: 'controlPoint',
+      subtype: 'sketch',
+    }));
     this.involvedFeatures_ = [];
     this.overlayLineString_ = null;
   }
@@ -92,6 +99,10 @@ export default class Modify extends PointerInteraction {
   setMap(map) {
     this.overlay_.setMap(map);
     super.setMap(map);
+  }
+
+  handleMoveEvent(event) {
+    this.pointAtCursor_.setCoordinates(event.coordinate);
   }
 
   /**
@@ -162,6 +173,8 @@ export default class Modify extends PointerInteraction {
    * @param {MapBrowserEvent<any>} event
    */
   handleDragEvent(event) {
+    this.pointAtCursor_.setCoordinates(event.coordinate);
+
     const type = this.feature_.get('type');
     if (this.overlayLineString_ ) {
       // update sketch linestring
