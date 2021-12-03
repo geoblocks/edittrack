@@ -11,15 +11,13 @@ import Event from 'ol/events/Event.js';
  * @typedef {import('ol/MapBrowserEvent.js').default<UIEvent>} MapBrowserEvent<UIEvent>
  */
 
-/**
- * @typedef {import('ol/geom/Geometry.js').default} Geometry
- */
+/** @typedef {import('ol/geom/Geometry.js').default} Geometry */
 
 /**
  * @typedef {import('ol/render/Feature.js').default} RenderFeature
  */
 
-class ModifyEvent extends Event {
+export class ModifyEvent extends Event {
 
   /**
    *
@@ -38,6 +36,18 @@ class ModifyEvent extends Event {
 }
 
 
+/** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
+
+/**
+ * @typedef Options
+ * @type {Object}
+ * @property {VectorSource<any>} source
+ * @property {import('./TrackData').default} trackData
+ * @property {StyleFunction} style
+ * @property {function(MapBrowserEvent<any>): boolean} condition
+ */
+
+
 /**
  * Interaction to modify a Vector Source.
  * - on down a 3 points linestring is created and dispatched as modifystart;
@@ -46,6 +56,10 @@ class ModifyEvent extends Event {
  */
 export default class Modify extends PointerInteraction {
 
+  /**
+   *
+   * @param {Options} options
+   */
   constructor(options) {
     super();
 
@@ -55,7 +69,7 @@ export default class Modify extends PointerInteraction {
 
     /**
      * The feature being modified.
-     *  @type {Feature<Geometry>}
+     *  @type {Feature<Point|LineString>}
      */
     this.feature_ = null;
 
@@ -88,6 +102,7 @@ export default class Modify extends PointerInteraction {
       type: 'controlPoint',
       subtype: 'sketch',
     }));
+    /** @type {Feature<any>[]} */
     this.involvedFeatures_ = [];
     this.overlayLineString_ = null;
   }
@@ -101,6 +116,9 @@ export default class Modify extends PointerInteraction {
     super.setMap(map);
   }
 
+  /**
+   * @param {MapBrowserEvent<any>} event
+   */
   handleMoveEvent(event) {
     this.pointAtCursor_.setCoordinates(event.coordinate);
   }
@@ -114,7 +132,7 @@ export default class Modify extends PointerInteraction {
       return false;
     }
     console.assert(!this.feature_);
-    this.feature_ = /** @type {Feature<Geometry>} */ (event.map.forEachFeatureAtPixel(
+    this.feature_ = /** @type {Feature<LineString|Point>} */ (event.map.forEachFeatureAtPixel(
       event.pixel,
       (f) => f, {
         layerFilter: (l) => l.getSource() === this.source_,
@@ -137,7 +155,8 @@ export default class Modify extends PointerInteraction {
         }
         case 'controlPoint': {
           // we create a 3 points linestring, doubled if end points clicked
-          const {before, after} = this.trackData_.getAdjacentSegments(this.feature_)
+          const f = /** @type {Feature<Point>} */ (this.feature_);
+          const {before, after} = this.trackData_.getAdjacentSegments(f);
           if (!before && !after) {
             // single point case
             this.involvedFeatures_ = [this.feature_];
@@ -185,7 +204,8 @@ export default class Modify extends PointerInteraction {
     }
 
     if (type === 'controlPoint') {
-      this.feature_.getGeometry().setCoordinates(event.coordinate);
+      const g = /** @type {Point} */ (this.feature_.getGeometry());
+      g.setCoordinates(event.coordinate);
     }
   }
 

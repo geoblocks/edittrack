@@ -12,6 +12,8 @@ import {debounce, setZ} from './util.js';
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
+/** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
+
 
 /** @typedef {'edit'|''} TrackMode */
 
@@ -22,7 +24,7 @@ import {debounce, setZ} from './util.js';
  * @property {import("ol/layer/Vector").default<VectorSource>} trackLayer
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
- * @property {import("ol/style/Style").default} [style]
+ * @property {StyleFunction} style
  */
 
 
@@ -109,7 +111,13 @@ class TrackManager {
       map: this.map_,
     });
 
-    this.interaction_.on('drawend', (event) => {
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('drawend',
+    /**
+     *
+     * @param {import ('ol/interaction/Draw').DrawEvent} event
+     */
+    (event) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
       const feature = /** @type {Feature<Point>} */ (event.feature);
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
@@ -159,7 +167,13 @@ class TrackManager {
      */
     this.modifyInProgress_ = false;
 
-    const debouncedMapToProfileUpdater = debounce((coordinate, hover) => {
+    const debouncedMapToProfileUpdater = debounce(
+      /**
+       *
+       * @param {import('ol/coordinate').Coordinate} coordinate
+       * @param {boolean} hover
+       */
+      (coordinate, hover) => {
       if (hover && this.trackData_.getSegments().length > 0) {
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
@@ -185,7 +199,13 @@ class TrackManager {
       }
     });
 
-    this.interaction_.on('modifyend', (event) => {
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('modifyend',
+    /**
+     *
+     * @param {import ('./TrackInteractionModify').ModifyEvent} event
+     */
+    (event) => {
       const feature = event.feature;
       const type = feature.get('type');
 
@@ -218,8 +238,14 @@ class TrackManager {
       }
     });
 
-    this.interaction_.on('select', (feature) => {
-      const selected = /** @type {Feature<Point>} */ (feature.selected[0]);
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('select',
+    /**
+     *
+     * @param {import ('ol/interaction/Select').SelectEvent} event
+     */
+    (event) => {
+      const selected = /** @type {Feature<Point>} */ (event.selected[0]);
       console.assert(selected.getGeometry().getType() === 'Point');
       const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
