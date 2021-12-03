@@ -1,10 +1,11 @@
-import {Circle, Fill, Stroke, Style, Icon} from 'ol/style.js';
+import {Circle, Fill, Stroke, Style, Icon, Text} from 'ol/style.js';
 
 
 /**
  * @type {Style}
  */
 export const controlPoint = new Style({
+  zIndex: 10,
   image: new Circle({
     radius: 8,
     fill: new Fill({
@@ -17,6 +18,7 @@ export const controlPoint = new Style({
  * @type {Style}
  */
 export const firstControlPoint = new Style({
+  zIndex: 10,
   image: new Circle({
     radius: 8,
     fill: new Fill({
@@ -30,6 +32,7 @@ export const firstControlPoint = new Style({
  * @type {Style}
  */
 export const lastControlPoint = new Style({
+  zIndex: 10,
   image: new Circle({
     radius: 8,
     fill: new Fill({
@@ -37,6 +40,26 @@ export const lastControlPoint = new Style({
     })
   })
 });
+
+
+/**
+ * @type {Style}
+ */
+ export const numberedControlPoint = new Style({
+  zIndex: 10,
+  image: new Circle({
+    radius: 8,
+    fill: new Fill({
+      color: '#ffffffdd'
+    })
+  }),
+  text: new Text({
+    fill: new Fill({
+      color: 'blue'
+    })
+  })
+});
+
 
 /**
  * @type {Style}
@@ -76,9 +99,10 @@ export const trackLineModifying = new Style({
 /**
  * @param {string} type
  * @param {string} subtype
+ * @param {number} index
  * @return {?Style}
  */
-export function styleFromType(type, subtype) {
+export function styleFromType(type, subtype, index) {
   switch (type) {
     case 'controlPoint':
       switch (subtype) {
@@ -89,6 +113,10 @@ export function styleFromType(type, subtype) {
         case 'sketch':
           return sketchControlPoint;
         default:
+          if (index !== undefined) {
+            numberedControlPoint.getText().setText(index.toString());
+            return numberedControlPoint;
+          }
           return controlPoint;
       }
     case 'segment':
@@ -109,7 +137,7 @@ export function styleFromType(type, subtype) {
  * @return {?Style}
  */
 export function styleFunction(feature, _) {
-  return styleFromType(feature.get('type'), feature.get('subtype'));
+  return styleFromType(feature.get('type'), feature.get('subtype'), feature.get('index'));
 }
 
 /**
