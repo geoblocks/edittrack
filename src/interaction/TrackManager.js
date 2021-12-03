@@ -4,6 +4,7 @@ import Point from 'ol/geom/Point.js';
 import TrackData from './TrackData.js';
 import TrackUpdater from './TrackUpdater.js';
 import TrackInteraction from './TrackInteraction.js';
+import HistoryManager from './HistoryManager.js';
 
 import {findClosestPointInLines} from './closestfinder.js';
 
@@ -109,6 +110,27 @@ class TrackManager {
       trackData: this.trackData_,
       trackLayer: this.trackLayer_,
       map: this.map_,
+    });
+
+    /**
+     * @type {HistoryManager<Feature<Point|LineString>[]>}
+     */
+    this.history_ = new HistoryManager();
+
+    /**
+     * @type {boolean}
+     */
+    this.historyChanged_ = false;
+
+    this.addTrackChangeEventListener(() => {
+      const segments = this.getSegments();
+      if (!this.historyChanged_ && segments.length > 0) {
+        const controlPoints = this.getControlPoints();
+        this.history_.add([...segments, ...controlPoints]);
+      } else {
+        // skip the update, it originated from a undo or redo.
+        this.historyChanged_ = false;
+      }
     });
 
     // @ts-ignore too complicate to declare proper events
@@ -296,7 +318,11 @@ class TrackManager {
    * @param {TrackMode} mode
    */
   set mode(mode) {
-    this.interaction_.setActive(mode === 'edit');
+    const edit = mode === 'edit';
+    if (!edit) {
+      this.history_.clear();
+    }
+    this.interaction_.setActive(edit);
     this.mode_ = mode || '';
   }
 
@@ -432,6 +458,35 @@ class TrackManager {
    */
   notifyTrackHoverEventListener_(distance) {
     this.trackHoverEventListeners_.forEach(handler => handler(distance));
+  }
+
+
+  /**
+   * Undo one drawing step
+   */
+   undo() {
+    if (this.mode === 'edit') {
+      const features = this.history_.undo();
+      if (features) {
+        this.restoreFeatures(features.map(feature => feature.clone()));
+        this.historyChanged_ = true;
+      } else {
+        this.clear();
+      }
+    }
+  }
+
+  /**
+   * Redo one drawing step
+   */
+  redo() {
+    if (this.mode === 'edit') {
+      const features = this.history_.redo();
+      if (features) {
+        this.restoreFeatures(features.map(feature => feature.clone()));
+        this.historyChanged_ = true;
+      }
+    }
   }
 }
 
