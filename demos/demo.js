@@ -81,7 +81,7 @@ function main() {
     router: router,
     profiler: profiler,
     trackLayer: trackLayer,
-    style: controlPoint
+    style: styleFunction
   });
 
   /**

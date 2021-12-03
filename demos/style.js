@@ -6,7 +6,7 @@ import {Circle, Fill, Stroke, Style, Icon} from 'ol/style.js';
  */
 export const controlPoint = new Style({
   image: new Circle({
-    radius: 7,
+    radius: 8,
     fill: new Fill({
       color: 'white'
     })
@@ -18,7 +18,7 @@ export const controlPoint = new Style({
  */
 export const firstControlPoint = new Style({
   image: new Circle({
-    radius: 7,
+    radius: 8,
     fill: new Fill({
       color: 'green'
     })
@@ -31,7 +31,7 @@ export const firstControlPoint = new Style({
  */
 export const lastControlPoint = new Style({
   image: new Circle({
-    radius: 7,
+    radius: 8,
     fill: new Fill({
       color: 'red'
     })
@@ -53,9 +53,9 @@ export const trackLine = new Style({
  */
 export const trackLineModifying = new Style({
   stroke: new Stroke({
-    color: 'blue',
+    color: 'purple',
     width: 3,
-    lineDash: [0.5, 4]
+    lineDash: [5, 9]
   })
 });
 

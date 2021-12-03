@@ -1,7 +1,7 @@
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 import Draw from 'ol/interaction/Draw.js';
-import Modify from 'ol/interaction/Modify.js';
+import Modify from './Modify.js';
 import Select from 'ol/interaction/Select.js';
 import {click} from 'ol/events/condition.js';
 
@@ -211,45 +211,27 @@ class TrackManager {
      * @private
      */
     this.modifyTrack_ = new Modify({
+      trackData: this.trackData_,
       source: this.source_,
-      style: () => null,
+      style: options.style,
       // don't modify when trying to delete a feature
       condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
       // deleteCondition: () => false,
     });
     this.modifyTrack_.setActive(false);
-    this.source_.on('changefeature', (event) => {
+
+    this.modifyTrack_.on('modifyend', (event) => {
       const feature = event.feature;
-      if (this.modifyInProgress_) {
-        const type = feature.get('type');
-        if (type === 'controlPoint') {
-          console.assert(feature.getGeometry().getType() === 'Point');
-          // moving an existing point
-          console.assert(this.modifiedControlPoint_ ? this.modifiedControlPoint_ === feature : true);
-          this.modifiedControlPoint_ = /** @type {Feature<Point>} */ (feature);
-        } else if (type === 'segment') {
-          // adding a new point to an existing segment
-          console.assert(feature.getGeometry().getType() === 'LineString');
-          this.modifiedSegment_ = /** @type {Feature<LineString>} */ (feature);
-        }
-      }
-    });
+      const type = feature.get('type');
 
-    this.modifyTrack_.on('modifystart', () => {
-      this.modifyInProgress_ = true;
-    });
-    this.modifyTrack_.on('modifyend', () => {
-      const modifiedControlPoint = this.modifiedControlPoint_;
-      const modifiedSegment = this.modifiedSegment_;
-
-      this.modifyInProgress_ = false;
-      if (modifiedControlPoint) {
-        this.updater_.updateAdjacentSegmentsGeometries(modifiedControlPoint).then(() => {
-          this.updater_.changeAdjacentSegmentsStyling(modifiedControlPoint, '');
-          this.updater_.computeAdjacentSegmentsProfile(modifiedControlPoint).then(() => this.onTrackChanged_());
+      if (type === 'controlPoint') {
+        this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
+          this.updater_.changeAdjacentSegmentsStyling(feature, '');
+          this.updater_.computeAdjacentSegmentsProfile(feature).then(() => this.onTrackChanged_());
         });
-      } else if (modifiedSegment) {
-        const indexOfSegment = this.trackData_.getSegments().indexOf(modifiedSegment);
+      } else if (type === 'segment') {
+        const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
+
         console.assert(indexOfSegment >= 0);
         const controlPoint = /** @type {Feature<Point>} */ (new Feature({
           geometry: new Point(this.lastCoordinates_)
