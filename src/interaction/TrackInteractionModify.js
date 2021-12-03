@@ -4,7 +4,6 @@ import VectorSource from 'ol/source/Vector.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
 import Event from 'ol/events/Event.js';
-import {createEditingStyle} from 'ol/style/Style'
 
 /**
  * @template UIEvent
@@ -83,6 +82,7 @@ export default class Modify extends PointerInteraction {
     this.trackData_ = options.trackData;
 
     this.involvedFeatures_ = [];
+    this.overlayLineString_ = null;
   }
 
   /**
@@ -102,7 +102,6 @@ export default class Modify extends PointerInteraction {
     if (!this.condition_(event)) {
       return false;
     }
-    console.log('down')
     console.assert(!this.feature_);
     this.feature_ = /** @type {Feature<Geometry>} */ (event.map.forEachFeatureAtPixel(
       event.pixel,
@@ -113,7 +112,7 @@ export default class Modify extends PointerInteraction {
     );
 
     if (this.feature_) {
-      let lineString;
+      this.overlayLineString_ = null;
       switch (this.feature_.get('type')) {
         case 'segment': {
           // we create a 3 points linestring
@@ -121,28 +120,38 @@ export default class Modify extends PointerInteraction {
           console.log(geometry.getType(), this.feature_.getProperties())
           console.assert(geometry.getType() === 'LineString', this.feature_.getProperties());
           const g = /** @type {LineString} */ (geometry);
-          lineString = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()])
+          this.overlayLineString_  = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()])
           this.involvedFeatures_ = [this.feature_];
           break;
         }
         case 'controlPoint': {
           // we create a 3 points linestring, doubled if end points clicked
           const {before, after} = this.trackData_.getAdjacentSegments(this.feature_)
-          const bg = before?.getGeometry();
-          const ag = after?.getGeometry();
-          const p0 = bg ? bg.getFirstCoordinate() : ag.getLastCoordinate();
-          const p2 = ag ? ag.getLastCoordinate() : bg.getFirstCoordinate();
-          lineString = new LineString([p0, event.coordinate, p2]);
-          this.involvedFeatures_ = [before, this.feature_, after];
+          if (!before && !after) {
+            // single point case
+            this.involvedFeatures_ = [this.feature_];
+          } else {
+            const bg = before?.getGeometry();
+            const ag = after?.getGeometry();
+            const p0 = bg ? bg.getFirstCoordinate() : ag.getLastCoordinate();
+            const p2 = ag ? ag.getLastCoordinate() : bg.getFirstCoordinate();
+            this.overlayLineString_  = new LineString([p0, event.coordinate, p2]);
+            this.involvedFeatures_ = [before, this.feature_, after];
+          }
+
           break;
         }
         default:
           return false; // not managed, should not happen
       }
 
-      this.overlayFeature_.setGeometry(lineString);
-      this.overlay_.getSource().addFeature(this.overlayFeature_);
-      this.involvedFeatures_.forEach(f => f?.set('subtype', 'modifying'));
+      if (this.overlayLineString_ ) {
+        this.overlayFeature_.setGeometry(this.overlayLineString_ );
+        this.overlay_.getSource().addFeature(this.overlayFeature_);
+      }
+      this.involvedFeatures_.forEach(f => {
+        f?.get('type') === 'segment' && f?.set('subtype', 'modifying')
+      });
       return true;
     } else {
       return false;
@@ -153,19 +162,28 @@ export default class Modify extends PointerInteraction {
    * @param {MapBrowserEvent<any>} event
    */
   handleDragEvent(event) {
-    const coordinates = this.overlayFeature_.getGeometry().getCoordinates();
-    console.assert(coordinates.length === 3);
-    coordinates[1] = event.coordinate;
-    this.overlayFeature_.getGeometry().setCoordinates(coordinates);
-  }
+    const type = this.feature_.get('type');
+    if (this.overlayLineString_ ) {
+      // update sketch linestring
+      const coordinates = this.overlayLineString_.getCoordinates();
+      console.assert(coordinates.length === 3);
+      coordinates[1] = event.coordinate;
+      this.overlayLineString_.setCoordinates(coordinates);
+    }
 
-  handleUpEvent(event) {
-    this.involvedFeatures_.forEach(f => f?.set('subtype', undefined));
-    if (this.feature_.get('type') === 'controlPoint') {
+    if (type === 'controlPoint') {
       this.feature_.getGeometry().setCoordinates(event.coordinate);
     }
+  }
+
+  handleUpEvent() {
+    this.involvedFeatures_.forEach(f => {
+      f?.get('type') === 'segment' && f?.set('subtype', undefined)
+    });
     this.dispatchEvent(new ModifyEvent('modifyend', this.feature_));
-    this.overlay_.getSource().removeFeature(this.overlayFeature_);
+    if (this.overlayLineString_) {
+      this.overlay_.getSource().removeFeature(this.overlayFeature_);
+    }
     this.feature_ = null;
     return false;
   }

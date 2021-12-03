@@ -1,17 +1,13 @@
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
-import Draw from 'ol/interaction/Draw.js';
-import Modify from './Modify.js';
-import Select from 'ol/interaction/Select.js';
-import {click} from 'ol/events/condition.js';
 
 import TrackData from './TrackData.js';
 import TrackUpdater from './TrackUpdater.js';
+import TrackInteraction from './TrackInteraction.js';
 
 import {findClosestPointInLines} from './closestfinder.js';
 
 import {debounce, setZ} from './util.js';
-import GeometryType from 'ol/geom/GeometryType';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
@@ -28,15 +24,6 @@ import GeometryType from 'ol/geom/GeometryType';
  * @property {geoblocks.Profiler} profiler
  * @property {import("ol/style/Style").default} [style]
  */
-
-/**
- * @param {import("ol/MapBrowserEvent").default<any>} mapBrowserEvent
- * @return {boolean}
- */
-const altKeyAndOptionallyShift = function(mapBrowserEvent) {
-  const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
-  return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
-};
 
 
 class TrackManager {
@@ -115,19 +102,14 @@ class TrackManager {
       trackData: this.trackData_
     });
 
-    /**
-     * @private
-     */
-    this.drawTrack_ = new Draw({
-      type: GeometryType.POINT,
-      source: this.source_,
+    this.interaction_ = new TrackInteraction({
       style: options.style,
-      // don't draw when trying to delete a feature
-      condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
+      trackData: this.trackData_,
+      trackLayer: this.trackLayer_,
+      map: this.map_,
     });
-    this.drawTrack_.setActive(false);
 
-    this.drawTrack_.on('drawend', (event) => {
+    this.interaction_.on('drawend', (event) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
       const feature = /** @type {Feature<Point>} */ (event.feature);
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
@@ -167,18 +149,6 @@ class TrackManager {
 
     /**
      * @private
-     * @type {?Feature<Point>}
-     */
-    this.modifiedControlPoint_ = null;
-
-    /**
-     * @private
-     * @type {?Feature<LineString>}
-     */
-    this.modifiedSegment_ = null;
-
-    /**
-     * @private
      * @type {?import("ol/coordinate").Coordinate}
      */
     this.lastCoordinates_ = null;
@@ -189,15 +159,10 @@ class TrackManager {
      */
     this.modifyInProgress_ = false;
 
-    const debouncedMapToProfileUpdater = debounce(/** @param {MapBrowserEvent} event */ (event) => {
-      this.lastCoordinates_ = event.coordinate;
-      const hoverOnFeature = this.map_.hasFeatureAtPixel(event.pixel, {
-        layerFilter: layer => layer === options.trackLayer,
-        hitTolerance: 20
-      });
-      if (hoverOnFeature && this.trackData_.getSegments().length > 0) {
+    const debouncedMapToProfileUpdater = debounce((coordinate, hover) => {
+      if (hover && this.trackData_.getSegments().length > 0) {
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
-        const best = findClosestPointInLines(segments, this.lastCoordinates_, {tolerance: 1, interpolate: true});
+        const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
         this.onTrackHovered_(best ? best.distanceFromStart : undefined);
       } else {
         this.onTrackHovered_(undefined);
@@ -205,26 +170,27 @@ class TrackManager {
     }, 10);
 
     // @ts-ignore
-    this.map_.on('pointermove', debouncedMapToProfileUpdater);
-
-    /**
-     * @private
-     */
-    this.modifyTrack_ = new Modify({
-      trackData: this.trackData_,
-      source: this.source_,
-      style: options.style,
-      // don't modify when trying to delete a feature
-      condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
-      // deleteCondition: () => false,
+    this.map_.on('pointermove', (event) => {
+      const hover = this.map_.hasFeatureAtPixel(event.pixel, {
+        layerFilter: l => l === options.trackLayer,
+        hitTolerance: 20,
+      });
+      const cursor = (this.interaction_.getActive() && hover) ? 'pointer' : '';
+      if (this.map_.getTargetElement().style.cursor !== cursor) {
+        this.map_.getTargetElement().style.cursor = cursor;
+      }
+      this.lastCoordinates_ = event.coordinate;
+      if (!this.interaction_.getActive()) {
+        debouncedMapToProfileUpdater(event.coordinate, hover);
+      }
     });
-    this.modifyTrack_.setActive(false);
 
-    this.modifyTrack_.on('modifyend', (event) => {
+    this.interaction_.on('modifyend', (event) => {
       const feature = event.feature;
       const type = feature.get('type');
 
       if (type === 'controlPoint') {
+        console.log('end', feature.getProperties())
         this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           this.updater_.computeAdjacentSegmentsProfile(feature).then(() => this.onTrackChanged_());
@@ -234,7 +200,7 @@ class TrackManager {
 
         console.assert(indexOfSegment >= 0);
         const controlPoint = /** @type {Feature<Point>} */ (new Feature({
-          geometry: new Point(this.lastCoordinates_)
+          geometry: new Point(this.lastCoordinates_) // FIXME: can we avoid keeping track of last coordinate
         }));
         this.source_.addFeature(controlPoint);
         const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
@@ -250,21 +216,9 @@ class TrackManager {
           this.updater_.computeAdjacentSegmentsProfile(controlPoint).then(() => this.onTrackChanged_());
         });
       }
-      this.modifiedControlPoint_ = null;
-      this.modifiedSegment_ = null;
     });
 
-    /**
-     * @private
-     */
-    this.deletePoint_ = new Select({
-      // only delete if alt-key is being pressed while clicking
-      condition: (mapBrowserEvent) => click(mapBrowserEvent) && altKeyAndOptionallyShift(mapBrowserEvent),
-      layers: [this.trackLayer_],
-      filter: (feature) => feature.get('type') === 'controlPoint',
-    });
-
-    this.deletePoint_.on('select', (feature) => {
+    this.interaction_.on('select', (feature) => {
       const selected = /** @type {Feature<Point>} */ (feature.selected[0]);
       console.assert(selected.getGeometry().getType() === 'Point');
       const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
@@ -301,14 +255,8 @@ class TrackManager {
       }
 
       // unselect deleted feature
-      this.deletePoint_.getFeatures().clear();
+      this.interaction_.clearSelected();
     });
-
-    // The draw interaction must be added after the modify
-    // otherwise clicking on an existing segment or point doesn't add a new point
-    this.map_.addInteraction(this.modifyTrack_);
-    this.map_.addInteraction(this.drawTrack_);
-    this.map_.addInteraction(this.deletePoint_);
   }
 
   /**
@@ -322,9 +270,7 @@ class TrackManager {
    * @param {TrackMode} mode
    */
   set mode(mode) {
-    this.drawTrack_.setActive(mode === 'edit');
-    this.modifyTrack_.setActive(mode === 'edit');
-    this.deletePoint_.setActive(mode === 'edit');
+    this.interaction_.setActive(mode === 'edit');
     this.mode_ = mode || '';
   }
 
