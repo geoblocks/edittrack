@@ -75,13 +75,26 @@ function main() {
     ]
   });
 
+  /**
+   * @param {MapBrowserEvent} mapBrowserEvent
+   * @return {boolean}
+   */
+  const altKeyAndOptionallyShift = function(mapBrowserEvent) {
+    const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
+    return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
+  };
 
+  // by default there is no delete condition (clickingg on a CP will delete it)
+  // but it is still possible to pass a custom deleteCondition
+  let deleteCondition = altKeyAndOptionallyShift;
+  deleteCondition = undefined;
   const trackManager = new TrackManager({
     map: map,
     router: router,
     profiler: profiler,
     trackLayer: trackLayer,
-    style: styleFunction
+    style: styleFunction,
+    deleteCondition: deleteCondition,
   });
 
   /**

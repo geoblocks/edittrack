@@ -10,6 +10,7 @@ import {findClosestPointInLines} from './closestfinder.js';
 
 import {debounce, setZ} from './util.js';
 
+
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
@@ -26,6 +27,7 @@ import {debounce, setZ} from './util.js';
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
  * @property {StyleFunction} style
+ * @property {function(MapBrowserEvent): boolean} [deleteCondition]
  */
 
 
@@ -110,6 +112,7 @@ class TrackManager {
       trackData: this.trackData_,
       trackLayer: this.trackLayer_,
       map: this.map_,
+      deleteCondition: options.deleteCondition,
     });
 
     /**

@@ -10,6 +10,7 @@ import {click} from 'ol/events/condition.js';
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
 /** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
 /** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
+/** @typedef {import('ol/Feature.js').default<any>} Feature */
 
 /**
  * @typedef Options
@@ -18,27 +19,29 @@ import {click} from 'ol/events/condition.js';
  * @property {VectorLayer} trackLayer
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
+ * @property {function(MapBrowserEvent): boolean} [deleteCondition]
  */
 
-
-/**
- * @param {MapBrowserEvent} mapBrowserEvent
- * @return {boolean}
- */
-const altKeyAndOptionallyShift = function(mapBrowserEvent) {
-  const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
-  return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
-};
-
-/**
- *
- * @param {MapBrowserEvent} mapBrowserEvent
- * @return {boolean}
- */
-const condition = (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent)
 
 export default class TrackInteraction extends Interaction {
 
+  /**
+   *
+   * @param {import("ol/pixel.js").Pixel} pixel
+   * @return {Feature}
+   */
+  controlPointAtPixel(pixel) {
+    // @ts-ignore false cast error
+    return this.getMap().forEachFeatureAtPixel(pixel,
+      (f) => {
+        if (f.get('type') === 'controlPoint') {
+          return f;
+        }
+        return false;
+      }, {
+      layerFilter: l => l === this.trackLayer_,
+    });
+  }
   /**
    *
    * @param {VectorSource} source
@@ -50,8 +53,10 @@ export default class TrackInteraction extends Interaction {
       type: GeometryType.POINT,
       source: source,
       style: style,
-      // don't draw when trying to delete a feature
-      condition: condition,
+      // don't draw when deleteCondition is true
+      // without condition, don't draw then there is a control point ath this pixel
+      condition: (event) => this.deleteCondition_ ?
+       !this.deleteCondition_(event) : !this.controlPointAtPixel(event.pixel)
     });
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
@@ -69,9 +74,7 @@ export default class TrackInteraction extends Interaction {
       trackData: trackData,
       source: source,
       style: style,
-      // don't modify when trying to delete a feature
-      condition: condition,
-      // deleteCondition: () => false,
+      condition: (event) => !this.deleteCondition_ || !this.deleteCondition_(event),
     });
     // @ts-ignore too complicate to declare proper events
     modify.on('modifyend', (evt) => this.dispatchEvent(evt));
@@ -86,7 +89,9 @@ export default class TrackInteraction extends Interaction {
   createSelectInteraction(trackLayer) {
     const select = new Select({
       // only delete if alt-key is being pressed while clicking
-      condition: (mapBrowserEvent) => click(mapBrowserEvent) && altKeyAndOptionallyShift(mapBrowserEvent),
+      condition: (mapBrowserEvent) =>
+        click(mapBrowserEvent) &&
+        (!this.deleteCondition_ || this.deleteCondition_(mapBrowserEvent)),
       layers: [trackLayer],
       filter: (feature) => feature.get('type') === 'controlPoint',
     });
@@ -100,6 +105,9 @@ export default class TrackInteraction extends Interaction {
    */
   constructor(options) {
     super();
+
+    this.trackLayer_ = options.trackLayer;
+    this.deleteCondition_ = options.deleteCondition;
 
     const source = options.trackLayer.getSource();
 
@@ -124,9 +132,10 @@ export default class TrackInteraction extends Interaction {
     // The draw interaction must be added after the modify
     // otherwise clicking on an existing segment or point doesn't add a new point
     const map = options.map;
+    this.setMap(map);
+    map.addInteraction(this.deletePoint_);
     map.addInteraction(this.modifyTrack_);
     map.addInteraction(this.drawTrack_);
-    map.addInteraction(this.deletePoint_);
   }
 
   clearSelected() {

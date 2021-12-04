@@ -13,9 +13,7 @@ import Event from 'ol/events/Event.js';
 
 /** @typedef {import('ol/geom/Geometry.js').default} Geometry */
 
-/**
- * @typedef {import('ol/render/Feature.js').default} RenderFeature
- */
+/** @typedef {import('ol/render/Feature.js').default} RenderFeature */
 
 export class ModifyEvent extends Event {
 
@@ -62,6 +60,8 @@ export default class Modify extends PointerInteraction {
    */
   constructor(options) {
     super();
+
+    this.dragStarted = false;
 
     this.condition_ = options.condition;
 
@@ -140,9 +140,24 @@ export default class Modify extends PointerInteraction {
       })
     );
 
-    if (this.feature_) {
+    if (!this.feature_) {
+      return false;
+    }
+    this.dragStarted = false;
+    return true;
+  }
+
+  /**
+   * @param {MapBrowserEvent<any>} event
+   */
+  handleDragEvent(event) {
+    this.pointAtCursor_.setCoordinates(event.coordinate);
+
+    const type = this.feature_.get('type');
+    if (!this.dragStarted) {
+      this.dragStarted = true;
       this.overlayLineString_ = null;
-      switch (this.feature_.get('type')) {
+      switch (type) {
         case 'segment': {
           // we create a 3 points linestring
           const geometry = this.feature_.getGeometry();
@@ -167,11 +182,10 @@ export default class Modify extends PointerInteraction {
             this.overlayLineString_  = new LineString([p0, event.coordinate, p2]);
             this.involvedFeatures_ = [before, this.feature_, after];
           }
-
           break;
         }
         default:
-          return false; // not managed, should not happen
+          throw new Error('unknown feature');
       }
 
       if (this.overlayLineString_ ) {
@@ -181,19 +195,8 @@ export default class Modify extends PointerInteraction {
       this.involvedFeatures_.forEach(f => {
         f?.get('type') === 'segment' && f?.set('subtype', 'modifying')
       });
-      return true;
-    } else {
-      return false;
     }
-  }
 
-  /**
-   * @param {MapBrowserEvent<any>} event
-   */
-  handleDragEvent(event) {
-    this.pointAtCursor_.setCoordinates(event.coordinate);
-
-    const type = this.feature_.get('type');
     if (this.overlayLineString_ ) {
       // update sketch linestring
       const coordinates = this.overlayLineString_.getCoordinates();
@@ -209,6 +212,10 @@ export default class Modify extends PointerInteraction {
   }
 
   handleUpEvent() {
+    if (!this.dragStarted) {
+      this.feature_ = null;
+      return false;
+    }
     this.involvedFeatures_.forEach(f => {
       f?.get('type') === 'segment' && f?.set('subtype', undefined)
     });
