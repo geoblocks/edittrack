@@ -15,7 +15,7 @@ import {debounce, setZ} from './util.js';
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
 /** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
-
+/** @typedef {import('./closestfinder').ClosestPoint} ClosestPoint */
 
 /** @typedef {'edit'|''} TrackMode */
 
@@ -115,6 +115,14 @@ class TrackManager {
       deleteCondition: options.deleteCondition,
     });
 
+    // Hack to test profile synchro
+    // this.closestPointGeom_ = new Point([0, 0]);
+    // this.interaction_.modifyTrack_.overlay_.getSource().addFeature(new Feature({
+    //   geometry: this.closestPointGeom_,
+    //   type: 'controlPoint',
+    //   subtype: 'first',
+    // }));
+
     /**
      * @type {HistoryManager<Feature<Point|LineString>[]>}
      */
@@ -196,7 +204,7 @@ class TrackManager {
       if (hover && this.trackData_.getSegments().length > 0) {
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
-        this.onTrackHovered_(best ? best.distanceFromStart : undefined);
+        this.onTrackHovered_(best);
       } else {
         this.onTrackHovered_(undefined);
       }
@@ -327,11 +335,14 @@ class TrackManager {
   }
 
   /**
-   * @param {number} distance
+   * @param {ClosestPoint} point
    */
-  onTrackHovered_(distance) {
+  onTrackHovered_(point) {
     // notify observers
-    this.notifyTrackHoverEventListener_(distance);
+    // if (point) {
+    //   this.closestPointGeom_.setCoordinates(point.coordinates);
+    // }
+    this.notifyTrackHoverEventListener_(point?.distanceFromStart);
   }
 
   deleteLastPoint() {

@@ -1,5 +1,4 @@
-import {closestPointOnASegment, lerpCoordinates} from './util.js';
-import {distance} from 'ol/coordinate.js';
+import {distance, closestOnSegment} from 'ol/coordinate.js';
 
 /**
  * @typedef {Object} ClosestPoint
@@ -42,9 +41,9 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
 
     let distanceFromStart = currentLineLength;
     if (interpolate && i > 0) {
-      const t = closestPointOnASegment(previous, coordinates, searched);
-      coordinates = lerpCoordinates(previous, coordinates, t);
-      distanceFromStart = currentLineLength - segmentLength * (1 - t);
+      const newCoordinates = closestOnSegment(searched, [previous, coordinates]);
+      distanceFromStart = currentLineLength - distance(coordinates, newCoordinates);
+      coordinates = newCoordinates;
     }
     const distanceFromSearched = distance(searched, coordinates);
     if (distanceFromSearched < best.distanceFromSearched) {
