@@ -30,7 +30,7 @@ function createSwisstopoMap(target) {
   const trackSource = new VectorSource();
   const trackLayer = new VectorLayer({
     source: trackSource,
-    style: styleFunction
+    style: styleFunction,
   });
 
   const extent = proj2056.getExtent();

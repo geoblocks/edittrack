@@ -54,7 +54,7 @@ export default class TrackInteraction extends Interaction {
       source: source,
       style: style,
       // don't draw when deleteCondition is true
-      // without condition, don't draw then there is a control point ath this pixel
+      // without condition, don't draw then there is a control point at this pixel
       condition: (event) => this.deleteCondition_ ?
        !this.deleteCondition_(event) : !this.controlPointAtPixel(event.pixel)
     });

@@ -182,12 +182,6 @@ class TrackManager {
 
     /**
      * @private
-     * @type {?import("ol/coordinate").Coordinate}
-     */
-    this.lastCoordinates_ = null;
-
-    /**
-     * @private
      * @type {boolean}
      */
     this.modifyInProgress_ = false;
@@ -218,7 +212,6 @@ class TrackManager {
       if (this.map_.getTargetElement().style.cursor !== cursor) {
         this.map_.getTargetElement().style.cursor = cursor;
       }
-      this.lastCoordinates_ = event.coordinate;
       if (!this.interaction_.getActive()) {
         debouncedMapToProfileUpdater(event.coordinate, hover);
       }
@@ -244,7 +237,7 @@ class TrackManager {
 
         console.assert(indexOfSegment >= 0);
         const controlPoint = /** @type {Feature<Point>} */ (new Feature({
-          geometry: new Point(this.lastCoordinates_) // FIXME: can we avoid keeping track of last coordinate
+          geometry: new Point(event.coordinate)
         }));
         this.source_.addFeature(controlPoint);
         const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);

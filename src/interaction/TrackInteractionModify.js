@@ -21,8 +21,9 @@ export class ModifyEvent extends Event {
    *
    * @param {string} type
    * @param {Feature<Geometry>} feature
+   * @param {import("ol/coordinate.js").Coordinate} coordinate
    */
-  constructor(type, feature) {
+  constructor(type, feature, coordinate) {
     super(type);
 
     /**
@@ -30,6 +31,12 @@ export class ModifyEvent extends Event {
      * @type {Feature<any>}
      */
     this.feature = feature;
+
+    /**
+     * The coordinate of the pointer when modification occured.
+     * @type {import("ol/coordinate.js").Coordinate}
+     */
+    this.coordinate = coordinate;
   }
 }
 
@@ -211,7 +218,12 @@ export default class Modify extends PointerInteraction {
     }
   }
 
-  handleUpEvent() {
+  /**
+   *
+   * @param {MapBrowserEvent<any>} event
+   * @return {boolean}
+   */
+  handleUpEvent(event) {
     if (!this.dragStarted) {
       this.feature_ = null;
       return false;
@@ -219,7 +231,7 @@ export default class Modify extends PointerInteraction {
     this.involvedFeatures_.forEach(f => {
       f?.get('type') === 'segment' && f?.set('subtype', undefined)
     });
-    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_));
+    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, event.coordinate));
     if (this.overlayLineString_) {
       this.overlay_.getSource().removeFeature(this.overlayFeature_);
     }
