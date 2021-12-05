@@ -6,6 +6,7 @@ import VectorSource from 'ol/source/Vector.js';
 import {View, Map as OLMap} from 'ol';
 
 import {styleFunction} from './style.js';
+import {createShadowLayer} from './shadowtrack.js';
 
 const RESOLUTIONS = [650, 500, 250, 100, 50, 20, 10, 5, 2.5, 2, 1.5, 1];
 
@@ -39,15 +40,17 @@ export function createMap(target) {
 
   const bgLayer = createSwisstopoLayer('ch.swisstopo.pixelkarte-farbe');
 
+  const shadowTrackLayer = createShadowLayer();
   const map = new OLMap({
     target,
     view,
     layers: [
       bgLayer,
+      shadowTrackLayer,
       trackLayer
     ]
   });
   window['mymap'] = map;
 
-  return {map, trackLayer};
+  return {map, trackLayer, shadowTrackLayer};
 }

@@ -7,6 +7,7 @@ import {View, Map as OLMap} from 'ol';
 
 import {styleFunction} from './style.js';
 import {transform, transformExtent} from 'ol/proj.js';
+import {createShadowLayer} from './shadowtrack.js';
 
 
 export function createMap(target) {
@@ -27,15 +28,17 @@ export function createMap(target) {
     source: new OSM()
   });
 
+  const shadowTrackLayer = createShadowLayer();
   const map = new OLMap({
     target,
     view,
     layers: [
       bgLayer,
+      shadowTrackLayer,
       trackLayer
     ]
   });
   window['mymap'] = map;
 
-  return {map, trackLayer};
+  return {map, trackLayer, shadowTrackLayer};
 }

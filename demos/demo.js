@@ -10,9 +10,8 @@ import {createMap} from './osm.js';
 const ROUTING_URL = 'https://graphhopper-wander.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
 
-
 function main() {
-  const {map, trackLayer} = createMap('map');
+  const {map, trackLayer, shadowTrackLayer} = createMap('map');
 
   const router = new GraphHopperRouter({
     url: ROUTING_URL,
@@ -46,6 +45,7 @@ function main() {
     router: router,
     profiler: profiler,
     trackLayer: trackLayer,
+    shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,
     deleteCondition: deleteCondition,
   });

@@ -16,6 +16,7 @@ import {debounce, setZ} from './util.js';
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
 /** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
 /** @typedef {import('./closestfinder').ClosestPoint} ClosestPoint */
+/** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
 
 /** @typedef {'edit'|''} TrackMode */
 
@@ -23,7 +24,8 @@ import {debounce, setZ} from './util.js';
  * @typedef Options
  * @type {Object}
  * @property {import("ol/Map").default} map
- * @property {import("ol/layer/Vector").default<VectorSource>} trackLayer
+ * @property {VectorLayer} trackLayer
+ * @property {VectorLayer} [shadowTrackLayer]
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
  * @property {StyleFunction} style
@@ -51,10 +53,16 @@ class TrackManager {
     this.source_ = options.trackLayer.getSource();
 
     /**
-     * @type {import("ol/layer/Vector").default<VectorSource>}
+     * @type {VectorLayer}
      * @private
      */
     this.trackLayer_ = options.trackLayer;
+
+    /**
+     * @type {VectorLayer}
+     * @private
+     */
+    this.shadowTrackLayer_ = options.shadowTrackLayer;
 
     /**
      * @type {boolean}
@@ -322,8 +330,17 @@ class TrackManager {
    */
   set mode(mode) {
     const edit = mode === 'edit';
-    if (!edit) {
+    if (edit) {
+      if (this.shadowTrackLayer_) {
+        this.shadowTrackLayer_.getSource().addFeatures(
+          this.source_.getFeatures().map(f => f.clone())
+        );
+      }
+    } else {
       this.history_.clear();
+      if (this.shadowTrackLayer_) {
+        this.shadowTrackLayer_.getSource().clear();
+      }
     }
     this.interaction_.setActive(edit);
     this.mode_ = mode || '';
