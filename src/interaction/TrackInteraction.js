@@ -56,9 +56,12 @@ export default class TrackInteraction extends Interaction {
       // don't draw when deleteCondition is true
       // without condition, don't draw then there is a control point at this pixel
       condition: (event) => this.deleteCondition_ ?
-       !this.deleteCondition_(event) : !this.controlPointAtPixel(event.pixel)
+       !this.deleteCondition_(event) : !this.controlPointAtPixel(event.pixel) // FIXME: analyze performance
     });
-    draw.on('drawend', (evt) => this.dispatchEvent(evt));
+    draw.on('drawend', (evt) => {
+      this.dispatchEvent(evt);
+      this.modifyTrack_.updateSketchFeature();
+    });
     return draw;
   }
 

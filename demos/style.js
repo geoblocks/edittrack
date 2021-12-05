@@ -73,6 +73,31 @@ export const lastControlPoint = new Style({
   })
 });
 
+const sketchLabel = {
+  'cp': new Style({
+    text: new Text({
+      font: '20px sans-serif',
+      offsetX: 20,
+      textAlign: 'left',
+      backgroundFill: new Fill({
+        color: '#ffffffaa'
+      }),
+      text: 'click to delete\ndrag to move point'
+    }),
+  }),
+  'segment': new Style({
+    text: new Text({
+      backgroundFill: new Fill({
+        color: '#ffffffaa'
+      }),
+      offsetX: 20,
+      textAlign: 'left',
+      font: '20px sans-serif',
+      text: 'drag to create point'
+    }),
+  })
+};
+
 
 /**
  * @type {Style}
@@ -97,21 +122,28 @@ export const trackLineModifying = new Style({
 
 
 /**
- * @param {string} type
- * @param {string} subtype
- * @param {number} index
+ * @param {import("ol/Feature").FeatureLike} feature
+ * @param {number} _
  * @return {?Style}
  */
-export function styleFromType(type, subtype, index) {
+export function styleFunction(feature, _) {
+  const type = feature.get('type');
+  const subtype = feature.get('subtype');
+  const index = feature.get('index');
+
   switch (type) {
+    case 'sketch': {
+      if (subtype) {
+        return [sketchControlPoint, sketchLabel[subtype]];
+      }
+      return sketchControlPoint;
+    }
     case 'controlPoint':
       switch (subtype) {
         case 'first':
           return firstControlPoint;
         case 'last':
           return lastControlPoint;
-        case 'sketch':
-          return sketchControlPoint;
         default:
           if (index !== undefined) {
             numberedControlPoint.getText().setText(index.toString());
@@ -129,15 +161,6 @@ export function styleFromType(type, subtype, index) {
     default:
       return null;
   }
-}
-
-/**
- * @param {import("ol/Feature").FeatureLike} feature
- * @param {number} _
- * @return {?Style}
- */
-export function styleFunction(feature, _) {
-  return styleFromType(feature.get('type'), feature.get('subtype'), feature.get('index'));
 }
 
 /**

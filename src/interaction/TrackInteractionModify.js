@@ -103,12 +103,18 @@ export default class Modify extends PointerInteraction {
 
     this.trackData_ = options.trackData;
 
-    this.pointAtCursor_ = new Point([0, 0]);
-    this.overlay_.getSource().addFeature(new Feature({
-      geometry: this.pointAtCursor_,
-      type: 'controlPoint',
-      subtype: 'sketch',
-    }));
+    this.lastPixel_ = [0, 0];
+
+    /**
+     * @type {Feature<Point>}
+     */
+    this.pointAtCursorFeature_ = new Feature({
+      geometry: new Point([0, 0]),
+      type: 'sketch',
+      subtype: '',
+    });
+    this.overlay_.getSource().addFeature(this.pointAtCursorFeature_);
+
     /** @type {Feature<any>[]} */
     this.involvedFeatures_ = [];
     this.overlayLineString_ = null;
@@ -123,11 +129,42 @@ export default class Modify extends PointerInteraction {
     super.setMap(map);
   }
 
+  updateSketchFeature() {
+    const f = /** @type {Feature<LineString|Point>} */ (this.getMap().forEachFeatureAtPixel(
+      this.lastPixel_,
+      (f) => f, {
+        layerFilter: (l) => l.getSource() === this.source_,
+        hitTolerance: 20
+      })
+    );
+    let subtype = '';
+    if (f) {
+      switch (f.get('type')) {
+        case 'controlPoint':
+          subtype = 'cp';
+          break;
+        case 'segment':
+          if (!this.dragStarted) {
+            subtype = 'segment';
+          }
+          break;
+        default:
+          // empty
+      }
+    }
+
+    if (subtype !== this.pointAtCursorFeature_.get('subtype')) {
+      this.pointAtCursorFeature_.set('subtype', subtype);
+    }
+  }
+
   /**
    * @param {MapBrowserEvent<any>} event
    */
   handleMoveEvent(event) {
-    this.pointAtCursor_.setCoordinates(event.coordinate);
+    this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
+    this.lastPixel_ = event.pixel;
+    this.updateSketchFeature();
   }
 
   /**
@@ -158,7 +195,7 @@ export default class Modify extends PointerInteraction {
    * @param {MapBrowserEvent<any>} event
    */
   handleDragEvent(event) {
-    this.pointAtCursor_.setCoordinates(event.coordinate);
+    this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
 
     const type = this.feature_.get('type');
     if (!this.dragStarted) {
