@@ -265,6 +265,7 @@ export default class Modify extends PointerInteraction {
       this.feature_ = null;
       return false;
     }
+    this.dragStarted = false;
     this.involvedFeatures_.forEach(f => {
       f?.get('type') === 'segment' && f?.set('subtype', undefined)
     });
