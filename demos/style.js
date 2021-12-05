@@ -66,9 +66,9 @@ export const lastControlPoint = new Style({
  */
  export const sketchControlPoint = new Style({
   image: new Circle({
-    radius: 8,
+    radius: 5,
     fill: new Fill({
-      color: '#ffffffaa'
+      color: '#ffffffdd'
     })
   })
 });
