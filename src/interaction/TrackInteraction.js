@@ -58,10 +58,7 @@ export default class TrackInteraction extends Interaction {
       condition: (event) => this.deleteCondition_ ?
        !this.deleteCondition_(event) : !this.controlPointAtPixel(event.pixel) // FIXME: analyze performance
     });
-    draw.on('drawend', (evt) => {
-      this.dispatchEvent(evt);
-      this.modifyTrack_.updateSketchFeature();
-    });
+    draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
   }
 
@@ -113,6 +110,9 @@ export default class TrackInteraction extends Interaction {
     this.deleteCondition_ = options.deleteCondition;
 
     const source = options.trackLayer.getSource();
+    // FIXME should debounce
+    source.on('addfeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
+    source.on('removefeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
 
     /**
      * @private
