@@ -23,15 +23,13 @@ import d3Elevation from '@geoblocks/d3profile/src/d3Elevation.js';
  * @typedef {Object} Options
  * @property {OLMap} map
  * @property {string|HTMLElement} profileTarget
+ * @property {boolean} [lightXAxis]
  * @property {string} [styleDefs]
  */
 
 const defaultStyleDefs = `
 .domain {
   color: rgb(0, 130, 205);
-}
-.x.axis .tick, .y.axis .tick {
-  display: none;
 }
 .y.axis .tick:first-of-type, .y.axis .tick:last-of-type {
   display: inline;
@@ -114,7 +112,7 @@ class Profile {
           zExtractor,
         }
       },
-      lightXAxis: true,
+      lightXAxis: options.lightXAxis,
       styleDefs: this.styleDefs_,
       hoverCallback: callbacks.hoverCallback,
       outCallback: callbacks.outCallback

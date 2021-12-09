@@ -1,0 +1,10 @@
+{
+  "name": "@geoblocks/edittrack",
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "dist/api",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true
+}
+

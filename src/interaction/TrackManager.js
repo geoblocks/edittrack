@@ -1,21 +1,22 @@
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
-import Draw from 'ol/interaction/Draw.js';
-import Modify from 'ol/interaction/Modify.js';
-import Select from 'ol/interaction/Select.js';
-import {click} from 'ol/events/condition.js';
 
 import TrackData from './TrackData.js';
 import TrackUpdater from './TrackUpdater.js';
+import TrackInteraction from './TrackInteraction.js';
+import HistoryManager from './HistoryManager.js';
 
 import {findClosestPointInLines} from './closestfinder.js';
 
 import {debounce, setZ} from './util.js';
-import GeometryType from 'ol/geom/GeometryType';
+
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
+/** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
+/** @typedef {import('./closestfinder').ClosestPoint} ClosestPoint */
+/** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
 
 /** @typedef {'edit'|''} TrackMode */
 
@@ -23,20 +24,13 @@ import GeometryType from 'ol/geom/GeometryType';
  * @typedef Options
  * @type {Object}
  * @property {import("ol/Map").default} map
- * @property {import("ol/layer/Vector").default<VectorSource>} trackLayer
+ * @property {VectorLayer} trackLayer
+ * @property {VectorLayer} [shadowTrackLayer]
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
- * @property {import("ol/style/Style").default} [style]
+ * @property {StyleFunction} style
+ * @property {function(MapBrowserEvent): boolean} [deleteCondition]
  */
-
-/**
- * @param {import("ol/MapBrowserEvent").default<any>} mapBrowserEvent
- * @return {boolean}
- */
-const altKeyAndOptionallyShift = function(mapBrowserEvent) {
-  const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
-  return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
-};
 
 
 class TrackManager {
@@ -59,10 +53,16 @@ class TrackManager {
     this.source_ = options.trackLayer.getSource();
 
     /**
-     * @type {import("ol/layer/Vector").default<VectorSource>}
+     * @type {VectorLayer}
      * @private
      */
     this.trackLayer_ = options.trackLayer;
+
+    /**
+     * @type {VectorLayer}
+     * @private
+     */
+    this.shadowTrackLayer_ = options.shadowTrackLayer;
 
     /**
      * @type {boolean}
@@ -115,19 +115,50 @@ class TrackManager {
       trackData: this.trackData_
     });
 
-    /**
-     * @private
-     */
-    this.drawTrack_ = new Draw({
-      type: GeometryType.POINT,
-      source: this.source_,
+    this.interaction_ = new TrackInteraction({
       style: options.style,
-      // don't draw when trying to delete a feature
-      condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
+      trackData: this.trackData_,
+      trackLayer: this.trackLayer_,
+      map: this.map_,
+      deleteCondition: options.deleteCondition,
     });
-    this.drawTrack_.setActive(false);
 
-    this.drawTrack_.on('drawend', (event) => {
+    // Hack to test profile synchro
+    // this.closestPointGeom_ = new Point([0, 0]);
+    // this.interaction_.modifyTrack_.overlay_.getSource().addFeature(new Feature({
+    //   geometry: this.closestPointGeom_,
+    //   type: 'controlPoint',
+    //   subtype: 'first',
+    // }));
+
+    /**
+     * @type {HistoryManager<Feature<Point|LineString>[]>}
+     */
+    this.history_ = new HistoryManager();
+
+    /**
+     * @type {boolean}
+     */
+    this.historyChanged_ = false;
+
+    this.addTrackChangeEventListener(() => {
+      const segments = this.getSegments();
+      if (!this.historyChanged_ && segments.length > 0) {
+        const controlPoints = this.getControlPoints();
+        this.history_.add([...segments, ...controlPoints]);
+      } else {
+        // skip the update, it originated from a undo or redo.
+        this.historyChanged_ = false;
+      }
+    });
+
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('drawend',
+    /**
+     *
+     * @param {import ('ol/interaction/Draw').DrawEvent} event
+     */
+    (event) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
       const feature = /** @type {Feature<Point>} */ (event.feature);
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
@@ -167,92 +198,62 @@ class TrackManager {
 
     /**
      * @private
-     * @type {?Feature<Point>}
-     */
-    this.modifiedControlPoint_ = null;
-
-    /**
-     * @private
-     * @type {?Feature<LineString>}
-     */
-    this.modifiedSegment_ = null;
-
-    /**
-     * @private
-     * @type {?import("ol/coordinate").Coordinate}
-     */
-    this.lastCoordinates_ = null;
-
-    /**
-     * @private
      * @type {boolean}
      */
     this.modifyInProgress_ = false;
 
-    const debouncedMapToProfileUpdater = debounce(/** @param {MapBrowserEvent} event */ (event) => {
-      this.lastCoordinates_ = event.coordinate;
-      const hoverOnFeature = this.map_.hasFeatureAtPixel(event.pixel, {
-        layerFilter: layer => layer === options.trackLayer,
-        hitTolerance: 20
-      });
-      if (hoverOnFeature && this.trackData_.getSegments().length > 0) {
+    const debouncedMapToProfileUpdater = debounce(
+      /**
+       *
+       * @param {import('ol/coordinate').Coordinate} coordinate
+       * @param {boolean} hover
+       */
+      (coordinate, hover) => {
+      if (hover && this.trackData_.getSegments().length > 0) {
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
-        const best = findClosestPointInLines(segments, this.lastCoordinates_, {tolerance: 1, interpolate: true});
-        this.onTrackHovered_(best ? best.distanceFromStart : undefined);
+        const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
+        this.onTrackHovered_(best);
       } else {
         this.onTrackHovered_(undefined);
       }
     }, 10);
 
     // @ts-ignore
-    this.map_.on('pointermove', debouncedMapToProfileUpdater);
-
-    /**
-     * @private
-     */
-    this.modifyTrack_ = new Modify({
-      source: this.source_,
-      style: () => null,
-      // don't modify when trying to delete a feature
-      condition: (mapBrowserEvent) => !altKeyAndOptionallyShift(mapBrowserEvent),
-      // deleteCondition: () => false,
-    });
-    this.modifyTrack_.setActive(false);
-    this.source_.on('changefeature', (event) => {
-      const feature = event.feature;
-      if (this.modifyInProgress_) {
-        const type = feature.get('type');
-        if (type === 'controlPoint') {
-          console.assert(feature.getGeometry().getType() === 'Point');
-          // moving an existing point
-          console.assert(this.modifiedControlPoint_ ? this.modifiedControlPoint_ === feature : true);
-          this.modifiedControlPoint_ = /** @type {Feature<Point>} */ (feature);
-        } else if (type === 'segment') {
-          // adding a new point to an existing segment
-          console.assert(feature.getGeometry().getType() === 'LineString');
-          this.modifiedSegment_ = /** @type {Feature<LineString>} */ (feature);
-        }
+    this.map_.on('pointermove', (event) => {
+      const hover = this.map_.hasFeatureAtPixel(event.pixel, {
+        layerFilter: l => l === options.trackLayer,
+        hitTolerance: 20,
+      });
+      const cursor = (this.interaction_.getActive() && hover) ? 'pointer' : '';
+      if (this.map_.getTargetElement().style.cursor !== cursor) {
+        this.map_.getTargetElement().style.cursor = cursor;
+      }
+      if (!this.interaction_.getActive()) {
+        debouncedMapToProfileUpdater(event.coordinate, hover);
       }
     });
 
-    this.modifyTrack_.on('modifystart', () => {
-      this.modifyInProgress_ = true;
-    });
-    this.modifyTrack_.on('modifyend', () => {
-      const modifiedControlPoint = this.modifiedControlPoint_;
-      const modifiedSegment = this.modifiedSegment_;
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('modifyend',
+    /**
+     *
+     * @param {import ('./TrackInteractionModify').ModifyEvent} event
+     */
+    (event) => {
+      const feature = event.feature;
+      const type = feature.get('type');
 
-      this.modifyInProgress_ = false;
-      if (modifiedControlPoint) {
-        this.updater_.updateAdjacentSegmentsGeometries(modifiedControlPoint).then(() => {
-          this.updater_.changeAdjacentSegmentsStyling(modifiedControlPoint, '');
-          this.updater_.computeAdjacentSegmentsProfile(modifiedControlPoint).then(() => this.onTrackChanged_());
+      if (type === 'controlPoint') {
+        this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
+          this.updater_.changeAdjacentSegmentsStyling(feature, '');
+          this.updater_.computeAdjacentSegmentsProfile(feature).then(() => this.onTrackChanged_());
         });
-      } else if (modifiedSegment) {
-        const indexOfSegment = this.trackData_.getSegments().indexOf(modifiedSegment);
+      } else if (type === 'segment') {
+        const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
+
         console.assert(indexOfSegment >= 0);
         const controlPoint = /** @type {Feature<Point>} */ (new Feature({
-          geometry: new Point(this.lastCoordinates_)
+          geometry: new Point(event.coordinate)
         }));
         this.source_.addFeature(controlPoint);
         const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
@@ -268,22 +269,16 @@ class TrackManager {
           this.updater_.computeAdjacentSegmentsProfile(controlPoint).then(() => this.onTrackChanged_());
         });
       }
-      this.modifiedControlPoint_ = null;
-      this.modifiedSegment_ = null;
     });
 
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('select',
     /**
-     * @private
+     *
+     * @param {import ('ol/interaction/Select').SelectEvent} event
      */
-    this.deletePoint_ = new Select({
-      // only delete if alt-key is being pressed while clicking
-      condition: (mapBrowserEvent) => click(mapBrowserEvent) && altKeyAndOptionallyShift(mapBrowserEvent),
-      layers: [this.trackLayer_],
-      filter: (feature) => feature.get('type') === 'controlPoint',
-    });
-
-    this.deletePoint_.on('select', (feature) => {
-      const selected = /** @type {Feature<Point>} */ (feature.selected[0]);
+    (event) => {
+      const selected = /** @type {Feature<Point>} */ (event.selected[0]);
       console.assert(selected.getGeometry().getType() === 'Point');
       const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
@@ -319,14 +314,8 @@ class TrackManager {
       }
 
       // unselect deleted feature
-      this.deletePoint_.getFeatures().clear();
+      this.interaction_.clearSelected();
     });
-
-    // The draw interaction must be added after the modify
-    // otherwise clicking on an existing segment or point doesn't add a new point
-    this.map_.addInteraction(this.modifyTrack_);
-    this.map_.addInteraction(this.drawTrack_);
-    this.map_.addInteraction(this.deletePoint_);
   }
 
   /**
@@ -340,9 +329,20 @@ class TrackManager {
    * @param {TrackMode} mode
    */
   set mode(mode) {
-    this.drawTrack_.setActive(mode === 'edit');
-    this.modifyTrack_.setActive(mode === 'edit');
-    this.deletePoint_.setActive(mode === 'edit');
+    const edit = mode === 'edit';
+    if (edit) {
+      if (this.shadowTrackLayer_) {
+        this.shadowTrackLayer_.getSource().addFeatures(
+          this.source_.getFeatures().map(f => f.clone())
+        );
+      }
+    } else {
+      this.history_.clear();
+      if (this.shadowTrackLayer_) {
+        this.shadowTrackLayer_.getSource().clear();
+      }
+    }
+    this.interaction_.setActive(edit);
     this.mode_ = mode || '';
   }
 
@@ -352,11 +352,14 @@ class TrackManager {
   }
 
   /**
-   * @param {number} distance
+   * @param {ClosestPoint} point
    */
-  onTrackHovered_(distance) {
+  onTrackHovered_(point) {
     // notify observers
-    this.notifyTrackHoverEventListener_(distance);
+    // if (point) {
+    //   this.closestPointGeom_.setCoordinates(point.coordinates);
+    // }
+    this.notifyTrackHoverEventListener_(point?.distanceFromStart);
   }
 
   deleteLastPoint() {
@@ -478,6 +481,35 @@ class TrackManager {
    */
   notifyTrackHoverEventListener_(distance) {
     this.trackHoverEventListeners_.forEach(handler => handler(distance));
+  }
+
+
+  /**
+   * Undo one drawing step
+   */
+   undo() {
+    if (this.mode === 'edit') {
+      const features = this.history_.undo();
+      if (features) {
+        this.restoreFeatures(features.map(feature => feature.clone()));
+        this.historyChanged_ = true;
+      } else {
+        this.clear();
+      }
+    }
+  }
+
+  /**
+   * Redo one drawing step
+   */
+  redo() {
+    if (this.mode === 'edit') {
+      const features = this.history_.redo();
+      if (features) {
+        this.restoreFeatures(features.map(feature => feature.clone()));
+        this.historyChanged_ = true;
+      }
+    }
   }
 }
 

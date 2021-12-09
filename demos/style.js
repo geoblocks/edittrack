@@ -1,12 +1,13 @@
-import {Circle, Fill, Stroke, Style, Icon} from 'ol/style.js';
+import {Circle, Fill, Stroke, Style, Icon, Text} from 'ol/style.js';
 
 
 /**
  * @type {Style}
  */
 export const controlPoint = new Style({
+  zIndex: 10,
   image: new Circle({
-    radius: 7,
+    radius: 8,
     fill: new Fill({
       color: 'white'
     })
@@ -17,8 +18,9 @@ export const controlPoint = new Style({
  * @type {Style}
  */
 export const firstControlPoint = new Style({
+  zIndex: 10,
   image: new Circle({
-    radius: 7,
+    radius: 8,
     fill: new Fill({
       color: 'green'
     })
@@ -30,13 +32,72 @@ export const firstControlPoint = new Style({
  * @type {Style}
  */
 export const lastControlPoint = new Style({
+  zIndex: 10,
   image: new Circle({
-    radius: 7,
+    radius: 8,
     fill: new Fill({
       color: 'red'
     })
   })
 });
+
+
+/**
+ * @type {Style}
+ */
+ export const numberedControlPoint = new Style({
+  zIndex: 10,
+  image: new Circle({
+    radius: 8,
+    fill: new Fill({
+      color: '#ffffffdd'
+    })
+  }),
+  text: new Text({
+    fill: new Fill({
+      color: 'blue'
+    })
+  })
+});
+
+
+/**
+ * @type {Style}
+ */
+ export const sketchControlPoint = new Style({
+  image: new Circle({
+    radius: 5,
+    fill: new Fill({
+      color: '#ffffffdd'
+    })
+  })
+});
+
+const sketchLabel = {
+  'cp': new Style({
+    text: new Text({
+      font: '20px sans-serif',
+      offsetX: 20,
+      textAlign: 'left',
+      backgroundFill: new Fill({
+        color: '#ffffffaa'
+      }),
+      text: 'click to delete\ndrag to move point'
+    }),
+  }),
+  'segment': new Style({
+    text: new Text({
+      backgroundFill: new Fill({
+        color: '#ffffffaa'
+      }),
+      offsetX: 20,
+      textAlign: 'left',
+      font: '20px sans-serif',
+      text: 'drag to create point'
+    }),
+  })
+};
+
 
 /**
  * @type {Style}
@@ -53,20 +114,30 @@ export const trackLine = new Style({
  */
 export const trackLineModifying = new Style({
   stroke: new Stroke({
-    color: 'blue',
+    color: 'purple',
     width: 3,
-    lineDash: [0.5, 4]
+    lineDash: [5, 9]
   })
 });
 
 
 /**
- * @param {string} type
- * @param {string} subtype
+ * @param {import("ol/Feature").FeatureLike} feature
+ * @param {number} _
  * @return {?Style}
  */
-export function styleFromType(type, subtype) {
+export function styleFunction(feature, _) {
+  const type = feature.get('type');
+  const subtype = feature.get('subtype');
+  const index = feature.get('index');
+
   switch (type) {
+    case 'sketch': {
+      if (subtype) {
+        return [sketchControlPoint, sketchLabel[subtype]];
+      }
+      return sketchControlPoint;
+    }
     case 'controlPoint':
       switch (subtype) {
         case 'first':
@@ -74,6 +145,10 @@ export function styleFromType(type, subtype) {
         case 'last':
           return lastControlPoint;
         default:
+          if (index !== undefined) {
+            numberedControlPoint.getText().setText(index.toString());
+            return numberedControlPoint;
+          }
           return controlPoint;
       }
     case 'segment':
@@ -86,15 +161,6 @@ export function styleFromType(type, subtype) {
     default:
       return null;
   }
-}
-
-/**
- * @param {import("ol/Feature").FeatureLike} feature
- * @param {number} _
- * @return {?Style}
- */
-export function styleFunction(feature, _) {
-  return styleFromType(feature.get('type'), feature.get('subtype'));
 }
 
 /**

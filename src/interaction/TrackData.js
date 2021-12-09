@@ -239,7 +239,7 @@ class TrackData {
       pointAfter.set('subtype', 'first');
     }
     // deleted point was the last point, update new last point
-    if (pointBefore && deleteIndex === this.controlPoints_.length - 1) {
+    if (pointBefore && deleteIndex === this.controlPoints_.length - 1 && deleteIndex !== 1) {
       pointBefore.set('subtype', 'last');
     }
 

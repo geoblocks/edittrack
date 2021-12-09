@@ -1,64 +1,17 @@
-import SwisstopoSource from '@geoblocks/sources/src/Swisstopo.js';
-import EPSG_2056, {proj as proj2056} from '@geoblocks/proj/src/EPSG_2056.js';
-import TileLayer from 'ol/layer/Tile.js';
-import VectorLayer from 'ol/layer/Vector.js';
-import VectorSource from 'ol/source/Vector.js';
-import {View, Map as OLMap} from 'ol';
-import TrackManager from '../src/interaction/TrackManager';
-import GraphHopperRouter from '../src/router/GraphHopper';
-import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../src/profiler/index';
-import Profile from '../src/Profile';
-import {controlPoint, styleFunction} from './style';
-import {Style, Circle, Fill} from 'ol/style';
 
-const RESOLUTIONS = [650, 500, 250, 100, 50, 20, 10, 5, 2.5, 2, 1.5, 1];
+import TrackManager from '../src/interaction/TrackManager.js';
+import GraphHopperRouter from '../src/router/GraphHopper.js';
+import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../src/profiler/index.js';
+import Profile from '../src/Profile.js';
+import {styleFunction} from './style.js';
+import {Style, Circle, Fill} from 'ol/style';
+import {createMap} from './osm.js';
+
 const ROUTING_URL = 'https://graphhopper-wander.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
 
-function createSwisstopoLayer(layer, format = 'image/jpeg') {
-  const swisstopoLayer = new SwisstopoSource({
-    layer,
-    format,
-    timestamp: 'current',
-    projection: EPSG_2056,
-    crossOrigin: 'anonymous'
-  });
-  return new TileLayer({source: swisstopoLayer});
-}
-
-function createSwisstopoMap(target) {
-  const trackSource = new VectorSource();
-  const trackLayer = new VectorLayer({
-    source: trackSource,
-    style: styleFunction
-  });
-
-  const extent = proj2056.getExtent();
-  const view = new View({
-    projection: EPSG_2056,
-    resolutions: RESOLUTIONS,
-    extent: extent,
-    center: [2532661.0, 1151654.0],
-    zoom: 10,
-  });
-
-  const bgLayer = createSwisstopoLayer('ch.swisstopo.pixelkarte-farbe');
-
-  const map = window['mymap'] = new OLMap({
-    target,
-    view,
-    layers: [
-      bgLayer,
-      trackLayer
-    ]
-  });
-
-  return {map, trackLayer};
-}
-
-
 function main() {
-  const {map, trackLayer} = createSwisstopoMap('map');
+  const {map, trackLayer, shadowTrackLayer} = createMap('map');
 
   const router = new GraphHopperRouter({
     url: ROUTING_URL,
@@ -74,13 +27,27 @@ function main() {
     ]
   });
 
+  /**
+   * @param {MapBrowserEvent} mapBrowserEvent
+   * @return {boolean}
+   */
+  const altKeyAndOptionallyShift = function(mapBrowserEvent) {
+    const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
+    return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
+  };
 
+  // by default there is no delete condition (clickingg on a CP will delete it)
+  // but it is still possible to pass a custom deleteCondition
+  let deleteCondition = altKeyAndOptionallyShift;
+  deleteCondition = undefined;
   const trackManager = new TrackManager({
     map: map,
     router: router,
     profiler: profiler,
     trackLayer: trackLayer,
-    style: controlPoint
+    shadowTrackLayer: shadowTrackLayer,
+    style: styleFunction,
+    deleteCondition: deleteCondition,
   });
 
   /**
@@ -120,6 +87,8 @@ function main() {
     trackManager.clear();
   });
 
+  document.querySelector('#undo').addEventListener('click', () => trackManager.undo());
+  document.querySelector('#redo').addEventListener('click', () => trackManager.redo());
   document.querySelector('#getTrackData').addEventListener('click', () => {
     trackManager.getTrackFeature();
     const features = [
