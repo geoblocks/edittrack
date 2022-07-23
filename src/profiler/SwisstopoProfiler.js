@@ -1,7 +1,7 @@
 import GeoJSONFormat from 'ol/format/GeoJSON.js';
+import {get as getProjection} from 'ol/proj.js';
 
-// @ts-ignore
-import EPSG_2056 from '@geoblocks/proj/src/EPSG_2056.js';
+
 /** @typedef {import('ol/geom/LineString').default} LineString */
 
 
@@ -35,12 +35,15 @@ export default class SwisstopoProfiler {
      */
     this.url_ = 'https://api3.geo.admin.ch/rest/services/profile.json';
 
+    const proj = getProjection('EPSG:2056');
+    console.assert(proj, 'Register projection first');
+
     /**
      * @private
      * @type {GeoJSONFormat}
      */
     this.geojsonFormat_ = new GeoJSONFormat({
-      dataProjection: EPSG_2056,
+      dataProjection: proj,
       featureProjection: options.projection
     });
   }
