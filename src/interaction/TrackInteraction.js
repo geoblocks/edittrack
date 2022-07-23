@@ -3,7 +3,6 @@ import Interaction from 'ol/interaction/Interaction.js';
 import Draw from 'ol/interaction/Draw.js';
 import Select from 'ol/interaction/Select.js';
 import Modify from './TrackInteractionModify.js';
-import GeometryType from 'ol/geom/GeometryType';
 import {click} from 'ol/events/condition.js';
 
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
@@ -50,7 +49,7 @@ export default class TrackInteraction extends Interaction {
    */
   createDrawInteraction(source, style) {
     const draw = new Draw({
-      type: GeometryType.POINT,
+      type: 'Point',
       source: source,
       style: style,
       // don't draw when deleteCondition is true
