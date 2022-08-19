@@ -2,7 +2,6 @@
 
 import 'mocha';
 import {assert} from 'chai';
-import GeometryLayout from 'ol/geom/GeometryLayout.js';
 import LineString from 'ol/geom/LineString.js';
 import PolylineXYZM from '../src/router/PolylineXYZM.js';
 
@@ -13,7 +12,7 @@ describe('PolylineXYZM', () => {
   it('writes features', () => {
     const p1 = [0, 0, 0, 0];
     const p2 = [1, 1, 1, 1];
-    const po1 = format.writeGeometry(new LineString([p1, p2], GeometryLayout.XYZM));
+    const po1 = format.writeGeometry(new LineString([p1, p2], 'XYZM'));
     assert.equal(po1, '???_ibE_ibEgE');
   });
 
@@ -38,7 +37,7 @@ describe('PolylineXYZM', () => {
         492.11,
         110.0957304249026]
     ];
-    const po1 = format.writeGeometry(new LineString(coos, GeometryLayout.XYZM));
+    const po1 = format.writeGeometry(new LineString(coos, 'XYZM'));
     assert.equal(po1, '_vr{Guqyf@_c_BuAk@eAkAs@NH]~@');
   });
 

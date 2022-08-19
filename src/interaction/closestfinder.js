@@ -1,5 +1,4 @@
 import {distance as fakeDistance, closestOnSegment} from 'ol/coordinate.js';
-import GeometryLayout from 'ol/geom/GeometryLayout.js';
 
 /**
  * @typedef {Object} ClosestPoint
@@ -26,7 +25,7 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
   let currentLineLength = 0; // from XYZM data
   const coordinatess = line.getCoordinates();
   let previous = coordinatess[0];
-  if (line.getLayout() !== GeometryLayout.XYZM) {
+  if (line.getLayout() !== 'XYZM') {
     console.error('invalid', line);
     throw new Error('findClosestPointInLine works only with XYZM lines');
   }

@@ -1,5 +1,4 @@
 import Polyline, {decodeDeltas, encodeDeltas} from 'ol/format/Polyline.js';
-import GeometryLayout from 'ol/geom/GeometryLayout.js';
 import {inflateCoordinates} from 'ol/geom/flat/inflate.js';
 import {flipXY} from 'ol/geom/flat/flip.js';
 import LineString from 'ol/geom/LineString.js';
@@ -17,7 +16,7 @@ export default class PolylineXYZM extends Polyline {
     super({
       factor: 1e5,
       // @ts-ignore
-      geometryLayout: GeometryLayout.XYZM
+      geometryLayout: 'XYZM'
     });
     this.zFactor = 1000;
   }
@@ -46,7 +45,7 @@ export default class PolylineXYZM extends Polyline {
       c[2] *= this.zFactor;
       c[3] = accDistance;
     });
-    const lineString = new LineString(coordinates, GeometryLayout.XYZM);
+    const lineString = new LineString(coordinates, 'XYZM');
 
     const outGeometry = /** @type {LineString} */ (transformGeometryWithOptions(
       lineString,

@@ -1,6 +1,5 @@
 import {toLonLat} from 'ol/proj.js';
 import PolyLineXYZMFormat from './PolylineXYZM.js';
-import GeometryLayout from 'ol/geom/GeometryLayout';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/geom/Point').default} Point */
@@ -62,7 +61,7 @@ export default class GraphHopper {
           }));
           const resultCoordinates = resultGeometry.getCoordinates();
           const segmentGeometry = /** @type {import("ol/geom/LineString").default} */ (segment.getGeometry());
-          segmentGeometry.setCoordinates(resultCoordinates, GeometryLayout.XYZM);
+          segmentGeometry.setCoordinates(resultCoordinates, 'XYZM');
 
           segment.setProperties({
             snapped: true
