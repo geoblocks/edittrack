@@ -36,7 +36,7 @@ export default class SwisstopoProfiler {
     this.url_ = 'https://api3.geo.admin.ch/rest/services/profile.json';
 
     const proj = getProjection('EPSG:2056');
-    console.assert(proj, 'Register projection first');
+    console.assert(!!proj, 'Register projection first');
 
     /**
      * @private
