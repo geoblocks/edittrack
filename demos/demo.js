@@ -7,7 +7,7 @@ import {styleFunction} from './style.js';
 import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './osm.js';
 
-const ROUTING_URL = 'https://graphhopper-wander.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
+const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
 
 function main() {
