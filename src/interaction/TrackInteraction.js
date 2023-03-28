@@ -9,7 +9,7 @@ import {click} from 'ol/events/condition.js';
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
 /** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
 /** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
-/** @typedef {import('ol/Feature.js').default<any>} Feature */
+/** @typedef {import('ol/Feature.js').FeatureLike} FeatureLike */
 
 /**
  * @typedef Options
@@ -27,10 +27,9 @@ export default class TrackInteraction extends Interaction {
   /**
    *
    * @param {import("ol/pixel.js").Pixel} pixel
-   * @return {Feature}
+   * @return {FeatureLike|false}
    */
   controlPointAtPixel(pixel) {
-    // @ts-ignore false cast error
     return this.getMap().forEachFeatureAtPixel(pixel,
       (f) => {
         if (f.get('type') === 'controlPoint') {

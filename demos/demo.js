@@ -74,7 +74,6 @@ function main() {
 
   trackManager.mode = 'edit';
   const tmEl = document.querySelector('#trackmode');
-  // @ts-ignore
   tmEl.addEventListener('change', evt => trackManager.mode = evt.target.value);
 
   document.querySelector('#snap').addEventListener('click', () => {
