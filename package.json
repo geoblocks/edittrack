@@ -21,7 +21,6 @@
     "@geoblocks/sources": "^0.3.1",
     "@types/chai": "^4.3.3",
     "@types/mocha": "^9.1.1",
-    "@types/ol": "^6.5.3",
     "@types/proj4": "^2.5.2",
     "@web/dev-server": "^0.1.34",
     "chai": "^4.3.6",
