@@ -7,8 +7,7 @@ import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
 
 /**
- * @template UIEvent
- * @typedef {import('ol/MapBrowserEvent.js').default<UIEvent>} MapBrowserEvent<UIEvent>
+ * @typedef {import('ol/MapBrowserEvent.js').default<UIEvent>} MapBrowserEvent
  */
 
 /** @typedef {import('ol/geom/Geometry.js').default} Geometry */
@@ -33,7 +32,7 @@ export class ModifyEvent extends Event {
     this.feature = feature;
 
     /**
-     * The coordinate of the pointer when modification occured.
+     * The coordinate of the pointer when modification occurred.
      * @type {import("ol/coordinate.js").Coordinate}
      */
     this.coordinate = coordinate;
@@ -49,7 +48,7 @@ export class ModifyEvent extends Event {
  * @property {VectorSource<any>} source
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
- * @property {function(MapBrowserEvent<any>): boolean} condition
+ * @property {function(MapBrowserEvent): boolean} condition
  */
 
 
@@ -159,7 +158,7 @@ export default class Modify extends PointerInteraction {
   }
 
   /**
-   * @param {MapBrowserEvent<any>} event
+   * @param {MapBrowserEvent} event
    */
   handleMoveEvent(event) {
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
@@ -168,7 +167,7 @@ export default class Modify extends PointerInteraction {
   }
 
   /**
-   * @param {MapBrowserEvent<any>} event
+   * @param {MapBrowserEvent} event
    * @return {boolean}
    */
   handleDownEvent(event) {
@@ -192,7 +191,7 @@ export default class Modify extends PointerInteraction {
   }
 
   /**
-   * @param {MapBrowserEvent<any>} event
+   * @param {MapBrowserEvent} event
    */
   handleDragEvent(event) {
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
@@ -257,7 +256,7 @@ export default class Modify extends PointerInteraction {
 
   /**
    *
-   * @param {MapBrowserEvent<any>} event
+   * @param {MapBrowserEvent} event
    * @return {boolean}
    */
   handleUpEvent(event) {

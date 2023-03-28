@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     /* Basic Options */
-    "target": "ES2017",      
+    "target": "ES2017",
     "module": "ES2020",
     "lib": ["es2020", "dom"],
-    "allowJs": true,         
-    "checkJs": true,         
-    "noEmit": true,          
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
     "skipLibCheck": true,
 
     /* Strict Type-Checking Options */
@@ -35,7 +35,6 @@
     "test/**/*.js",
     "src/**/*.js",
     "src/**/*.d.ts",
-    "node_modules/@types/openlayers/*",
     "types/**/*"
   ]
 }

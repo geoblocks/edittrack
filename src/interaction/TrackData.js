@@ -178,7 +178,8 @@ class TrackData {
       // first control point
       point.set('subtype', 'first');
       return {pointFrom: point, pointTo: point, segment: undefined};
-    } else if (length >= 2) {
+    }
+    if (length >= 2) {
       const previous = this.controlPoints_[length - 2];
       // change previous point from 'last' to 'control' except if it's the 'first'
       if (length > 2) {

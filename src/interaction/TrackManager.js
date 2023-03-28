@@ -218,7 +218,6 @@ class TrackManager {
       }
     }, 10);
 
-    // @ts-ignore
     this.map_.on('pointermove', (event) => {
       const hover = this.map_.hasFeatureAtPixel(event.pixel, {
         layerFilter: l => l === options.trackLayer,

@@ -15,7 +15,6 @@ export default class PolylineXYZM extends Polyline {
   constructor() {
     super({
       factor: 1e5,
-      // @ts-ignore
       geometryLayout: 'XYZM'
     });
     this.zFactor = 1000;

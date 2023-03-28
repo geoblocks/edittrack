@@ -38,10 +38,9 @@
     if (this.historyIndex_ > 0) {
       this.historyIndex_--;
       return this.history_[this.historyIndex_];
-    } else {
-      this.historyIndex_ = -1;
-      return undefined;
     }
+    this.historyIndex_ = -1;
+    return undefined;
   }
 
   /**
@@ -51,8 +50,7 @@
     if (this.historyIndex_ < this.history_.length - 1) {
       this.historyIndex_++;
       return this.history_[this.historyIndex_];
-    } else {
-      return undefined;
     }
+    return undefined;
   }
 }
