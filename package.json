@@ -12,8 +12,14 @@
     "lint": "npm run eslint && npm run typecheck",
     "doc": "typedoc"
   },
-  "author": "",
-  "license": "bsd",
+  "license": "BSD-3-Clause",
+  "repository": "github:geoblocks/edittrack",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src"
+  ],
   "type": "module",
   "devDependencies": {
     "@geoblocks/d3profile": "^0.0.6",
