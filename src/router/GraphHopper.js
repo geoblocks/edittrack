@@ -43,8 +43,8 @@ export default class GraphHopper {
    * @return {Promise<void>}
    */
   snapSegment(segment, pointFrom, pointTo) {
-    const pointFromGeometry = /** @type {import("ol/geom/Point").default} */ (pointFrom.getGeometry());
-    const pointToGeometry = /** @type {import("ol/geom/Point").default} */ (pointTo.getGeometry());
+    const pointFromGeometry = pointFrom.getGeometry();
+    const pointToGeometry = pointTo.getGeometry();
     const pointFromCoordinates = pointFromGeometry.getCoordinates();
     const pointToCoordinates = pointToGeometry.getCoordinates();
 
@@ -60,7 +60,7 @@ export default class GraphHopper {
             featureProjection: this.mapProjection_
           }));
           const resultCoordinates = resultGeometry.getCoordinates();
-          const segmentGeometry = /** @type {import("ol/geom/LineString").default} */ (segment.getGeometry());
+          const segmentGeometry = segment.getGeometry();
           segmentGeometry.setCoordinates(resultCoordinates, 'XYZM');
 
           segment.setProperties({

@@ -36,7 +36,7 @@ function main() {
     return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
   };
 
-  // by default there is no delete condition (clickingg on a CP will delete it)
+  // by default there is no delete condition (clicking on a CP will delete it)
   // but it is still possible to pass a custom deleteCondition
   let deleteCondition = altKeyAndOptionallyShift;
   deleteCondition = undefined;

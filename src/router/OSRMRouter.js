@@ -65,8 +65,8 @@ export default class OSRMRouter {
    * @return {Promise<void>}
    */
   snapSegment(segment, pointFrom, pointTo) {
-    const pointFromGeometry = /** @type {Point} */ (pointFrom.getGeometry());
-    const pointToGeometry = /** @type {Point} */ (pointTo.getGeometry());
+    const pointFromGeometry = pointFrom.getGeometry();
+    const pointToGeometry = pointTo.getGeometry();
     const coordinates = [pointFromGeometry.getCoordinates(), pointToGeometry.getCoordinates()].map(cc => toLonLat(cc.slice(0, 2), this.mapProjection_));
 
     // [ [a,b] , [c,d] ] -> 'a,b;c,d'
