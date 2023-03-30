@@ -6,11 +6,13 @@
   "scripts": {
     "eslint": "eslint src test",
     "eslint-fix": "eslint src test --fix",
-    "start": "web-dev-server --watch --node-resolve --open /demos/",
+    "start": "parcel serve demos/*.html",
+    "build-demo": "parcel build --target demos demos/*.html",
     "test": "mocha --exit",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",
-    "doc": "typedoc"
+    "doc": "typedoc",
+    "gh-pages": "rm -rf docs && npm run doc && npm run build-demo && gh-pages -d dist"
   },
   "license": "BSD-3-Clause",
   "repository": "github:geoblocks/edittrack",
@@ -21,6 +23,12 @@
     "src"
   ],
   "type": "module",
+  "targets": {
+    "demos": {
+      "context": "browser",
+      "publicUrl": "./"
+    }
+  },
   "devDependencies": {
     "@geoblocks/d3profile": "^0.0.6",
     "@geoblocks/proj": "^0.4.6",
@@ -28,12 +36,13 @@
     "@types/chai": "^4.3.4",
     "@types/mocha": "^10.0.1",
     "@types/proj4": "^2.5.2",
-    "@web/dev-server": "^0.1.36",
     "chai": "^4.3.7",
     "eslint": "^8.36.0",
     "eslint-config-openlayers": "^18.0.0",
+    "gh-pages": "^5.0.0",
     "mocha": "^10.2.0",
     "ol": "^7.3.0",
+    "parcel": "^2.8.3",
     "proj4": "^2.9.0",
     "tsconfig-paths": "^4.1.2",
     "typedoc": "^0.23.28",
