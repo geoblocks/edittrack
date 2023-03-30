@@ -328,7 +328,7 @@ function createStraightSegment(featureFrom, featureTo) {
     featureTo.getGeometry().getCoordinates()
   ]);
 
-  const segment = /** @type {Feature<LineString>} */ (new Feature({geometry}));
+  const segment = new Feature({geometry});
   segment.set('type', 'segment');
 
   return segment;

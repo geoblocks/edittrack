@@ -172,7 +172,7 @@ class TrackManager {
                 const {before} = this.trackData_.getAdjacentSegments(pointFrom);
                 if (before && !before.get('snapped')) {
                   // move the last point of the previous straight segment
-                  const geometry = /** @type {LineString} */ (before.getGeometry());
+                  const geometry = before.getGeometry();
                   const coordinates = geometry.getCoordinates();
                   console.assert(coordinates.length === 2, 'Previous segment is not a straight line');
                   geometry.setCoordinates([coordinates[0], segment.getGeometry().getFirstCoordinate()]);
@@ -251,9 +251,9 @@ class TrackManager {
         const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
         console.assert(indexOfSegment >= 0);
-        const controlPoint = /** @type {Feature<Point>} */ (new Feature({
+        const controlPoint = new Feature({
           geometry: new Point(event.coordinate)
-        }));
+        });
         this.source_.addFeature(controlPoint);
         const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
         console.assert(!!removed);
@@ -410,7 +410,7 @@ class TrackManager {
    */
   getControlPoints() {
     return this.trackData_.getControlPoints().map((point, index) => {
-      const clone = /** @type {Feature<Point>} */ (point.clone());
+      const clone = point.clone();
       clone.set('index', index);
       return clone;
     });
@@ -421,7 +421,7 @@ class TrackManager {
    */
   getSegments() {
     return this.trackData_.getSegments().map((segment, index) => {
-      const clone = /** @type {Feature<LineString>} */ (segment.clone());
+      const clone = segment.clone();
       clone.set('index', index);
       return clone;
     });
