@@ -13,6 +13,9 @@
  * @property {geoblocks.Profiler} profiler
  */
 
+/**
+ * Drive the chosen router and profiler to update the segment geometries.
+ */
 class TrackUpdater {
 
   /**

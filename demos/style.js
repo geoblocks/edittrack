@@ -27,6 +27,18 @@ export const firstControlPoint = new Style({
   })
 });
 
+/**
+ * @type {Style}
+ */
+export const poiPoint = new Style({
+  zIndex: 100,
+  image: new Circle({
+    radius: 8,
+    fill: new Fill({
+      color: 'yellow'
+    })
+  })
+});
 
 /**
  * @type {Style}
@@ -74,6 +86,17 @@ export const lastControlPoint = new Style({
 });
 
 const sketchLabel = {
+  'POI': new Style({
+    text: new Text({
+      font: '20px sans-serif',
+      offsetX: 20,
+      textAlign: 'left',
+      backgroundFill: new Fill({
+        color: '#ffffffaa'
+      }),
+      text: 'click to delete\ndrag to move POI'
+    }),
+  }),
   'cp': new Style({
     text: new Text({
       font: '20px sans-serif',
@@ -138,6 +161,8 @@ export function styleFunction(feature, _) {
       }
       return sketchControlPoint;
     }
+    case 'POI':
+      return poiPoint;
     case 'controlPoint':
       switch (subtype) {
         case 'first':
