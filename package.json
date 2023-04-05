@@ -6,8 +6,8 @@
   "scripts": {
     "eslint": "eslint src test",
     "eslint-fix": "eslint src test --fix",
-    "start": "parcel serve demos/*.html",
-    "build-demo": "parcel build --target demos demos/*.html",
+    "start": "parcel serve demos/*/*.html",
+    "build-demo": "parcel build --target demos demos/*/*.html",
     "test": "mocha --exit",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",

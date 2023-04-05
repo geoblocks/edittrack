@@ -231,7 +231,7 @@ export default class Modify extends PointerInteraction {
           break;
         }
         case 'POI': {
-          // nothing to do
+          this.involvedFeatures_ = [this.feature_];
           break;
         }
         default:

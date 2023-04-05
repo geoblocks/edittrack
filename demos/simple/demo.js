@@ -1,8 +1,8 @@
 
-import TrackManager from '../src/interaction/TrackManager.js';
-import GraphHopperRouter from '../src/router/GraphHopper.js';
-import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../src/profiler/index.js';
-import Profile from '../src/Profile.js';
+import TrackManager from '../../src/interaction/TrackManager.js';
+import GraphHopperRouter from '../../src/router/GraphHopper.js';
+import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.js';
+import Profile from '../../src/Profile.js';
 import {styleFunction} from './style.js';
 import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './osm.js';
