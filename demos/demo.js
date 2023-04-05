@@ -31,7 +31,7 @@ function main() {
    * @param {MapBrowserEvent} mapBrowserEvent
    * @return {boolean}
    */
-  const altKeyAndOptionallyShift = function(mapBrowserEvent) {
+  const altKeyAndOptionallyShift = function (mapBrowserEvent) {
     const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
     return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
   };
@@ -49,6 +49,8 @@ function main() {
     style: styleFunction,
     deleteCondition: deleteCondition,
   });
+
+  window.trackManager = trackManager;
 
   /**
    * @type {Profile}
@@ -77,7 +79,7 @@ function main() {
   tmEl.addEventListener('change', evt => trackManager.mode = evt.target.value);
 
   document.querySelector('#snap').addEventListener('click', () => {
-    trackManager.snapping = ! trackManager.snapping;
+    trackManager.snapping = !trackManager.snapping;
   });
   document.querySelector('#delete').addEventListener('click', () => {
     trackManager.deleteLastPoint();
@@ -92,7 +94,8 @@ function main() {
     trackManager.getTrackFeature();
     const features = [
       ...trackManager.getControlPoints(),
-      ...trackManager.getSegments()
+      ...trackManager.getSegments(),
+      ...trackManager.getPOIs(),
     ];
     trackManager.restoreFeatures(features)
   });
