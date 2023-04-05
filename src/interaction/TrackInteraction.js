@@ -29,10 +29,11 @@ export default class TrackInteraction extends Interaction {
    * @param {import("ol/pixel.js").Pixel} pixel
    * @return {FeatureLike|false}
    */
-  controlPointAtPixel(pixel) {
+  controlPointOrPOIAtPixel(pixel) {
     return this.getMap().forEachFeatureAtPixel(pixel,
       (f) => {
-        if (f.get('type') === 'controlPoint') {
+        const t = f.get('type');
+        if (t === 'controlPoint' || t === 'POI') {
           return f;
         }
         return false;
@@ -54,7 +55,7 @@ export default class TrackInteraction extends Interaction {
       // don't draw when deleteCondition is true
       // without condition, don't draw then there is a control point at this pixel
       condition: (event) => this.deleteCondition_ ?
-       !this.deleteCondition_(event) : !this.controlPointAtPixel(event.pixel) // FIXME: analyze performance
+       !this.deleteCondition_(event) : !this.controlPointOrPOIAtPixel(event.pixel) // FIXME: analyze performance
     });
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
@@ -91,7 +92,10 @@ export default class TrackInteraction extends Interaction {
         click(mapBrowserEvent) &&
         (!this.deleteCondition_ || this.deleteCondition_(mapBrowserEvent)),
       layers: [trackLayer],
-      filter: (feature) => feature.get('type') === 'controlPoint',
+      filter: (feature) => {
+        const t = feature.get('type');
+        return t === 'controlPoint' || t === 'POI';
+      },
     });
     select.on('select', (evt) => this.dispatchEvent(evt));
     return select;

@@ -143,9 +143,10 @@ class TrackManager {
 
     this.addTrackChangeEventListener(() => {
       const segments = this.getSegments();
-      if (!this.historyChanged_ && segments.length > 0) {
+      if (!this.historyChanged_) {
         const controlPoints = this.getControlPoints();
-        this.history_.add([...segments, ...controlPoints]);
+        const pois = this.getPOIs();
+        this.history_.add([...segments, ...controlPoints, ...pois]);
       } else {
         // skip the update, it originated from a undo or redo.
         this.historyChanged_ = false;
@@ -242,7 +243,9 @@ class TrackManager {
       const feature = event.feature;
       const type = feature.get('type');
 
-      if (type === 'controlPoint') {
+      if (type === 'POI') {
+        this.onTrackChanged_();
+      } else if (type === 'controlPoint') {
         this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           this.updater_.computeAdjacentSegmentsProfile(feature).then(() => this.onTrackChanged_());
@@ -279,37 +282,45 @@ class TrackManager {
     (event) => {
       const selected = /** @type {Feature<Point>} */ (event.selected[0]);
       console.assert(selected.getGeometry().getType() === 'Point');
-      const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
+      const type = selected.get('type');
+      if (type === 'POI') {
+        this.trackData_.deletePOI(selected);
+        this.source_.removeFeature(selected);
+        this.onTrackChanged_();
+      } else {
+        // control point
+        const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
-      // remove deleted features from source
-      deleted.forEach(f => this.source_.removeFeature(f));
+        // remove deleted features from source
+        deleted.forEach(f => this.source_.removeFeature(f));
 
-      // add newly created segment to source
-      if (newSegment) {
-        this.source_.addFeature(newSegment);
-      }
-
-      // update adjacent points
-      if (pointBefore || pointAfter) {
-        const geometryUpdates = [];
-        if (pointBefore) {
-          geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore));
+        // add newly created segment to source
+        if (newSegment) {
+          this.source_.addFeature(newSegment);
         }
-        if (pointAfter) {
-          geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter));
-        }
-        Promise.all(geometryUpdates).then(() => {
-          const segmentUpdates = [];
+
+        // update adjacent points
+        if (pointBefore || pointAfter) {
+          const geometryUpdates = [];
           if (pointBefore) {
-            segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore));
           }
           if (pointAfter) {
-            segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter));
           }
-          Promise.all(segmentUpdates).then(() => {
-            this.onTrackChanged_();
+          Promise.all(geometryUpdates).then(() => {
+            const segmentUpdates = [];
+            if (pointBefore) {
+              segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+            }
+            if (pointAfter) {
+              segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+            }
+            Promise.all(segmentUpdates).then(() => {
+              this.onTrackChanged_();
+            });
           });
-        });
+        }
       }
 
       // unselect deleted feature
@@ -404,6 +415,13 @@ class TrackManager {
       this.onTrackChanged_();
     });
   }
+
+  /**
+   * @return {Feature<Point>[]}
+   */
+    getPOIs() {
+      return this.trackData_.getPOIs().map(point => point.clone());
+    }
 
   /**
    * @return {Feature<Point>[]}

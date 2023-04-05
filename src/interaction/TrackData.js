@@ -5,20 +5,29 @@ import LineString from 'ol/geom/LineString.js';
 /** @typedef {import('ol/geom/Point').default} Point */
 
 
-class TrackData {
+export default class TrackData {
 
   constructor() {
     /**
+     * The pieces of the track linestring.
+     * @private
+     * @type {Array<Feature<LineString>>}
+     */
+    this.segments_ = [];
+
+    /**
+     * The ends of the track linestring pieces.
      * @private
      * @type {Array<Feature<Point>>}
      */
     this.controlPoints_ = [];
 
     /**
+     * Some POI points coming together with the line track.
      * @private
-     * @type {Array<Feature<LineString>>}
+     * @type {Array<Feature<Point>>}
      */
-    this.segments_ = [];
+    this.pois_ = [];
   }
 
   /**
@@ -34,6 +43,9 @@ class TrackData {
       } else if (type === 'controlPoint') {
         console.assert(feature.getGeometry().getType() === 'Point');
         this.controlPoints_.push(/** @type {Feature<Point>} */ (feature));
+      } else if (type === 'POI') {
+        console.assert(feature.getGeometry().getType() === 'Point');
+        this.pois_.push(/** @type {Feature<Point>} */ (feature));
       }
     }
     this.segments_.sort(sortByIndex);
@@ -84,6 +96,13 @@ class TrackData {
       return this.controlPoints_[index + 1];
     }
     return null;
+  }
+
+  /**
+   * @return {Feature<Point>[]}
+   */
+  getPOIs() {
+    return this.pois_;
   }
 
   /**
@@ -302,9 +321,20 @@ class TrackData {
     }
   }
 
+  /**
+   * Deletes the supplied point.
+   * @param {Feature<Point>} point Point to delete.
+   */
+  deletePOI(point) {
+    console.assert(point.get('type') === 'POI');
+    const idx = this.pois_.findIndex(p => p === point);
+    this.pois_.splice(idx, 1);
+  }
+
   clear() {
     this.controlPoints_.length = 0;
     this.segments_.length = 0;
+    this.pois_.length = 0;
   }
 }
 
@@ -347,6 +377,3 @@ function isXYZ(coordinates) {
   }
   return true;
 }
-
-
-export default TrackData;

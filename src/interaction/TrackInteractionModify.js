@@ -142,6 +142,9 @@ export default class Modify extends PointerInteraction {
         case 'controlPoint':
           subtype = 'cp';
           break;
+        case 'POI':
+          subtype = 'POI';
+          break;
         case 'segment':
           if (!this.dragStarted) {
             subtype = 'segment';
@@ -227,6 +230,10 @@ export default class Modify extends PointerInteraction {
           }
           break;
         }
+        case 'POI': {
+          // nothing to do
+          break;
+        }
         default:
           throw new Error('unknown feature');
       }
@@ -248,7 +255,7 @@ export default class Modify extends PointerInteraction {
       this.overlayLineString_.setCoordinates(coordinates);
     }
 
-    if (type === 'controlPoint') {
+    if (type === 'controlPoint' || type === 'POI') {
       const g = /** @type {Point} */ (this.feature_.getGeometry());
       g.setCoordinates(event.coordinate);
     }
