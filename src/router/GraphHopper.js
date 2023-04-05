@@ -1,5 +1,6 @@
 import {toLonLat} from 'ol/proj.js';
 import PolyLineXYZMFormat from './PolylineXYZM.js';
+import {distance} from 'ol/coordinate.js';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/geom/Point').default} Point */
@@ -8,6 +9,7 @@ import PolyLineXYZMFormat from './PolylineXYZM.js';
  * @typedef {Object} Options
  * @property {import("ol/proj").ProjectionLike} mapProjection
  * @property {string} url
+ * @property {number} [maxSnappingDistance=Infinity]
  */
 
 
@@ -34,6 +36,12 @@ export default class GraphHopper {
      * @type {PolyLineXYZMFormat}
      */
     this.polylineFormat_ = new PolyLineXYZMFormat();
+
+    /**
+     * @private
+     * @type {number}
+     */
+    this.maxSnappingDistance_ = options.maxSnappingDistance === undefined ? Infinity : options.maxSnappingDistance;
   }
 
   /**
@@ -60,16 +68,23 @@ export default class GraphHopper {
             featureProjection: this.mapProjection_
           }));
           const resultCoordinates = resultGeometry.getCoordinates();
+          const resultFromCoordinates = resultCoordinates[0].slice(0, 2);
+          const resultToCoordinates = resultCoordinates[resultCoordinates.length - 1].slice(0, 2);
           const segmentGeometry = segment.getGeometry();
-          segmentGeometry.setCoordinates(resultCoordinates, 'XYZM');
 
-          segment.setProperties({
-            snapped: true
-          });
-          pointFromGeometry.setCoordinates(resultCoordinates[0].slice(0, 2));
-          pointToGeometry.setCoordinates(resultCoordinates[resultCoordinates.length - 1].slice(0, 2));
-          pointFrom.set('snapped', true);
-          pointTo.set('snapped', true);
+          if (distance(pointFromCoordinates, resultFromCoordinates) < this.maxSnappingDistance_ && distance(pointToCoordinates, resultToCoordinates) < this.maxSnappingDistance_) {
+            segmentGeometry.setCoordinates(resultCoordinates, 'XYZM');
+            segment.set('snapped', true);
+            pointFromGeometry.setCoordinates(resultFromCoordinates);
+            pointToGeometry.setCoordinates(resultToCoordinates);
+            pointFrom.set('snapped', true);
+            pointTo.set('snapped', true);
+          } else {
+            segmentGeometry.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
+            segment.set('snapped', false);
+            pointFrom.set('snapped', false);
+            pointTo.set('snapped', false);
+          }
         }
       });
   }
