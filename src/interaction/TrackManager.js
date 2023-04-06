@@ -134,24 +134,8 @@ class TrackManager {
     /**
      * @type {HistoryManager<Feature<Point|LineString>[]>}
      */
-    this.history_ = new HistoryManager();
+    this.historyManager_ = new HistoryManager();
 
-    /**
-     * @type {boolean}
-     */
-    this.historyChanged_ = false;
-
-    this.addTrackChangeEventListener(() => {
-      const segments = this.getSegments();
-      if (!this.historyChanged_) {
-        const controlPoints = this.getControlPoints();
-        const pois = this.getPOIs();
-        this.history_.add([...segments, ...controlPoints, ...pois]);
-      } else {
-        // skip the update, it originated from a undo or redo.
-        this.historyChanged_ = false;
-      }
-    });
 
     // @ts-ignore too complicate to declare proper events
     this.interaction_.on('drawend',
@@ -248,8 +232,9 @@ class TrackManager {
       } else if (type === 'controlPoint') {
         this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
-          this.updater_.computeAdjacentSegmentsProfile(feature).then(() => this.onTrackChanged_());
-        });
+          this.updater_.computeAdjacentSegmentsProfile(feature);
+        })
+        .then(() => this.onTrackChanged_());
       } else if (type === 'segment') {
         const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
@@ -268,8 +253,9 @@ class TrackManager {
 
         this.updater_.updateAdjacentSegmentsGeometries(controlPoint).then(() => {
           this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
-          this.updater_.computeAdjacentSegmentsProfile(controlPoint).then(() => this.onTrackChanged_());
-        });
+          this.updater_.computeAdjacentSegmentsProfile(controlPoint);
+        })
+        .then(() => this.onTrackChanged_());
       }
     });
 
@@ -329,6 +315,16 @@ class TrackManager {
   }
 
   /**
+   * @private
+   */
+  pushNewStateToHistoryManager_() {
+    const segments = this.getSegments();
+    const controlPoints = this.getControlPoints();
+    const pois = this.getPOIs();
+    this.historyManager_.add([...segments, ...controlPoints, ...pois]);
+  }
+
+  /**
    * @return {TrackMode} mode
    */
   get mode() {
@@ -347,7 +343,7 @@ class TrackManager {
         );
       }
     } else {
-      this.history_.clear();
+      this.historyManager_.clear();
       if (this.shadowTrackLayer_) {
         this.shadowTrackLayer_.getSource().clear();
       }
@@ -374,48 +370,76 @@ class TrackManager {
 
   deleteLastPoint() {
     if (this.mode_) {
-      const deletedFeatures = this.trackData_.deleteLastControlPoint();
-      deletedFeatures.forEach(feature => this.source_.removeFeature(feature));
-      this.onTrackChanged_();
+      if (this.trackData_.getControlPoints().length > 0) {
+        const deletedFeatures = this.trackData_.deleteLastControlPoint();
+        deletedFeatures.forEach(feature => this.source_.removeFeature(feature));
+        this.onTrackChanged_();
+      }
     }
   }
 
   reverse() {
+    if (!this.trackData_.getSegments().length) {
+      return;
+    }
     this.trackData_.reverse();
     const points = this.trackData_.getControlPoints();
     for (let i = 1, ii = points.length; i < ii; i += 2) {
       const point = points[i];
       this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
-      this.updater_.updateAdjacentSegmentsGeometries(point).then(() => {
+      this.updater_.updateAdjacentSegmentsGeometries(point)
+      .then(() => {
         this.updater_.changeAdjacentSegmentsStyling(point, '');
-        this.updater_.computeAdjacentSegmentsProfile(point).then(() => this.onTrackChanged_());
-      });
+        this.updater_.computeAdjacentSegmentsProfile(point);
+      })
+      .then(() => this.onTrackChanged_());
     }
   }
 
   /**
+   * This function does not trigger track changed events.
+   * @private
    */
-  clear() {
+  clearInternal_() {
     this.source_.clear();
     this.trackData_.clear();
-    this.onTrackChanged_();
+  }
+
+  /**
+   */
+    clear() {
+      if (this.trackData_.hasData()) {
+        this.clearInternal_()
+        this.onTrackChanged_();
+      }
+    }
+
+  /**
+   * This function does not trigger track changed events.
+   * @private
+   * @param {Array<Feature<Point|LineString>>} features
+   * @return {Promise<any>}
+   */
+  restoreFeaturesInternal_(features) {
+    this.clearInternal_();
+    // should parse features first, compute profile, and then replace the trackdata and add history
+    const parsedFeatures = this.trackData_.parseFeatures(features);
+    this.source_.addFeatures(features);
+    const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
+    return Promise.all(profileRequests).then(() => {
+      this.trackData_.restoreParsedFeatures(parsedFeatures);
+    });
   }
 
   /**
    * @param {Array<Feature<Point|LineString>>} features
    * @return {Promise<any>}
    */
-  restoreFeatures(features) {
-    this.clear();
-    this.trackData_.restoreFeatures(features);
-    this.source_.addFeatures(features);
-    const segments = this.trackData_.getSegments();
-    const profileRequests = segments.map(segment => this.profiler_.computeProfile(segment));
-    return Promise.all(profileRequests).then(() => {
-      this.onTrackChanged_();
-    });
-  }
-
+    restoreFeatures(features) {
+      return this.restoreFeaturesInternal_(features).then(() => {
+        this.onTrackChanged_();
+      });
+    }
   /**
    * @return {Feature<Point>[]}
    */
@@ -471,9 +495,13 @@ class TrackManager {
 
   /**
    * @private
+   * @param {boolean} notifyHistory Whether to notify history manager
    */
-  notifyTrackChangeEventListeners_() {
+  notifyTrackChangeEventListeners_(notifyHistory = true) {
     this.trackChangeEventListeners_.forEach(handler => handler());
+    if (notifyHistory) {
+      this.pushNewStateToHistoryManager_();
+    }
   }
 
   /**
@@ -506,13 +534,13 @@ class TrackManager {
    */
    undo() {
     if (this.mode === 'edit') {
-      const features = this.history_.undo();
+      const features = this.historyManager_.undo();
       if (features) {
-        this.restoreFeatures(features.map(feature => feature.clone()));
-        this.historyChanged_ = true;
+        this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
       } else {
-        this.clear();
+        this.clearInternal_();
       }
+      this.notifyTrackChangeEventListeners_(false);
     }
   }
 
@@ -521,10 +549,10 @@ class TrackManager {
    */
   redo() {
     if (this.mode === 'edit') {
-      const features = this.history_.redo();
+      const features = this.historyManager_.redo();
       if (features) {
-        this.restoreFeatures(features.map(feature => feature.clone()));
-        this.historyChanged_ = true;
+        this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
+        this.notifyTrackChangeEventListeners_(false);
       }
     }
   }
