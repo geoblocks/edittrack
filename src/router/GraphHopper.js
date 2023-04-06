@@ -1,5 +1,5 @@
 import {toLonLat} from 'ol/proj.js';
-import PolyLineXYZMFormat from './PolylineXYZM.js';
+import PolyLineXYZMFormat from './PolylineXYZM.ts';
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/geom/Point').default} Point */

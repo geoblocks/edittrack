@@ -27,6 +27,7 @@
     "typeRoots": ["types"],
 
     "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
 
     "moduleResolution": "Node"
   },
@@ -34,6 +35,6 @@
     "test/**/*.js",
     "src/**/*.js",
     "src/**/*.d.ts",
-    "types/**/*"
+    "types/**/*",
   ]
 }

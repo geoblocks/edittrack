@@ -2,7 +2,7 @@ import Polyline, {decodeDeltas, encodeDeltas} from 'ol/format/Polyline.js';
 import {inflateCoordinates} from 'ol/geom/flat/inflate.js';
 import {flipXY} from 'ol/geom/flat/flip.js';
 import LineString from 'ol/geom/LineString.js';
-import {transformGeometryWithOptions} from 'ol/format/Feature.js';
+import {ReadOptions, transformGeometryWithOptions, WriteOptions} from 'ol/format/Feature.js';
 import {getDistance} from 'ol/sphere.js';
 
 
@@ -12,21 +12,19 @@ import {getDistance} from 'ol/sphere.js';
  * It is using a factor of 10⁵ for x an y and a factor of 10³ for z.
  */
 export default class PolylineXYZM extends Polyline {
+  private zFactor = 1000;
+
   constructor() {
     super({
       factor: 1e5,
       geometryLayout: 'XYZM'
     });
-    this.zFactor = 1000;
   }
 
   /**
-   * @param {string} text Text.
-   * @param {import("ol/format/Feature.js").ReadOptions} [opt_options] Read options.
-   * @protected
    * @return {LineString} Geometry with layout XYZM.
    */
-  readGeometryFromText(text, opt_options) {
+  protected readGeometryFromText(text: string, opt_options: ReadOptions): LineString {
     const stride = 3;
     const flatCoordinates = decodeDeltas(text, stride, 1e5);
     flipXY(flatCoordinates, 0, flatCoordinates.length, stride, flatCoordinates);
@@ -46,29 +44,30 @@ export default class PolylineXYZM extends Polyline {
     });
     const lineString = new LineString(coordinates, 'XYZM');
 
-    const outGeometry = /** @type {LineString} */ (transformGeometryWithOptions(
+    const outGeometry = transformGeometryWithOptions(
       lineString,
       false,
       this.adaptOptions(opt_options)
-    ));
+    ) as LineString;
 
     return outGeometry;
   }
 
+  override readGeometry(source: any, options?: ReadOptions): LineString {
+    return super.readGeometry(source, options) as LineString;
+  }
+
   /**
    * @param {LineString} geometry 4D Geometry.
-   * @param {import("ol/format/Feature.js").WriteOptions} [options] Write options.
-   * @protected
+   * @param {WriteOptions} [options] Write options.
    * @return {string} 3D polyline text.
    */
-  writeGeometryText(geometry, options) {
-    geometry =
-      /** @type {LineString} */
-      (transformGeometryWithOptions(
-        geometry,
-        true,
-        this.adaptOptions(options)
-      ));
+  protected writeGeometryText(geometry: LineString, options: WriteOptions): string {
+    geometry = transformGeometryWithOptions(
+      geometry,
+      true,
+      this.adaptOptions(options)
+    ) as LineString;
     console.assert(geometry.getStride() === 4);
     const flatCoordinates = geometry.getFlatCoordinates();
     const end = flatCoordinates.length;

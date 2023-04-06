@@ -1,4 +1,10 @@
-extends: 'eslint-config-openlayers'
+extends:
+- 'eslint-config-openlayers'
+- 'plugin:@typescript-eslint/recommended'
+parser: '@typescript-eslint/parser'
+plugins:
+- '@typescript-eslint'
+root: true
 rules:
   no-console: 0
   comma-dangle: 0
@@ -10,6 +16,8 @@ rules:
   jsdoc/require-returns-description: 0
   jsdoc/require-property-description: 0
   import/extensions: 0
+  '@typescript-eslint/ban-ts-comment': 0
+  '@typescript-eslint/no-explicit-any': 0
 env:
   es6: true,
 
