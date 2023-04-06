@@ -4,6 +4,12 @@ import LineString from 'ol/geom/LineString.js';
 
 /** @typedef {import('ol/geom/Point').default} Point */
 
+/**
+ * @typedef {Object} ParsedFeatures
+ * @property {Array<Feature<LineString>>}  segments
+ * @property {Array<Feature<Point>>} controlPoints
+ * @property {Array<Feature<Point>>} pois
+ */
 
 export default class TrackData {
 
@@ -32,26 +38,46 @@ export default class TrackData {
 
   /**
    * @param {Array<Feature<Point|LineString>>} features
+   * @return {ParsedFeatures}
    */
-  restoreFeatures(features) {
-    this.clear();
+  parseFeatures(features) {
+    /** @type {ParsedFeatures} */
+    const parsed = {
+      segments: [],
+      pois: [],
+      controlPoints: [],
+    };
+    const {segments, pois, controlPoints} = parsed;
+
     for (const feature of features) {
       const type = feature.get('type');
       if (type === 'segment') {
         console.assert(feature.getGeometry().getType() === 'LineString');
-        this.segments_.push(/** @type {Feature<LineString>} */ (feature));
+        segments.push(/** @type {Feature<LineString>} */ (feature));
       } else if (type === 'controlPoint') {
         console.assert(feature.getGeometry().getType() === 'Point');
-        this.controlPoints_.push(/** @type {Feature<Point>} */ (feature));
+        controlPoints.push(/** @type {Feature<Point>} */ (feature));
       } else if (type === 'POI') {
         console.assert(feature.getGeometry().getType() === 'Point');
-        this.pois_.push(/** @type {Feature<Point>} */ (feature));
+        pois.push(/** @type {Feature<Point>} */ (feature));
       }
     }
-    this.segments_.sort(sortByIndex);
-    this.controlPoints_.sort(sortByIndex);
 
-    console.assert(this.controlPoints_.length === this.segments_.length + 1);
+    segments.sort(sortByIndex);
+    controlPoints.sort(sortByIndex);
+    return parsed;
+  }
+
+  /**
+   * @param {ParsedFeatures} parsedFeatures
+   */
+  restoreParsedFeatures(parsedFeatures) {
+    const {segments, pois, controlPoints} = parsedFeatures;
+    console.assert((!controlPoints.length && !segments.length) || (controlPoints.length === segments.length + 1));
+    this.clear();
+    this.segments_ = segments;
+    this.pois_ = pois;
+    this.controlPoints_ = controlPoints;
   }
 
 
@@ -319,6 +345,10 @@ export default class TrackData {
         geometry.setCoordinates(coordinates);
       }
     }
+  }
+
+  hasData() {
+    return this.controlPoints_.length > 0 || this.segments_.length > 0 || this.pois_.length > 0;
   }
 
   /**
