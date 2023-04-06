@@ -11,7 +11,7 @@
     "build-demo:schm": "parcel build --target demo demos/schm/schm.html",
     "build-demo": "npm run build-demo:simple && npm run build-demo:schm",
     "test": "mocha --exit",
-    "typecheck": "tsc --pretty",
+    "typecheck": "tsc --pretty --noEmit",
     "lint": "npm run eslint && npm run typecheck",
     "doc": "typedoc",
     "gh-pages": "rm -rf docs && npm run doc && npm run build-demo && gh-pages -d dist"
