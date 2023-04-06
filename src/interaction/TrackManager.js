@@ -136,22 +136,21 @@ class TrackManager {
      */
     this.historyManager_ = new HistoryManager();
 
-
-    // @ts-ignore too complicate to declare proper events
-    this.interaction_.on('drawend',
-    /**
-     *
-     * @param {import ('ol/interaction/Draw').DrawEvent} event
-     */
-    (event) => {
-      console.assert(event.feature.getGeometry().getType() === 'Point');
-      const feature = /** @type {Feature<Point>} */ (event.feature);
-      const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
-      if (segment) {
-        this.source_.addFeature(segment);
-        if (this.snapping) {
-          this.router_.snapSegment(segment, pointFrom, pointTo)
-            .then(() => {
+    this.interaction_.on(
+      // @ts-ignore too complicate to declare proper events
+      'drawend',
+      /**
+       *
+       * @param {import ('ol/interaction/Draw').DrawEvent} event
+       */
+      (event) => {
+        console.assert(event.feature.getGeometry().getType() === 'Point');
+        const feature = /** @type {Feature<Point>} */ (event.feature);
+        const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
+        if (segment) {
+          this.source_.addFeature(segment);
+          if (this.snapping) {
+            this.router_.snapSegment(segment, pointFrom, pointTo).then(() => {
               // compute profile for routed segment
               this.profiler_.computeProfile(segment).then(() => {
                 const {before} = this.trackData_.getAdjacentSegments(pointFrom);
@@ -217,15 +216,16 @@ class TrackManager {
       }
     });
 
-    // @ts-ignore too complicate to declare proper events
-    this.interaction_.on('modifyend',
-    /**
-     *
-     * @param {import ('./TrackInteractionModify').ModifyEvent} event
-     */
-    (event) => {
-      const feature = event.feature;
-      const type = feature.get('type');
+    this.interaction_.on(
+      // @ts-ignore too complicate to declare proper events
+      'modifyend',
+      /**
+       *
+       * @param {import ('./TrackInteractionModify').ModifyEvent} event
+       */
+      (event) => {
+        const feature = event.feature;
+        const type = feature.get('type');
 
       if (type === 'POI') {
         this.onTrackChanged_();
@@ -259,23 +259,24 @@ class TrackManager {
       }
     });
 
-    // @ts-ignore too complicate to declare proper events
-    this.interaction_.on('select',
-    /**
-     *
-     * @param {import ('ol/interaction/Select').SelectEvent} event
-     */
-    (event) => {
-      const selected = /** @type {Feature<Point>} */ (event.selected[0]);
-      console.assert(selected.getGeometry().getType() === 'Point');
-      const type = selected.get('type');
-      if (type === 'POI') {
-        this.trackData_.deletePOI(selected);
-        this.source_.removeFeature(selected);
-        this.onTrackChanged_();
-      } else {
-        // control point
-        const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
+    this.interaction_.on(
+      // @ts-ignore too complicate to declare proper events
+      'select',
+      /**
+       *
+       * @param {import ('ol/interaction/Select').SelectEvent} event
+       */
+      (event) => {
+        const selected = /** @type {Feature<Point>} */ (event.selected[0]);
+        console.assert(selected.getGeometry().getType() === 'Point');
+        const type = selected.get('type');
+        if (type === 'POI') {
+          this.trackData_.deletePOI(selected);
+          this.source_.removeFeature(selected);
+          this.onTrackChanged_();
+        } else {
+          // control point
+          const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
         // remove deleted features from source
         deleted.forEach(f => this.source_.removeFeature(f));
