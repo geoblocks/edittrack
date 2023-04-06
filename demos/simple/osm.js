@@ -1,13 +1,13 @@
-import EPSG_2056, {proj as proj2056} from '@geoblocks/proj/src/EPSG_2056.js';
-import TileLayer from 'ol/layer/Tile.js';
-import OSM from 'ol/source/OSM.js';
-import VectorLayer from 'ol/layer/Vector.js';
-import VectorSource from 'ol/source/Vector.js';
+import EPSG_2056, {proj as proj2056} from '@geoblocks/proj/src/EPSG_2056';
+import TileLayer from 'ol/layer/Tile';
+import OSM from 'ol/source/OSM';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
 import {View, Map as OLMap} from 'ol';
 
-import {styleFunction} from './style.js';
-import {transform, transformExtent} from 'ol/proj.js';
-import {createShadowLayer} from './shadowtrack.js';
+import {styleFunction} from './style';
+import {transform, transformExtent} from 'ol/proj';
+import {createShadowLayer} from './shadowtrack';
 
 
 export function createMap(target) {

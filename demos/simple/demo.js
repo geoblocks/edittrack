@@ -1,11 +1,11 @@
 
-import TrackManager from '../../src/interaction/TrackManager.js';
-import GraphHopperRouter from '../../src/router/GraphHopper.js';
-import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.js';
-import Profile from '../../src/Profile.js';
-import {styleFunction} from './style.js';
+import TrackManager from '../../src/interaction/TrackManager';
+import GraphHopperRouter from '../../src/router/GraphHopper';
+import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
+import Profile from '../../src/Profile';
+import {styleFunction} from './style';
 import {Style, Circle, Fill} from 'ol/style';
-import {createMap} from './osm.js';
+import {createMap} from './osm';
 
 const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
