@@ -57,7 +57,7 @@ const sketchLabel = {
       backgroundFill: new Fill({
         color: "#ffffffaa",
       }),
-      text: "click to delete\ndrag to move POI",
+      text: "drag to move POI",
     }),
   }),
   cp: new Style({
