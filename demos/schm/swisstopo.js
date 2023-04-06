@@ -1,12 +1,12 @@
-import SwisstopoSource from '@geoblocks/sources/src/Swisstopo.js';
-import EPSG_2056, {proj as proj2056} from '@geoblocks/proj/src/EPSG_2056.js';
-import TileLayer from 'ol/layer/Tile.js';
-import VectorLayer from 'ol/layer/Vector.js';
-import VectorSource from 'ol/source/Vector.js';
+import SwisstopoSource from '@geoblocks/sources/src/Swisstopo';
+import EPSG_2056, {proj as proj2056} from '@geoblocks/proj/src/EPSG_2056';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
 import {View, Map as OLMap} from 'ol';
 
-import {styleFunction} from './style.js';
-import {createShadowLayer} from './shadowtrack.js';
+import {styleFunction} from './style';
+import {createShadowLayer} from './shadowtrack';
 
 const RESOLUTIONS = [650, 500, 250, 100, 50, 20, 10, 5, 2.5, 2, 1.5, 1];
 

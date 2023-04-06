@@ -173,7 +173,7 @@ class Profile {
        * @type {[number, number, number, number][]}
        */
       const segmentProfile = segment.get('profile');
-      if (segmentProfile) {
+      if (segmentProfile.length > 0) {
         profile = profile.concat(segmentProfile.map(item => {
           return {
             x: item[0],
