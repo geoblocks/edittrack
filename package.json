@@ -45,7 +45,7 @@
     "parcel": "2.8.3",
     "proj4": "2.9.0",
     "tsconfig-paths": "4.2.0",
-    "typedoc": "0.23.28",
+    "typedoc": "0.24.1",
     "typescript": "5.0.4"
   },
   "optionalDependencies": {
