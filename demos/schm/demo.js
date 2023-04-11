@@ -7,6 +7,7 @@ import {styleFunction} from './style';
 import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
+import {click} from 'ol/events/condition';
 
 const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
@@ -32,17 +33,13 @@ async function main() {
 
   /**
    * @param {MapBrowserEvent} mapBrowserEvent
+   * @param {string} pointType
    * @return {boolean}
    */
-  const altKeyAndOptionallyShift = function(mapBrowserEvent) {
-    const originalEvent = /** @type {MouseEvent} */ (mapBrowserEvent.originalEvent);
-    return originalEvent.altKey && !(originalEvent.metaKey || originalEvent.ctrlKey);
+  const deleteCondition = function(mapBrowserEvent, pointType) {
+    return click(mapBrowserEvent) && pointType !== 'POI';
   };
 
-  // by default there is no delete condition (clicking on a CP will delete it)
-  // but it is still possible to pass a custom deleteCondition
-  let deleteCondition = altKeyAndOptionallyShift;
-  deleteCondition = undefined;
   const trackManager = new TrackManager({
     map: map,
     router: router,

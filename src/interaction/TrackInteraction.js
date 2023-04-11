@@ -18,7 +18,7 @@ import {click} from 'ol/events/condition.js';
  * @property {VectorLayer} trackLayer
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
- * @property {function(MapBrowserEvent): boolean} [deleteCondition]
+ * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
  */
 
 
@@ -54,8 +54,7 @@ export default class TrackInteraction extends Interaction {
       style: style,
       // don't draw when deleteCondition is true
       // without condition, don't draw then there is a control point at this pixel
-      condition: (event) => this.deleteCondition_ ?
-       !this.deleteCondition_(event) : !this.controlPointOrPOIAtPixel(event.pixel) // FIXME: analyze performance
+      condition: (event) => !this.deleteCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
     });
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
@@ -73,7 +72,7 @@ export default class TrackInteraction extends Interaction {
       trackData: trackData,
       source: source,
       style: style,
-      condition: (event) => !this.deleteCondition_ || !this.deleteCondition_(event),
+      condition: (event) => !this.deleteCondition_(event),
     });
     // @ts-ignore too complicate to declare proper events
     modify.on('modifyend', (evt) => this.dispatchEvent(evt));
@@ -87,10 +86,7 @@ export default class TrackInteraction extends Interaction {
    */
   createSelectInteraction(trackLayer) {
     const select = new Select({
-      // only delete if alt-key is being pressed while clicking
-      condition: (mapBrowserEvent) =>
-        click(mapBrowserEvent) &&
-        (!this.deleteCondition_ || this.deleteCondition_(mapBrowserEvent)),
+      condition: (event) => this.deleteCondition_(event),
       layers: [trackLayer],
       filter: (feature) => {
         const t = feature.get('type');
@@ -102,6 +98,18 @@ export default class TrackInteraction extends Interaction {
   }
 
   /**
+   * @param {MapBrowserEvent} event
+   * @return {boolean}
+   */
+  deleteCondition_(event) {
+    const point = this.controlPointOrPOIAtPixel(event.pixel);
+    if (point) {
+      return this.userDeleteCondition_(event, point.get('type'));
+    }
+    return false;
+  }
+
+  /**
    *
    * @param {Options} options
    */
@@ -109,7 +117,8 @@ export default class TrackInteraction extends Interaction {
     super();
 
     this.trackLayer_ = options.trackLayer;
-    this.deleteCondition_ = options.deleteCondition;
+
+    this.userDeleteCondition_ = options.deleteCondition === undefined ? click : options.deleteCondition;
 
     const source = options.trackLayer.getSource();
     // FIXME should debounce
