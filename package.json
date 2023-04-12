@@ -7,7 +7,9 @@
     "eslint": "eslint src test",
     "eslint-fix": "eslint src test --fix",
     "start": "parcel serve demos/*/*.html",
-    "build-demo": "parcel build --target demos demos/*/*.html",
+    "build-demo:simple": "parcel build --target demo demos/simple/simple.html",
+    "build-demo:schm": "parcel build --target demo demos/schm/schm.html",
+    "build-demo": "npm run build-demo:simple && npm run build-demo:schm",
     "test": "mocha --exit",
     "typecheck": "tsc --pretty",
     "lint": "npm run eslint && npm run typecheck",
@@ -24,7 +26,7 @@
   ],
   "type": "module",
   "targets": {
-    "demos": {
+    "demo": {
       "context": "browser",
       "publicUrl": "./"
     }
