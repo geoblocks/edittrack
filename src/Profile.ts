@@ -7,7 +7,7 @@ import VectorLayer from 'ol/layer/Vector.js';
 import d3Elevation from '@geoblocks/d3profile/src/d3Elevation.js';
 import Style from 'ol/style/Style.js';
 import LineString from 'ol/geom/LineString.js';
-
+import type Map from 'ol/Map.js';
 
 interface ProfileItem {
   x: number;
@@ -17,15 +17,15 @@ interface ProfileItem {
 }
 
 interface Options {
-  map: OLMap;
+  map: Map;
   profileTarget: string|HTMLElement;
   lightXAxis?: boolean;
   styleDefs?: string;
 }
 
 interface Callbacks {
-  outCallback: Function;
-  hoverCallback: ((ProfileItem) => void);
+  outCallback: () => void;
+  hoverCallback: (item: ProfileItem) => void;
 }
 
 const defaultStyleDefs = `
@@ -55,7 +55,7 @@ const defaultStyleDefs = `
 
 class Profile {
   hoverActive: boolean;
-  map_: OLMap;
+  map_: Map;
   private profileTarget_: string | HTMLElement;
   styleDefs_: string;
   private hoverFeature_: Feature<Point>;
@@ -161,7 +161,7 @@ class Profile {
     this.profile_.clearHighlight();
   }
 
-  /**
+  /*
    * Highlight the given distance and corresponding elevation on chart.
    * Fire the hoverCallback callback with corresponding point.
    */

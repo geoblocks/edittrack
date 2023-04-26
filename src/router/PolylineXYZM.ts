@@ -2,7 +2,8 @@ import Polyline, {decodeDeltas, encodeDeltas} from 'ol/format/Polyline.js';
 import {inflateCoordinates} from 'ol/geom/flat/inflate.js';
 import {flipXY} from 'ol/geom/flat/flip.js';
 import LineString from 'ol/geom/LineString.js';
-import {ReadOptions, transformGeometryWithOptions, WriteOptions} from 'ol/format/Feature.js';
+import {transformGeometryWithOptions} from 'ol/format/Feature.js';
+import type {ReadOptions, WriteOptions} from 'ol/format/Feature.js';
 import {getDistance} from 'ol/sphere.js';
 
 
@@ -21,9 +22,6 @@ export default class PolylineXYZM extends Polyline {
     });
   }
 
-  /**
-   * @return {LineString} Geometry with layout XYZM.
-   */
   protected readGeometryFromText(text: string, opt_options: ReadOptions): LineString {
     const stride = 3;
     const flatCoordinates = decodeDeltas(text, stride, 1e5);
