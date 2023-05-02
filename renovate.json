@@ -9,7 +9,6 @@
   },
   "packageRules": [{
     "matchUpdateTypes": ["minor", "patch"],
-    "groupName": "all patch and minor dependencies",
-    "automerge": true
+    "groupName": "all patch and minor dependencies"
   }]
 }
