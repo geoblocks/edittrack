@@ -44,7 +44,7 @@
     "gh-pages": "5.0.0",
     "mocha": "10.2.0",
     "ol": "7.3.0",
-    "parcel": "2.8.3",
+    "parcel": "2.9.1",
     "proj4": "2.9.0",
     "tsconfig-paths": "4.2.0",
     "typedoc": "0.24.7",
