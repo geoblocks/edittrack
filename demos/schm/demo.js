@@ -3,7 +3,7 @@ import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
 import Profile from '../../src/Profile';
-import {styleFunction} from './style';
+import {styleFunction, profileHover} from './style';
 import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
@@ -112,14 +112,7 @@ async function main() {
     trackManager.reverse();
   });
 
-  d3Profile.setTrackHoverStyle(new Style({
-    image: new Circle({
-      fill: new Fill({
-        color: 'blue',
-      }),
-      radius: 9
-    })
-  }));
+  d3Profile.setTrackHoverStyle(profileHover);
 }
 
 main();

@@ -93,9 +93,7 @@ export default class Modify extends PointerInteraction {
       source: new VectorSource({
         useSpatialIndex: false
       }),
-      style: (feature, resolution) => {
-        return options.style(feature, resolution);
-      },
+      style: (feature, resolution) => options.style(feature, resolution),
       updateWhileAnimating: true,
       updateWhileInteracting: true
     });
@@ -117,6 +115,8 @@ export default class Modify extends PointerInteraction {
     /** @type {Feature<any>[]} */
     this.involvedFeatures_ = [];
     this.overlayLineString_ = null;
+
+    this.scratchPoint_ = new Point([0, 0]);
   }
 
   /**
@@ -128,35 +128,45 @@ export default class Modify extends PointerInteraction {
     super.setMap(map);
   }
 
-  updateSketchFeature() {
-    const f = /** @type {Feature<LineString|Point>} */ (this.getMap().forEachFeatureAtPixel(
-      this.lastPixel_,
-      (f) => f, {
-        layerFilter: (l) => l.getSource() === this.source_,
-        hitTolerance: 20
-      })
-    );
-    let subtype = '';
-    if (f) {
-      switch (f.get('type')) {
-        case 'controlPoint':
-          subtype = 'cp';
-          break;
-        case 'POI':
-          subtype = 'POI';
-          break;
-        case 'segment':
-          if (!this.dragStarted) {
-            subtype = 'segment';
-          }
-          break;
-        default:
-          // empty
-      }
+  /**
+   * Get the first feature at pixel, favor points over lines
+   * @param {import("ol/pixel").Pixel} pixel
+   * @return {Feature<LineString|Point>|undefined}
+   */
+  getFeatureAtPixel(pixel) {
+    const features = /** @type {Feature<LineString|Point>[]} */ (this.getMap().getFeaturesAtPixel(pixel, {
+      layerFilter: (l) => l.getSource() === this.source_,
+      hitTolerance: 20
+    }));
+    // get the first point feature
+    const feature = features.find((f) => f.getGeometry().getType() === 'Point');
+    if (feature) {
+      return feature;
     }
+    return features[0];
+  }
 
-    if (subtype !== this.pointAtCursorFeature_.get('subtype')) {
-      this.pointAtCursorFeature_.set('subtype', subtype);
+  updateSketchFeature() {
+    const feature = this.getFeatureAtPixel(this.lastPixel_);
+    // Adds hit geometries to the hit feature and the sketch feature.
+    // The geometry is either the closest point on a line or the point itself
+    this.source_.forEachFeature((f) => f.set('sketchHitGeometry', undefined));
+    this.pointAtCursorFeature_.set('sketchHitGeometry', undefined);
+    this.pointAtCursorFeature_.set('subtype', undefined);
+    if (feature) {
+      const type = feature.get('type');
+      const sketchGeometry = this.pointAtCursorFeature_.getGeometry();
+      const featureGeometry = feature.getGeometry();
+      let hitGeometry = null;
+      if (type === 'segment') {
+        this.scratchPoint_.setCoordinates(featureGeometry.getClosestPoint(sketchGeometry.getCoordinates()));
+        hitGeometry = this.scratchPoint_;
+      } else {
+        hitGeometry = featureGeometry;
+      }
+      feature.set('sketchHitGeometry', hitGeometry);
+      this.pointAtCursorFeature_.set('sketchHitGeometry', sketchGeometry);
+      this.pointAtCursorFeature_.set('subtype', type);
     }
   }
 
@@ -178,13 +188,7 @@ export default class Modify extends PointerInteraction {
       return false;
     }
     console.assert(!this.feature_);
-    this.feature_ = /** @type {Feature<LineString|Point>} */ (event.map.forEachFeatureAtPixel(
-      event.pixel,
-      (f) => f, {
-        layerFilter: (l) => l.getSource() === this.source_,
-        hitTolerance: 20
-      })
-    );
+    this.feature_ = this.getFeatureAtPixel(event.pixel);
 
     if (!this.feature_) {
       return false;
@@ -238,8 +242,8 @@ export default class Modify extends PointerInteraction {
           throw new Error('unknown feature');
       }
 
-      if (this.overlayLineString_ ) {
-        this.overlayFeature_.setGeometry(this.overlayLineString_ );
+      if (this.overlayLineString_) {
+        this.overlayFeature_.setGeometry(this.overlayLineString_);
         this.overlay_.getSource().addFeature(this.overlayFeature_);
       }
       this.involvedFeatures_.forEach(f => {
@@ -247,12 +251,16 @@ export default class Modify extends PointerInteraction {
       });
     }
 
-    if (this.overlayLineString_ ) {
+    if (this.overlayLineString_) {
       // update sketch linestring
       const coordinates = this.overlayLineString_.getCoordinates();
       console.assert(coordinates.length === 3);
       coordinates[1] = event.coordinate;
       this.overlayLineString_.setCoordinates(coordinates);
+
+      this.scratchPoint_.setCoordinates(event.coordinate);
+      this.overlayFeature_.set('sketchHitGeometry', this.scratchPoint_);
+      this.pointAtCursorFeature_.set('sketchHitGeometry', this.scratchPoint_);
     }
 
     if (type === 'controlPoint' || type === 'POI') {
