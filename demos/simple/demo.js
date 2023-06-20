@@ -48,6 +48,7 @@ function main() {
     shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,
     deleteCondition: deleteCondition,
+    hitTolerance: 10,
   });
 
   window.trackManager = trackManager;
