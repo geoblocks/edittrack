@@ -218,18 +218,19 @@ class TrackManager {
        *
        * @param {import ('./TrackInteractionModify').ModifyEvent} event
        */
-      (event) => {
+      async (event) => {
         const feature = event.feature;
         const type = feature.get('type');
 
       if (type === 'POI') {
+        this.trackData_.updatePOIIndexes();
         this.onTrackChanged_();
       } else if (type === 'controlPoint') {
-        this.updater_.updateAdjacentSegmentsGeometries(feature).then(() => {
-          this.updater_.changeAdjacentSegmentsStyling(feature, '');
-          this.updater_.computeAdjacentSegmentsProfile(feature);
-        })
-        .then(() => this.onTrackChanged_());
+        await this.updater_.updateAdjacentSegmentsGeometries(feature);
+        this.updater_.changeAdjacentSegmentsStyling(feature, '');
+        await this.updater_.computeAdjacentSegmentsProfile(feature);
+        this.trackData_.updatePOIIndexes();
+        this.onTrackChanged_();
       } else if (type === 'segment') {
         const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
@@ -246,11 +247,11 @@ class TrackManager {
         console.assert(!!before && !!after);
         this.source_.addFeatures([before, after]);
 
-        this.updater_.updateAdjacentSegmentsGeometries(controlPoint).then(() => {
-          this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
-          this.updater_.computeAdjacentSegmentsProfile(controlPoint);
-        })
-        .then(() => this.onTrackChanged_());
+        await this.updater_.updateAdjacentSegmentsGeometries(controlPoint);
+        this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
+        await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
+        this.trackData_.updatePOIIndexes();
+        this.onTrackChanged_();
       }
     });
 

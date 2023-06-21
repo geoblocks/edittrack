@@ -94,7 +94,6 @@ export const poiPoint = new Style({
   }),
   text: new Text({
     font: "11px Inter",
-    text: "99",
     offsetY: -10,
     fill: new Fill({
       color: "#fff",
@@ -109,7 +108,6 @@ export const poiPointSketchHit = new Style({
   }),
   text: new Text({
     font: "11px Inter",
-    text: "99",
     offsetY: -10,
     fill: new Fill({
       color: "#fff",
@@ -164,7 +162,14 @@ export function styleFunction(feature) {
       }
       return withPointerDevice ? null : sketchControlPoint;
     case "POI":
-      return sketchHitGeometry ? poiPointSketchHit : poiPoint;
+      if (sketchHitGeometry) {
+        return poiPointSketchHit
+      }
+      const index = feature.get("index");
+      if (index !== undefined) {
+        poiPoint.getText().setText((index + 1).toString());
+      }
+      return poiPoint;
     case "controlPoint":
       if (!withPointerDevice && sketchHitGeometry) {
         return sketchControlPointHint;
