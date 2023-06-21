@@ -38,21 +38,6 @@ class TrackUpdater {
     this.router_ = options.router;
   }
 
-
-  /**
-   * @private
-   * @param {import('ol/Feature').default<LineString>} segment
-   * @param {import('ol/Feature').default<Point>} pointFrom
-   * @param {import('ol/Feature').default<Point>} pointTo
-   */
-  updateStraightLineSegmentGeometry_(segment, pointFrom, pointTo) {
-    console.assert(!segment.get('snapped'));
-    segment.getGeometry().setCoordinates([
-      pointFrom.getGeometry().getCoordinates(),
-      pointTo.getGeometry().getCoordinates()
-    ]);
-  }
-
   /**
    * @param {import('ol/Feature').default<Point>} modifiedControlPoint
    * @return {Promise<any>}
@@ -91,33 +76,21 @@ class TrackUpdater {
    * @param {import('ol/Feature').default<Point>} modifiedControlPoint
    * @return {Promise<any>}
    */
-  updateAdjacentSegmentsGeometries(modifiedControlPoint) {
-    const routedSegments = [];
-    /** @type {function[]} */
-    const straightSegments = [];
-
+  async updateAdjacentSegmentsGeometries(modifiedControlPoint) {
+    // FIXME: use snapping property from manager
     if (modifiedControlPoint) {
       const {before, after} = this.trackData_.getAdjacentSegments(modifiedControlPoint);
       if (before) {
         const pointFrom = this.trackData_.getControlPointBefore(modifiedControlPoint);
-        if (before.get('snapped')) {
-          routedSegments.push(() => this.router_.snapSegment(before, pointFrom, modifiedControlPoint));
-        } else {
-          straightSegments.push(() => this.updateStraightLineSegmentGeometry_(before, pointFrom, modifiedControlPoint));
-        }
+        await this.router_.snapSegment(before, pointFrom, modifiedControlPoint);
+        await this.profiler_.computeProfile(before);
       }
       if (after) {
         const pointTo = this.trackData_.getControlPointAfter(modifiedControlPoint);
-        if (after.get('snapped')) {
-          routedSegments.push(() => this.router_.snapSegment(after, modifiedControlPoint, pointTo));
-        } else {
-          straightSegments.push(() => this.updateStraightLineSegmentGeometry_(after, modifiedControlPoint, pointTo));
-        }
+        await this.router_.snapSegment(after, modifiedControlPoint, pointTo);
+        await this.profiler_.computeProfile(after);
       }
     }
-    return Promise.all(routedSegments.map(fn => fn())).then(() => {
-      straightSegments.forEach(fn => fn());
-    });
   }
 }
 
