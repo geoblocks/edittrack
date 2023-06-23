@@ -148,11 +148,13 @@ export default class TrackInteraction extends Interaction {
     // for simplicity we directly register the interactions
     // The draw interaction must be added after the modify
     // otherwise clicking on an existing segment or point doesn't add a new point
+    // The delete interaction must be added after the draw otherwise the draw is not passing
+    // the double click event to the delete interaction.
     const map = options.map;
     this.setMap(map);
-    map.addInteraction(this.deletePoint_);
     map.addInteraction(this.modifyTrack_);
     map.addInteraction(this.drawTrack_);
+    map.addInteraction(this.deletePoint_);
   }
 
   clearSelected() {

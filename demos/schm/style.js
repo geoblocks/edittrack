@@ -130,7 +130,7 @@ const sketchLabel = new Style({
 
 const sketchLabelText = {
   POI: "drag to move POI",
-  controlPoint: "click to delete\ndrag to move point",
+  controlPoint: "double click to delete\ndrag to move point",
   segment: "drag to create point",
 };
 
