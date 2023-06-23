@@ -1,27 +1,21 @@
 import {distance as fakeDistance, closestOnSegment} from 'ol/coordinate.js';
+import type LineString from 'ol/geom/LineString.js';
+import type {Coordinate} from 'ol/coordinate.js';
 
-/**
- * @typedef {Object} ClosestPoint
- * @property {number} distanceFromStart
- * @property {number} distanceFromSearched
- * @property {import("ol/coordinate").Coordinate} coordinates
- * @property {number} [fullLength]
- */
+export interface ClosestPoint {
+  distanceFromStart: number;
+  distanceFromSearched: number;
+  coordinates: Coordinate;
+  fullLength?: number;
+}
 
-/**
- * @typedef {Object} ClosestLinesOptions
- * @property {number} tolerance
- * @property {boolean} interpolate
- */
+export interface ClosestLinesOptions {
+  tolerance: number;
+  interpolate: boolean;
+}
 
-/**
- * @param {import("ol/geom/LineString").default} line
- * @param {import("ol/coordinate").Coordinate} searched
- * @param {number} previousLineLength
- * @param {boolean} interpolate
- * @return {ClosestPoint}
- */
-export function findClosestPointInLine(line, searched, previousLineLength, interpolate) {
+
+export function findClosestPointInLine(line: LineString, searched: Coordinate, previousLineLength: number, interpolate: boolean): ClosestPoint {
   let currentLineLength = 0; // from XYZM data
   const coordinatess = line.getCoordinates();
   let previous = coordinatess[0];
@@ -30,8 +24,7 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
     throw new Error('findClosestPointInLine works only with XYZM lines');
   }
 
-  /** @type {ClosestPoint} */
-  const best = {
+  const best: ClosestPoint = {
     distanceFromStart: 0,
     distanceFromSearched: Number.POSITIVE_INFINITY,
     coordinates: coordinatess[0],
@@ -73,13 +66,7 @@ export function findClosestPointInLine(line, searched, previousLineLength, inter
 }
 
 
-/**
- * @param {Array<import("ol/geom/LineString").default>} lines
- * @param {import("ol/coordinate").Coordinate} searched
- * @param {ClosestLinesOptions} options
- * @return {ClosestPoint}
- */
-export function findClosestPointInLines(lines, searched, options) {
+export function findClosestPointInLines(lines: LineString[], searched: Coordinate, options: ClosestLinesOptions): ClosestPoint {
   const {tolerance, interpolate} = options;
   const bests = [];
   let previousDistance = 0;
