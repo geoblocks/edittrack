@@ -11,7 +11,7 @@
     "build-demo:schm": "parcel build --target demo demos/schm/schm.html",
     "build-demo": "npm run build-demo:simple && npm run build-demo:schm",
     "test": "mocha --exit",
-    "typecheck": "tsc --pretty",
+    "typecheck": "tsc --pretty --noEmit",
     "lint": "npm run eslint && npm run typecheck",
     "doc": "typedoc",
     "gh-pages": "rm -rf docs && npm run doc && npm run build-demo && gh-pages -d dist"
@@ -38,6 +38,8 @@
     "@types/chai": "4.3.5",
     "@types/mocha": "10.0.1",
     "@types/proj4": "2.5.2",
+    "@typescript-eslint/eslint-plugin": "^5.57.1",
+    "@typescript-eslint/parser": "^5.57.1",
     "chai": "4.3.7",
     "eslint": "8.43.0",
     "eslint-config-openlayers": "18.0.0",
@@ -46,6 +48,7 @@
     "ol": "7.4.0",
     "parcel": "2.9.2",
     "proj4": "2.9.0",
+    "ts-node": "^10.9.1",
     "tsconfig-paths": "4.2.0",
     "typedoc": "0.24.8",
     "typescript": "5.1.3"

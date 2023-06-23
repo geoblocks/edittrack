@@ -5,27 +5,28 @@ import VectorLayer from 'ol/layer/Vector.js';
 
 // @ts-ignore FIXME: introduce a type declaration
 import d3Elevation from '@geoblocks/d3profile/src/d3Elevation.js';
+import Style from 'ol/style/Style.js';
+import LineString from 'ol/geom/LineString.js';
+import type Map from 'ol/Map.js';
 
-/**
- * @typedef {import('ol/geom/LineString').default} LineString
- * @typedef {import('ol/Map').default} OLMap
- */
+interface ProfileItem {
+  x: number;
+  y: number;
+  dist: number;
+  ele: number;
+}
 
-/**
- * @typedef {Object} ProfileItem
- * @property {number} x
- * @property {number} y
- * @property {number} dist
- * @property {number} ele
- */
+interface Options {
+  map: Map;
+  profileTarget: string|HTMLElement;
+  lightXAxis?: boolean;
+  styleDefs?: string;
+}
 
-/**
- * @typedef {Object} Options
- * @property {OLMap} map
- * @property {string|HTMLElement} profileTarget
- * @property {boolean} [lightXAxis]
- * @property {string} [styleDefs]
- */
+interface Callbacks {
+  outCallback: () => void;
+  hoverCallback: (item: ProfileItem) => void;
+}
 
 const defaultStyleDefs = `
 .domain {
@@ -53,58 +54,30 @@ const defaultStyleDefs = `
 }`;
 
 class Profile {
+  hoverActive: boolean;
+  map_: Map;
+  private profileTarget_: string | HTMLElement;
+  styleDefs_: string;
+  private hoverFeature_: Feature<Point>;
+  private profile_: any; // FIXME: d3js component
 
-  /**
-   * @param {Options} options
-   */
-  constructor(options) {
+  constructor(options: Options) {
 
-    /**
-     * @type {boolean}
-     */
     this.hoverActive = true;
-
-    /**
-     * @type {OLMap}
-     * @private
-     */
     this.map_ = options.map;
-
-    /**
-     * @type {string|HTMLElement}
-     * @private
-     */
     this.profileTarget_ = options.profileTarget;
-
     this.styleDefs_ = options.styleDefs || defaultStyleDefs;
-
-    /**
-     * @private
-     * @type {Feature<Point>}
-     */
-    this.hoverFeature_ = undefined;
 
     const callbacks = this.createProfileCallbacks_();
 
-    /**
-     * @param {ProfileItem} item
-     * @return {number} dist
-     */
-    function distanceExtractor(item) {
+    function distanceExtractor(item: ProfileItem): number {
       return item.dist;
     }
 
-    /**
-     * @param {ProfileItem} item
-     * @return {number} elevation
-     */
-    function zExtractor(item) {
+    function zExtractor(item: ProfileItem): number {
       return item.ele;
     }
 
-    /**
-     * @private
-     */
     this.profile_ = d3Elevation({
       distanceExtractor,
       linesConfiguration: {
@@ -119,11 +92,7 @@ class Profile {
     });
   }
 
-  /**
-   * @private
-   * @return {{outCallback: Function, hoverCallback: function(ProfileItem)}}
-   */
-  createProfileCallbacks_() {
+  private createProfileCallbacks_(): Callbacks {
     const profileHoverGeometry = new Point([0, 0]);
     this.hoverFeature_ = new Feature({
       geometry: profileHoverGeometry
@@ -141,10 +110,7 @@ class Profile {
       profileHoverVector.setVisible(false);
     };
 
-    /**
-     * @param {ProfileItem} item
-     */
-    const hoverCallback = item => {
+    const hoverCallback = (item: ProfileItem) => {
       if (this.hoverActive) {
         // An item in the list of points given to the profile.
         profileHoverGeometry.setCoordinates([item.x, item.y]);
@@ -158,21 +124,11 @@ class Profile {
     };
   }
 
-  /**
-   * @param {Feature<LineString>[]} segments
-   * @return {ProfileItem[]}
-   */
-  getTrackProfile(segments) {
-    /**
-     * @type {ProfileItem[]}
-     */
-    let profile = [];
+  getTrackProfile(segments: Feature<LineString>[]): ProfileItem[] {
+    let profile: ProfileItem[] = [];
     let previousDistance = 0;
     for (const segment of segments) {
-      /**
-       * @type {[number, number, number, number][]}
-       */
-      const segmentProfile = segment.get('profile');
+      const segmentProfile: [number, number, number, number] = segment.get('profile');
       if (segmentProfile.length > 0) {
         profile = profile.concat(segmentProfile.map(item => {
           return {
@@ -188,18 +144,12 @@ class Profile {
     return profile;
   }
 
-  /**
-   * @param {Feature<LineString>[]} segments
-   */
-  refreshProfile(segments) {
+  refreshProfile(segments: Feature<LineString>[]) {
     const trackProfile = this.getTrackProfile(segments);
     this.profile_.refreshProfile(this.profileTarget_, trackProfile.length > 0 ? trackProfile : undefined);
   }
 
-  /**
-   * @param {import("ol/style/Style").default} style
-   */
-  setTrackHoverStyle(style) {
+  setTrackHoverStyle(style: Style) {
     this.hoverFeature_.setStyle(style);
   }
 
@@ -211,12 +161,11 @@ class Profile {
     this.profile_.clearHighlight();
   }
 
-  /**
+  /*
    * Highlight the given distance and corresponding elevation on chart.
    * Fire the hoverCallback callback with corresponding point.
-   * @param {number} distance Distance.
    */
-  highlight(distance) {
+  highlight(distance: number) {
     this.profile_.highlight(distance);
   }
 }

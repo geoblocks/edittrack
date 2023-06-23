@@ -3,7 +3,7 @@
 import 'mocha';
 import {assert} from 'chai';
 import LineString from 'ol/geom/LineString.js';
-import PolylineXYZM from '../src/router/PolylineXYZM.js';
+import PolylineXYZM from '../src/router/PolylineXYZM.ts';
 
 
 describe('PolylineXYZM', () => {
@@ -44,12 +44,12 @@ describe('PolylineXYZM', () => {
   it('reads 3D polyline', () => {
     const p1 = [0, 0, 0, 0];
     const p2 = [1, 1, 1, 157249.59847404022];
-    const geom = /** @type {LineString} */(format.readGeometry('???_ibE_ibEgE'));
+    const geom: LineString = format.readGeometry('???_ibE_ibEgE');
     assert.deepEqual(geom.getCoordinates(), [p1, p2]);
   });
 
   it('reads real like polyline', () => {
-    const geom = /** @type {LineString} */(format.readGeometry('_vr{Guqyf@_c_BuAk@eAkAs@NH]~@'));
+    const geom = format.readGeometry('_vr{Guqyf@_c_BuAk@eAkAs@NH]~@');
     // console.log(geom);
     const expected = [
       [

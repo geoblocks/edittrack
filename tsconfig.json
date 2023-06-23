@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
     /* Basic Options */
-    "target": "ES2017",
-    "module": "ES2020",
-    "lib": ["es2020", "dom"],
+    "target": "ES2020",
+    "module": "ES2022",
+    "lib": ["es2022", "dom"],
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
     "skipLibCheck": true,
 
     /* Strict Type-Checking Options */
@@ -28,6 +27,7 @@
     "typeRoots": ["types"],
 
     "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
 
     "moduleResolution": "Node"
   },
@@ -35,6 +35,6 @@
     "test/**/*.js",
     "src/**/*.js",
     "src/**/*.d.ts",
-    "types/**/*"
+    "types/**/*",
   ]
 }
