@@ -1,38 +1,79 @@
-import { Fill, Stroke, Style, Icon, Text, RegularShape } from "ol/style";
+import { Fill, Stroke, Style, Icon, Text, Circle } from "ol/style";
 import { toString } from "ol/color";
+import Point from "ol/geom/Point";
 
-const color = [227, 6, 19];
-const lightColor = [...color, 0.6];
+const tourColor = [55, 97, 164];
+const lightTourColor = [...tourColor, 0.6];
+
+const focusRed = [173, 9, 29];
+const lightFocusRed = [...focusRed, 0.3];
 
 const poiSvg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="33">
-  <path d="M10 0C5 0 .5 3 .5 9c0 4 9.5 24 9.5 24s9.5-20 9.5-24c0-6-4.5-9-9.5-9z" fill="${toString(color)}"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="60">
+  <path fill="${toString(tourColor)}" stroke="white" stroke-width="2" paint-oder="stroke" d="M18 8.177c-5 0-9.5 3-9.5 9 0 4 9.5 24 9.5 24s9.5-20 9.5-24c0-6-4.5-9-9.5-9Z"/>
+</svg>
+`;
+
+const poiSvgSketchHit = `
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="60">
+  <path fill="${toString(focusRed)}" stroke="${toString(lightFocusRed)}" stroke-width="16" paint-oder="stroke" d="M18 8.177c-5 0-9.5 3-9.5 9 0 4 9.5 24 9.5 24s9.5-20 9.5-24c0-6-4.5-9-9.5-9Z"/>
+  <path fill="${toString(focusRed)}" stroke="white" stroke-width="2" paint-oder="stroke" d="M18 8.177c-5 0-9.5 3-9.5 9 0 4 9.5 24 9.5 24s9.5-20 9.5-24c0-6-4.5-9-9.5-9Z"/>
 </svg>
 `;
 
 export const controlPoint = new Style({
-  image: new RegularShape({
+  zIndex: 100,
+  image: new Circle({
     fill: new Fill({
-      color: lightColor,
+      color: tourColor,
     }),
     stroke: new Stroke({
       width: 2,
-      color: color,
+      color: "#fff",
     }),
-    points: 4,
     radius: 8,
-    angle: Math.PI / 4,
   }),
   text: new Text({
+    font: "bold 11px Inter",
     fill: new Fill({
       color: "#fff",
     }),
   }),
 });
 
-export const sketchControlPoint = controlPoint.clone();
+export const sketchControlPoint = [
+  new Style({
+    zIndex: 200,
+    image: new Circle({
+      fill: new Fill({
+        color: lightFocusRed,
+      }),
+      radius: 16,
+    }),
+  }),
+  new Style({
+    zIndex: 200,
+    image: new Circle({
+      fill: new Fill({
+        color: focusRed,
+      }),
+      radius: 8,
+    }),
+  }),
+];
 
-export const numberedControlPoint = controlPoint.clone();
+export const controlPointSketchHit = controlPoint.clone();
+controlPointSketchHit.getImage().getFill().setColor(focusRed);
+
+// mouse over a control point or dragging a new control point on a segment
+export const sketchControlPointHint = sketchControlPoint.map((style) => style.clone());
+sketchControlPointHint[1].getImage().setStroke(new Stroke({
+  width: 2,
+  color: "#fff",
+}));
+
+export const segmentIntermediatePoint = controlPoint.clone();
+segmentIntermediatePoint.getImage().setRadius(4);
 
 export const firstControlPoint = controlPoint.clone();
 firstControlPoint.getText().setText("A");
@@ -40,59 +81,68 @@ firstControlPoint.getText().setText("A");
 export const lastControlPoint = controlPoint.clone();
 lastControlPoint.getText().setText("B");
 
+export const profileHover = sketchControlPointHint.map((style) => style.clone());
+profileHover[1].getImage().setRadius(6);
+profileHover[0].getImage().getFill().setColor([0, 0, 0, 0.3]);
+
+
 export const poiPoint = new Style({
-  zIndex: 100,
   image: new Icon({
     src: `data:image/svg+xml;utf8,${poiSvg}`,
-    // anchor: [0.5, 1]
+  }),
+  text: new Text({
+    font: "11px Inter",
+    text: "99",
+    offsetY: -10,
+    fill: new Fill({
+      color: "#fff",
+    }),
   }),
 });
 
-const sketchLabel = {
-  POI: new Style({
-    text: new Text({
-      font: "20px sans-serif",
-      offsetX: 20,
-      textAlign: "left",
-      backgroundFill: new Fill({
-        color: "#ffffffaa",
-      }),
-      text: "drag to move POI",
+export const poiPointSketchHit = new Style({
+  zIndex: 200,
+  image: new Icon({
+    src: `data:image/svg+xml;utf8,${poiSvgSketchHit}`,
+  }),
+  text: new Text({
+    font: "11px Inter",
+    text: "99",
+    offsetY: -10,
+    fill: new Fill({
+      color: "#fff",
     }),
   }),
-  cp: new Style({
-    text: new Text({
-      font: "20px sans-serif",
-      offsetX: 20,
-      textAlign: "left",
-      backgroundFill: new Fill({
-        color: "#ffffffaa",
-      }),
-      text: "click to delete\ndrag to move point",
+});
+
+const sketchLabel = new Style({
+  text: new Text({
+    font: "16px Inter",
+    padding: [4, 4, 4, 4],
+    offsetX: 24,
+    textAlign: "left",
+    backgroundFill: new Fill({
+      color: "#fff",
     }),
   }),
-  segment: new Style({
-    text: new Text({
-      backgroundFill: new Fill({
-        color: "#ffffffaa",
-      }),
-      offsetX: 20,
-      textAlign: "left",
-      font: "20px sans-serif",
-      text: "drag to create point",
-    }),
-  }),
+})
+
+
+const sketchLabelText = {
+  POI: "drag to move POI",
+  controlPoint: "click to delete\ndrag to move point",
+  segment: "drag to create point",
 };
 
 export const trackLine = new Style({
   stroke: new Stroke({
-    color: color,
+    color: tourColor,
     width: 6,
   }),
 });
 
 export const trackLineModifying = trackLine.clone();
-trackLineModifying.getStroke().setColor(lightColor);
+trackLineModifying.getStroke().setColor(lightTourColor);
 trackLineModifying.getStroke().setLineDash([1, 12]);
 
 /**
@@ -103,28 +153,27 @@ trackLineModifying.getStroke().setLineDash([1, 12]);
 export function styleFunction(feature, _) {
   const type = feature.get("type");
   const subtype = feature.get("subtype");
-  const index = feature.get("index");
+  const sketchHitGeometry = feature.get("sketchHitGeometry");
 
   switch (type) {
-    case "sketch": {
+    case "sketch":
       if (subtype) {
-        return [sketchControlPoint, sketchLabel[subtype]];
+        sketchLabel.getText().setText(sketchLabelText[subtype]);
+        return sketchLabel;
       }
       return sketchControlPoint;
-    }
     case "POI":
-      return poiPoint;
+      return sketchHitGeometry ? poiPointSketchHit : poiPoint;
     case "controlPoint":
+      if (sketchHitGeometry) {
+        return sketchControlPointHint;
+      }
       switch (subtype) {
         case "first":
           return firstControlPoint;
         case "last":
           return lastControlPoint;
         default:
-          if (index !== undefined) {
-            numberedControlPoint.getText().setText((index + 1).toString());
-            return numberedControlPoint;
-          }
           return controlPoint;
       }
     case "segment":
@@ -132,9 +181,20 @@ export function styleFunction(feature, _) {
         case "modifying":
           return trackLineModifying;
         default:
-          return trackLine;
+          const styles = [];
+          if (sketchHitGeometry) {
+            sketchControlPointHint.forEach((style) => style.setGeometry(sketchHitGeometry));
+            styles.push(...sketchControlPointHint);
+          } else {
+            sketchControlPointHint.forEach((style) => style.setGeometry(null));
+          }
+          const intermediatePoint = segmentIntermediatePoint.clone();
+          intermediatePoint.setGeometry(new Point(feature.getGeometry().getFlatMidpoint()));
+          styles.push(trackLine, intermediatePoint);
+          return styles;
       }
     default:
+      // console.assert(false, "unknown feature type");
       return null;
   }
 }
