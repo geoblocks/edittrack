@@ -30,6 +30,7 @@ import {debounce, setZ} from './util.js';
  * @property {geoblocks.Profiler} profiler
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent): boolean} [deleteCondition]
+ * @property {number} [hitTolerance=20]
  */
 
 
@@ -63,6 +64,12 @@ class TrackManager {
      * @private
      */
     this.shadowTrackLayer_ = options.shadowTrackLayer;
+
+    /**
+     * @type {number}
+     * @private
+     */
+    this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
 
     /**
      * @type {boolean}
@@ -121,6 +128,7 @@ class TrackManager {
       trackLayer: this.trackLayer_,
       map: this.map_,
       deleteCondition: options.deleteCondition,
+      hitTolerance: this.hitTolerance_,
     });
 
     // Hack to test profile synchro
@@ -206,7 +214,7 @@ class TrackManager {
     this.map_.on('pointermove', (event) => {
       const hover = this.map_.hasFeatureAtPixel(event.pixel, {
         layerFilter: l => l === options.trackLayer,
-        hitTolerance: 20,
+        hitTolerance: this.hitTolerance_,
       });
       const cursor = (this.interaction_.getActive() && hover) ? 'pointer' : '';
       if (this.map_.getTargetElement().style.cursor !== cursor) {

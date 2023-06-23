@@ -19,6 +19,7 @@ import {click} from 'ol/events/condition.js';
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
+ * @property {number} hitTolerance
  */
 
 
@@ -65,14 +66,16 @@ export default class TrackInteraction extends Interaction {
    * @param {import('./TrackData').default} trackData
    * @param {VectorSource} source
    * @param {StyleFunction} style
+   * @param {number} hitTolerance
    * @return {Modify}
    */
-  createModifyInteraction(trackData, source, style) {
+  createModifyInteraction(trackData, source, style, hitTolerance) {
     const modify = new Modify({
       trackData: trackData,
       source: source,
       style: style,
       condition: (event) => !this.deleteCondition_(event),
+      hitTolerance: hitTolerance,
     });
     // @ts-ignore too complicate to declare proper events
     modify.on('modifyend', (evt) => this.dispatchEvent(evt));
@@ -133,7 +136,7 @@ export default class TrackInteraction extends Interaction {
     /**
      * @private
      */
-    this.modifyTrack_ = this.createModifyInteraction(options.trackData, source, options.style);
+    this.modifyTrack_ = this.createModifyInteraction(options.trackData, source, options.style, options.hitTolerance);
 
     /**
      * @private

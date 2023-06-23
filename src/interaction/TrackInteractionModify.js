@@ -49,6 +49,7 @@ export class ModifyEvent extends Event {
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent): boolean} condition
+ * @property {number} hitTolerance
  */
 
 
@@ -72,6 +73,8 @@ export default class Modify extends PointerInteraction {
     this.condition_ = options.condition;
 
     this.source_ = options.source;
+
+    this.hitTolerance_ = options.hitTolerance;
 
     /**
      * The feature being modified.
@@ -136,7 +139,7 @@ export default class Modify extends PointerInteraction {
   getFeatureAtPixel(pixel) {
     const features = /** @type {Feature<LineString|Point>[]} */ (this.getMap().getFeaturesAtPixel(pixel, {
       layerFilter: (l) => l.getSource() === this.source_,
-      hitTolerance: 20
+      hitTolerance: this.hitTolerance_
     }));
     // get the first point feature
     const feature = features.find((f) => f.getGeometry().getType() === 'Point');
