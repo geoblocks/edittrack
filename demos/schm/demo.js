@@ -4,10 +4,9 @@ import GraphHopperRouter from '../../src/router/GraphHopper';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
 import Profile from '../../src/Profile';
 import {styleFunction, profileHover} from './style';
-import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
-import {click} from 'ol/events/condition';
+import {doubleClick} from 'ol/events/condition';
 
 const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
@@ -37,7 +36,7 @@ async function main() {
    * @return {boolean}
    */
   const deleteCondition = function(mapBrowserEvent, pointType) {
-    return click(mapBrowserEvent) && pointType !== 'POI';
+    return doubleClick(mapBrowserEvent) && pointType !== 'POI';
   };
 
   const trackManager = new TrackManager({
