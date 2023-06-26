@@ -62,9 +62,9 @@ export default class OSRMRouter {
    * @param {import('ol/Feature').default<LineString>} segment
    * @param {import('ol/Feature').default<Point>} pointFrom
    * @param {import('ol/Feature').default<Point>} pointTo
-   * @return {Promise<void>}
+   * @return {Promise<boolean>}
    */
-  snapSegment(segment, pointFrom, pointTo) {
+  async snapSegment(segment, pointFrom, pointTo) {
     const pointFromGeometry = pointFrom.getGeometry();
     const pointToGeometry = pointTo.getGeometry();
     const coordinates = [pointFromGeometry.getCoordinates(), pointToGeometry.getCoordinates()].map(cc => toLonLat(cc.slice(0, 2), this.mapProjection_));
@@ -77,27 +77,22 @@ export default class OSRMRouter {
     if (this.extraParams_) {
       url += `&${this.extraParams_}`;
     }
-    return fetch(url)
-      .then(response => response.json())
-      .then((jsonResponse) => {
-        console.assert(jsonResponse.code === 'Ok');
-        console.assert(jsonResponse.routes.length === 1);
-        const route = jsonResponse.routes[0];
-        const segmentCoordinates = /** @type {import('ol/coordinate').Coordinate[]} */
-        (route.geometry.coordinates).map(cc => fromLonLat(cc, this.mapProjection_));
-        const segmentGeometry = segment.getGeometry();
+    const response = await fetch(url);
+    const jsonResponse = await response.json();
+    console.assert(jsonResponse.code === 'Ok');
+    console.assert(jsonResponse.routes.length === 1);
+    const route = jsonResponse.routes[0];
+    const segmentCoordinates = /** @type {import('ol/coordinate').Coordinate[]} */ (route.geometry.coordinates).map(cc => fromLonLat(cc, this.mapProjection_));
+    const segmentGeometry = segment.getGeometry();
+    segmentGeometry.setCoordinates(segmentCoordinates);
 
-        segment.setProperties({
-          snapped: true
-        });
+    pointFromGeometry.setCoordinates(segmentCoordinates[0]);
+    pointToGeometry.setCoordinates(segmentCoordinates[segmentCoordinates.length - 1]);
+    segment.set('snapped', true);
+    pointFrom.set('snapped', true);
+    pointTo.set('snapped', true);
 
-        segmentGeometry.setCoordinates(segmentCoordinates);
-
-        pointFromGeometry.setCoordinates(segmentCoordinates[0]);
-        pointToGeometry.setCoordinates(segmentCoordinates[segmentCoordinates.length - 1]);
-        pointFrom.set('snapped', true);
-        pointTo.set('snapped', true);
-      });
+    return true;
   }
 
   /**

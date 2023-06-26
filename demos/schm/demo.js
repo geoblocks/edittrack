@@ -18,7 +18,8 @@ async function main() {
   const projection = map.getView().getProjection();
   const router = new GraphHopperRouter({
     url: ROUTING_URL,
-    mapProjection: projection
+    mapProjection: projection,
+    maxRoutingDistance: 15,
   });
 
   const profiler = new FallbackProfiler({

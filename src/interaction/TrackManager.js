@@ -144,47 +144,30 @@ class TrackManager {
      */
     this.historyManager_ = new HistoryManager();
 
-    this.interaction_.on(
-      // @ts-ignore too complicate to declare proper events
-      'drawend',
-      /**
-       *
-       * @param {import ('ol/interaction/Draw').DrawEvent} event
-       */
-      (event) => {
-        console.assert(event.feature.getGeometry().getType() === 'Point');
-        const feature = /** @type {Feature<Point>} */ (event.feature);
-        const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
-        if (segment) {
-          this.source_.addFeature(segment);
-          if (this.snapping) {
-            this.router_.snapSegment(segment, pointFrom, pointTo).then(() => {
-              // compute profile for routed segment
-              this.profiler_.computeProfile(segment).then(() => {
-                const {before} = this.trackData_.getAdjacentSegments(pointFrom);
-                if (before && !before.get('snapped')) {
-                  // move the last point of the previous straight segment
-                  const geometry = before.getGeometry();
-                  const coordinates = geometry.getCoordinates();
-                  console.assert(coordinates.length === 2, 'Previous segment is not a straight line');
-                  geometry.setCoordinates([coordinates[0], segment.getGeometry().getFirstCoordinate()]);
-                }
-                this.onTrackChanged_();
-              });
-            });
-        } else {
-          // compute profile for straight segment and set the elevation to the points
-          this.profiler_.computeProfile(segment).then(() => {
-          /**
-           * @type {[number, number, number, number][]}
-           */
-            const segmentProfile = segment.get('profile');
-            if (segmentProfile) {
-              setZ(segment, segmentProfile[0][2], segmentProfile[segmentProfile.length - 1][2]);
-            }
-            this.onTrackChanged_();
-          });
+    // @ts-ignore too complicate to declare proper events
+    this.interaction_.on('drawend',
+    /**
+     *
+     * @param {import ('ol/interaction/Draw').DrawEvent} event
+     */
+    async (event) => {
+      console.assert(event.feature.getGeometry().getType() === 'Point');
+      const feature = /** @type {Feature<Point>} */ (event.feature);
+      const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
+      if (segment) {
+        this.source_.addFeature(segment);
+        let snapped = false;
+        if (this.snapping) {
+          snapped = await this.router_.snapSegment(segment, pointFrom, pointTo);
         }
+        await this.profiler_.computeProfile(segment);
+        if (!snapped) {
+          const segmentProfile = segment.get('profile');
+          if (segmentProfile) {
+            setZ(segment, segmentProfile[0][2], segmentProfile[segmentProfile.length - 1][2]);
+          }
+        }
+        this.onTrackChanged_();
       }
     });
 
