@@ -1,48 +1,40 @@
 import {equals} from 'ol/coordinate.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
+import type Point from 'ol/geom/Point.js';
+import type {Coordinate} from 'ol/coordinate.js';
 
-/** @typedef {import('ol/geom/Point').default} Point */
+interface ParsedFeatures {
+  segments: Array<Feature<LineString>>;
+  controlPoints: Array<Feature<Point>>;
+  pois: Array<Feature<Point>>;
+}
 
-/**
- * @typedef {Object} ParsedFeatures
- * @property {Array<Feature<LineString>>}  segments
- * @property {Array<Feature<Point>>} controlPoints
- * @property {Array<Feature<Point>>} pois
- */
+interface AdjacentSegments {
+  before?: Feature<LineString>;
+  after?: Feature<LineString>;
+}
+
+interface AddedControlPoint {
+  pointFrom: Feature<Point>;
+  pointTo: Feature<Point>;
+  segment?: Feature<LineString>;
+}
+
+interface DeletedControlPoint {
+  deleted: Array<Feature<Point|LineString>>;
+  pointBefore?: Feature<Point>;
+  pointAfter?: Feature<Point>;
+  newSegment?: Feature<LineString>;
+}
 
 export default class TrackData {
+  private segments_: Array<Feature<LineString>> = [];
+  private controlPoints_: Array<Feature<Point>> = [];
+  private pois_: Array<Feature<Point>> = [];
 
-  constructor() {
-    /**
-     * The pieces of the track linestring.
-     * @private
-     * @type {Array<Feature<LineString>>}
-     */
-    this.segments_ = [];
-
-    /**
-     * The ends of the track linestring pieces.
-     * @private
-     * @type {Array<Feature<Point>>}
-     */
-    this.controlPoints_ = [];
-
-    /**
-     * Some POI points coming together with the line track.
-     * @private
-     * @type {Array<Feature<Point>>}
-     */
-    this.pois_ = [];
-  }
-
-  /**
-   * @param {Array<Feature<Point|LineString>>} features
-   * @return {ParsedFeatures}
-   */
-  parseFeatures(features) {
-    /** @type {ParsedFeatures} */
-    const parsed = {
+  parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
+    const parsed: ParsedFeatures = {
       segments: [],
       pois: [],
       controlPoints: [],
@@ -53,39 +45,30 @@ export default class TrackData {
       const type = feature.get('type');
       if (type === 'segment') {
         console.assert(feature.getGeometry().getType() === 'LineString');
-        segments.push(/** @type {Feature<LineString>} */ (feature));
+        segments.push(feature as Feature<LineString>);
       } else if (type === 'controlPoint') {
         console.assert(feature.getGeometry().getType() === 'Point');
-        controlPoints.push(/** @type {Feature<Point>} */ (feature));
+        controlPoints.push(feature as Feature<Point>);
       } else if (type === 'POI') {
         console.assert(feature.getGeometry().getType() === 'Point');
-        pois.push(/** @type {Feature<Point>} */ (feature));
+        pois.push(feature as Feature<Point>);
       }
     }
 
-    segments.sort(sortByIndex);
-    controlPoints.sort(sortByIndex);
     return parsed;
   }
 
-  /**
-   * @param {ParsedFeatures} parsedFeatures
-   */
-  restoreParsedFeatures(parsedFeatures) {
+  restoreParsedFeatures(parsedFeatures: ParsedFeatures) {
     const {segments, pois, controlPoints} = parsedFeatures;
     console.assert((!controlPoints.length && !segments.length) || (controlPoints.length === segments.length + 1));
     this.clear();
+    controlPoints.sort(sortByIndex);
     this.segments_ = segments;
     this.pois_ = pois;
     this.controlPoints_ = controlPoints;
   }
 
-
-  /**
-   * @param {Feature<Point>} controlPoint
-   * @return {{before: Feature<LineString>|undefined, after: Feature<LineString>|undefined}}
-   */
-  getAdjacentSegments(controlPoint) {
+  getAdjacentSegments(controlPoint: Feature<Point>): AdjacentSegments {
     let before = undefined;
     let after = undefined;
     const index = this.controlPoints_.indexOf(controlPoint);
@@ -100,11 +83,7 @@ export default class TrackData {
     return {before, after};
   }
 
-  /**
-   * @param {Feature<Point>} controlPoint
-   * @return {?Feature<Point>}
-   */
-  getControlPointBefore(controlPoint) {
+  getControlPointBefore(controlPoint: Feature<Point>): Feature<Point> | null {
     const index = this.controlPoints_.indexOf(controlPoint);
     if (index > 0) {
       return this.controlPoints_[index - 1];
@@ -112,11 +91,7 @@ export default class TrackData {
     return null;
   }
 
-  /**
-   * @param {Feature<Point>} controlPoint
-   * @return {?Feature<Point>}
-   */
-  getControlPointAfter(controlPoint) {
+  getControlPointAfter(controlPoint: Feature<Point>): Feature<Point> | null {
     const index = this.controlPoints_.indexOf(controlPoint);
     if (index >= 0 && index < this.controlPoints_.length - 1) {
       return this.controlPoints_[index + 1];
@@ -124,36 +99,20 @@ export default class TrackData {
     return null;
   }
 
-  /**
-   * @return {Feature<Point>[]}
-   */
-  getPOIs() {
+  getPOIs(): Feature<Point>[] {
     return this.pois_;
   }
 
-  /**
-   * @return {Feature<Point>[]}
-   */
-  getControlPoints() {
+  getControlPoints(): Feature<Point>[] {
     return this.controlPoints_;
   }
 
-  /**
-   * @return {Array<Feature<LineString>>}
-   */
-  getSegments() {
+  getSegments(): Array<Feature<LineString>> {
     return this.segments_;
   }
 
-  /**
-   * Return the whole track as one line string.
-   * @return {LineString}
-   */
-  getLineString() {
-    /**
-     * @type {import('ol/coordinate').Coordinate[]}
-     */
-    const coordinates = [];
+  getLineString(): LineString {
+    const coordinates: Coordinate[] = [];
     for (const feature of this.segments_) {
       const segment = feature.getGeometry().getCoordinates();
       // remove the overlap between the last coordinate of a segment and
@@ -167,12 +126,7 @@ export default class TrackData {
     return new LineString(coordinates);
   }
 
-  /**
-   * @param {Feature<Point>} point
-   * @param {number} index
-   * @return {Feature<LineString>|undefined}
-   */
-  insertControlPointAt(point, index) {
+  insertControlPointAt(point: Feature<Point>, index: number): Feature<LineString> | undefined {
     let removed = undefined;
     point.set('type', 'controlPoint');
     console.assert(index >= 0 && index <= this.controlPoints_.length);
@@ -210,12 +164,10 @@ export default class TrackData {
     return removed;
   }
 
-  /**
+  /*
    * Add a new control point at the end.
-   * @param {Feature<Point>} point
-   * @return {{pointFrom: Feature<Point>, pointTo: Feature<Point>, segment: Feature<LineString>|undefined}}
    */
-  pushControlPoint(point) {
+  pushControlPoint(point: Feature<Point>): AddedControlPoint {
     this.insertControlPointAt(point, this.controlPoints_.length);
     const length = this.controlPoints_.length;
 
@@ -239,14 +191,12 @@ export default class TrackData {
     throw new Error('Internal error: incorrect length');
   }
 
-  /**
+  /*
    * Deletes the supplied point and all adjacent segments.
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
-   * @param {Feature<Point>} point Point to delete.
-   * @return {{deleted: Array<Feature<Point|LineString>>, pointBefore: ?Feature<Point>, pointAfter: ?Feature<Point>, newSegment: ?Feature<LineString>}}
    */
-  deleteControlPoint(point) {
+  deleteControlPoint(point: Feature<Point>): DeletedControlPoint {
     const deleteIndex = this.controlPoints_.indexOf(point);
     if (deleteIndex === -1) {
       return {
@@ -304,11 +254,10 @@ export default class TrackData {
     };
   }
 
-  /**
+  /*
    * Remove the last control point.
-   * @return {Array<Feature<Point|LineString>>}
    */
-  deleteLastControlPoint() {
+  deleteLastControlPoint(): Feature<Point | LineString>[] {
     const deletedFeatures = [];
     const point = this.controlPoints_.pop();
     if (point !== undefined) {
@@ -347,15 +296,14 @@ export default class TrackData {
     }
   }
 
-  hasData() {
+  hasData(): boolean {
     return this.controlPoints_.length > 0 || this.segments_.length > 0 || this.pois_.length > 0;
   }
 
-  /**
+  /*
    * Deletes the supplied point.
-   * @param {Feature<Point>} point Point to delete.
    */
-  deletePOI(point) {
+  deletePOI(point: Feature<Point>) {
     console.assert(point.get('type') === 'POI');
     const idx = this.pois_.findIndex(p => p === point);
     this.pois_.splice(idx, 1);
@@ -368,21 +316,11 @@ export default class TrackData {
   }
 }
 
-/**
- * @param {Feature<any>} left
- * @param {Feature<any>} right
- * @return {number}
- */
-function sortByIndex(left, right) {
+function sortByIndex(left: Feature<any>, right: Feature<any>): number {
   return left.get('index') - right.get('index');
 }
 
-/**
- * @param {Feature<Point>} featureFrom
- * @param {Feature<Point>} featureTo
- * @return {Feature<LineString>}
- */
-function createStraightSegment(featureFrom, featureTo) {
+function createStraightSegment(featureFrom: Feature<Point>, featureTo: Feature<Point>): Feature<LineString> {
   const geometry = new LineString([
     featureFrom.getGeometry().getCoordinates(),
     featureTo.getGeometry().getCoordinates()
@@ -394,11 +332,7 @@ function createStraightSegment(featureFrom, featureTo) {
   return segment;
 }
 
-/**
- * @param {Array<Array<number>>} coordinates
- * @return {boolean}
- */
-function isXYZ(coordinates) {
+function isXYZ(coordinates: Coordinate[]): boolean {
   for (let i = 0, ii = coordinates.length; i < ii; i++) {
     const coord = coordinates[i];
     if (coord.length !== 3 || !coord.every(num => typeof num === 'number')) {

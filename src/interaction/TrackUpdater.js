@@ -1,5 +1,5 @@
 /**
- * @typedef {import("./TrackData.js").default} TrackData
+ * @typedef {import("./TrackData").default} TrackData
  * @typedef {import('ol/geom/Point').default} Point
  * @typedef {import('ol/geom/LineString').default} LineString
  * @typedef {import('ol/geom/Geometry').default} Geometry

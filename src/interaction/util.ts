@@ -1,17 +1,9 @@
-/** @typedef {import('ol/geom/LineString').default} LineString */
+import type Feature from 'ol/Feature.js';
+import type LineString from 'ol/geom/LineString.js';
 
-/**
- * @param {Function} fn
- * @param {number} [delay]
- * @return {Function}
- */
-export function debounce(fn, delay = 0) {
-  /**
-   * @type {number}
-   */
-  let id;
-  // @ts-ignore
-  return (...args) => {
+export function debounce(fn: (...args: any[]) => any, delay = 0): any {
+  let id : number | undefined;
+  return (...args: any) => {
     if (id !== undefined) {
       clearTimeout(id);
     }
@@ -22,13 +14,7 @@ export function debounce(fn, delay = 0) {
   };
 }
 
-
-/**
- * @param {import("ol/Feature").default<LineString>} straightSegment
- * @param {number} first
- * @param {number} last
- */
-export function setZ(straightSegment, first, last) {
+export function setZ(straightSegment: Feature<LineString>, first: number, last: number) {
   const geometry = straightSegment.getGeometry();
   const coordinates = geometry.getCoordinates();
   console.assert(coordinates.length === 2);
