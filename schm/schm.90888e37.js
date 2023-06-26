@@ -583,13 +583,12 @@ var _index = require("../../src/profiler/index");
 var _profile = require("../../src/Profile");
 var _profileDefault = parcelHelpers.interopDefault(_profile);
 var _style = require("./style");
-var _style1 = require("ol/style");
 var _swisstopo = require("./swisstopo");
 var _track = require("./track");
 var _condition = require("ol/events/condition");
 const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true";
 async function main() {
-    const { map , trackLayer , shadowTrackLayer  } = (0, _swisstopo.createMap)("map");
+    const { map, trackLayer, shadowTrackLayer } = (0, _swisstopo.createMap)("map");
     const projection = map.getView().getProjection();
     const router = new (0, _graphHopperDefault.default)({
         url: ROUTING_URL,
@@ -608,7 +607,10 @@ async function main() {
    * @param {string} pointType
    * @return {boolean}
    */ const deleteCondition = function(mapBrowserEvent, pointType) {
-        return (0, _condition.click)(mapBrowserEvent) && pointType !== "POI";
+        return (0, _condition.doubleClick)(mapBrowserEvent) && pointType !== "POI";
+    };
+    const addLastPointCondition = function(mapBrowserEvent) {
+        return (0, _condition.doubleClick)(mapBrowserEvent);
     };
     const trackManager = new (0, _trackManagerDefault.default)({
         map: map,
@@ -617,7 +619,8 @@ async function main() {
         trackLayer: trackLayer,
         shadowTrackLayer: shadowTrackLayer,
         style: (0, _style.styleFunction),
-        deleteCondition: deleteCondition
+        deleteCondition: deleteCondition,
+        addLastPointCondition: addLastPointCondition
     });
     const search = new URLSearchParams(document.location.search);
     const trackId = search.get("trackId");
@@ -678,7 +681,7 @@ async function main() {
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile":"i4hMD","./style":"lUZ9u","ol/style":"hEQxF","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile":"i4hMD","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
@@ -836,7 +839,7 @@ const sketchLabel = new (0, _style.Style)({
 });
 const sketchLabelText = {
     POI: "drag to move POI",
-    controlPoint: "click to delete\ndrag to move point",
+    controlPoint: "double click to delete\ndrag to move point",
     segment: "drag to create point"
 };
 const trackLine = new (0, _style.Style)({
@@ -895,7 +898,7 @@ function styleFunction(feature, _) {
     }
 }
 
-},{"ol/style":"hEQxF","ol/color":"4tahz","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","ol/geom/Point":"hx2Ar"}],"hYgvG":[function(require,module,exports) {
+},{"ol/style":"hEQxF","ol/color":"4tahz","ol/geom/Point":"hx2Ar","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hYgvG":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "createMap", ()=>createMap);
@@ -910,6 +913,7 @@ var _vectorDefault = parcelHelpers.interopDefault(_vector);
 var _vector1 = require("ol/source/Vector");
 var _vectorDefault1 = parcelHelpers.interopDefault(_vector1);
 var _ol = require("ol");
+var _interaction = require("ol/interaction");
 var _style = require("./style");
 var _shadowtrack = require("./shadowtrack");
 const RESOLUTIONS = [
@@ -958,6 +962,9 @@ function createMap(target) {
     const bgLayer = createSwisstopoLayer("ch.swisstopo.pixelkarte-farbe");
     const shadowTrackLayer = (0, _shadowtrack.createShadowLayer)();
     const map = new (0, _ol.Map)({
+        interactions: (0, _interaction.defaults)({
+            doubleClickZoom: false
+        }),
         target,
         view,
         layers: [
@@ -974,7 +981,7 @@ function createMap(target) {
     };
 }
 
-},{"@geoblocks/sources/src/Swisstopo":"8D6Vl","@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","./style":"lUZ9u","./shadowtrack":"62tDj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8D6Vl":[function(require,module,exports) {
+},{"@geoblocks/sources/src/Swisstopo":"8D6Vl","@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","ol/interaction":"akCDO","./style":"lUZ9u","./shadowtrack":"62tDj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8D6Vl":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "RESOLUTIONS", ()=>RESOLUTIONS);
@@ -1713,7 +1720,81 @@ function createFromCapabilitiesMatrixSet(matrixSet, extent, matrixLimits) {
     });
 }
 
-},{"./TileGrid.js":"cZOJJ","../proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"62tDj":[function(require,module,exports) {
+},{"./TileGrid.js":"cZOJJ","../proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"akCDO":[function(require,module,exports) {
+/**
+ * @module ol/interaction
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "DoubleClickZoom", ()=>(0, _doubleClickZoomJsDefault.default));
+parcelHelpers.export(exports, "DblClickDragZoom", ()=>(0, _dblClickDragZoomJsDefault.default));
+parcelHelpers.export(exports, "DragAndDrop", ()=>(0, _dragAndDropJsDefault.default));
+parcelHelpers.export(exports, "DragBox", ()=>(0, _dragBoxJsDefault.default));
+parcelHelpers.export(exports, "DragPan", ()=>(0, _dragPanJsDefault.default));
+parcelHelpers.export(exports, "DragRotate", ()=>(0, _dragRotateJsDefault.default));
+parcelHelpers.export(exports, "DragRotateAndZoom", ()=>(0, _dragRotateAndZoomJsDefault.default));
+parcelHelpers.export(exports, "DragZoom", ()=>(0, _dragZoomJsDefault.default));
+parcelHelpers.export(exports, "Draw", ()=>(0, _drawJsDefault.default));
+parcelHelpers.export(exports, "Extent", ()=>(0, _extentJsDefault.default));
+parcelHelpers.export(exports, "Interaction", ()=>(0, _interactionJsDefault.default));
+parcelHelpers.export(exports, "KeyboardPan", ()=>(0, _keyboardPanJsDefault.default));
+parcelHelpers.export(exports, "KeyboardZoom", ()=>(0, _keyboardZoomJsDefault.default));
+parcelHelpers.export(exports, "Link", ()=>(0, _linkJsDefault.default));
+parcelHelpers.export(exports, "Modify", ()=>(0, _modifyJsDefault.default));
+parcelHelpers.export(exports, "MouseWheelZoom", ()=>(0, _mouseWheelZoomJsDefault.default));
+parcelHelpers.export(exports, "PinchRotate", ()=>(0, _pinchRotateJsDefault.default));
+parcelHelpers.export(exports, "PinchZoom", ()=>(0, _pinchZoomJsDefault.default));
+parcelHelpers.export(exports, "Pointer", ()=>(0, _pointerJsDefault.default));
+parcelHelpers.export(exports, "Select", ()=>(0, _selectJsDefault.default));
+parcelHelpers.export(exports, "Snap", ()=>(0, _snapJsDefault.default));
+parcelHelpers.export(exports, "Translate", ()=>(0, _translateJsDefault.default));
+parcelHelpers.export(exports, "defaults", ()=>(0, _defaultsJs.defaults));
+var _doubleClickZoomJs = require("./interaction/DoubleClickZoom.js");
+var _doubleClickZoomJsDefault = parcelHelpers.interopDefault(_doubleClickZoomJs);
+var _dblClickDragZoomJs = require("./interaction/DblClickDragZoom.js");
+var _dblClickDragZoomJsDefault = parcelHelpers.interopDefault(_dblClickDragZoomJs);
+var _dragAndDropJs = require("./interaction/DragAndDrop.js");
+var _dragAndDropJsDefault = parcelHelpers.interopDefault(_dragAndDropJs);
+var _dragBoxJs = require("./interaction/DragBox.js");
+var _dragBoxJsDefault = parcelHelpers.interopDefault(_dragBoxJs);
+var _dragPanJs = require("./interaction/DragPan.js");
+var _dragPanJsDefault = parcelHelpers.interopDefault(_dragPanJs);
+var _dragRotateJs = require("./interaction/DragRotate.js");
+var _dragRotateJsDefault = parcelHelpers.interopDefault(_dragRotateJs);
+var _dragRotateAndZoomJs = require("./interaction/DragRotateAndZoom.js");
+var _dragRotateAndZoomJsDefault = parcelHelpers.interopDefault(_dragRotateAndZoomJs);
+var _dragZoomJs = require("./interaction/DragZoom.js");
+var _dragZoomJsDefault = parcelHelpers.interopDefault(_dragZoomJs);
+var _drawJs = require("./interaction/Draw.js");
+var _drawJsDefault = parcelHelpers.interopDefault(_drawJs);
+var _extentJs = require("./interaction/Extent.js");
+var _extentJsDefault = parcelHelpers.interopDefault(_extentJs);
+var _interactionJs = require("./interaction/Interaction.js");
+var _interactionJsDefault = parcelHelpers.interopDefault(_interactionJs);
+var _keyboardPanJs = require("./interaction/KeyboardPan.js");
+var _keyboardPanJsDefault = parcelHelpers.interopDefault(_keyboardPanJs);
+var _keyboardZoomJs = require("./interaction/KeyboardZoom.js");
+var _keyboardZoomJsDefault = parcelHelpers.interopDefault(_keyboardZoomJs);
+var _linkJs = require("./interaction/Link.js");
+var _linkJsDefault = parcelHelpers.interopDefault(_linkJs);
+var _modifyJs = require("./interaction/Modify.js");
+var _modifyJsDefault = parcelHelpers.interopDefault(_modifyJs);
+var _mouseWheelZoomJs = require("./interaction/MouseWheelZoom.js");
+var _mouseWheelZoomJsDefault = parcelHelpers.interopDefault(_mouseWheelZoomJs);
+var _pinchRotateJs = require("./interaction/PinchRotate.js");
+var _pinchRotateJsDefault = parcelHelpers.interopDefault(_pinchRotateJs);
+var _pinchZoomJs = require("./interaction/PinchZoom.js");
+var _pinchZoomJsDefault = parcelHelpers.interopDefault(_pinchZoomJs);
+var _pointerJs = require("./interaction/Pointer.js");
+var _pointerJsDefault = parcelHelpers.interopDefault(_pointerJs);
+var _selectJs = require("./interaction/Select.js");
+var _selectJsDefault = parcelHelpers.interopDefault(_selectJs);
+var _snapJs = require("./interaction/Snap.js");
+var _snapJsDefault = parcelHelpers.interopDefault(_snapJs);
+var _translateJs = require("./interaction/Translate.js");
+var _translateJsDefault = parcelHelpers.interopDefault(_translateJs);
+var _defaultsJs = require("./interaction/defaults.js");
+
+},{"./interaction/DoubleClickZoom.js":false,"./interaction/DblClickDragZoom.js":false,"./interaction/DragAndDrop.js":false,"./interaction/DragBox.js":false,"./interaction/DragPan.js":false,"./interaction/DragRotate.js":false,"./interaction/DragRotateAndZoom.js":false,"./interaction/DragZoom.js":false,"./interaction/Draw.js":false,"./interaction/Extent.js":false,"./interaction/Interaction.js":false,"./interaction/KeyboardPan.js":false,"./interaction/KeyboardZoom.js":false,"./interaction/Link.js":false,"./interaction/Modify.js":false,"./interaction/MouseWheelZoom.js":false,"./interaction/PinchRotate.js":false,"./interaction/PinchZoom.js":false,"./interaction/Pointer.js":false,"./interaction/Select.js":false,"./interaction/Snap.js":false,"./interaction/Translate.js":false,"./interaction/defaults.js":"1L9Hg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"62tDj":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "style", ()=>style);

@@ -587,7 +587,7 @@ var _style1 = require("ol/style");
 var _osm = require("./osm");
 const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true";
 function main() {
-    const { map , trackLayer , shadowTrackLayer  } = (0, _osm.createMap)("map");
+    const { map, trackLayer, shadowTrackLayer } = (0, _osm.createMap)("map");
     const router = new (0, _graphHopperDefault.default)({
         url: ROUTING_URL,
         mapProjection: map.getView().getProjection()
@@ -673,7 +673,7 @@ function main() {
 }
 main();
 
-},{"ol/style":"hEQxF","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile":"i4hMD","./style":"bV6WG","./osm":"2SIll"}],"bV6WG":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile":"i4hMD","./style":"bV6WG","ol/style":"hEQxF","./osm":"2SIll","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);

@@ -580,8 +580,8 @@ var _featureJs = require("ol/Feature.js");
 var _featureJsDefault = parcelHelpers.interopDefault(_featureJs);
 var _pointJs = require("ol/geom/Point.js");
 var _pointJsDefault = parcelHelpers.interopDefault(_pointJs);
-var _trackData = require("./TrackData");
-var _trackDataDefault = parcelHelpers.interopDefault(_trackData);
+var _trackDataTs = require("./TrackData.ts");
+var _trackDataTsDefault = parcelHelpers.interopDefault(_trackDataTs);
 var _trackUpdaterJs = require("./TrackUpdater.js");
 var _trackUpdaterJsDefault = parcelHelpers.interopDefault(_trackUpdaterJs);
 var _trackInteractionJs = require("./TrackInteraction.js");
@@ -642,7 +642,7 @@ var _util = require("./util");
      */ this.trackHoverEventListeners_ = [];
         /**
      * @private
-     */ this.trackData_ = new (0, _trackDataDefault.default)();
+     */ this.trackData_ = new (0, _trackDataTsDefault.default)();
         console.assert(!!options.router);
         /**
      * @type {geoblocks.Router}
@@ -1005,7 +1005,7 @@ var _util = require("./util");
 }
 exports.default = TrackManager;
 
-},{"ol/Feature.js":"liabO","ol/geom/Point.js":"hx2Ar","./TrackUpdater.js":"3EEec","./TrackInteraction.js":"asKaw","./HistoryManager.js":"iUaNA","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./closestfinder":"hbA4H","./util":"d4dJS","./TrackData":"aNEab"}],"liabO":[function(require,module,exports) {
+},{"ol/Feature.js":"liabO","ol/geom/Point.js":"hx2Ar","./TrackUpdater.js":"3EEec","./TrackInteraction.js":"asKaw","./HistoryManager.js":"iUaNA","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./closestfinder":"hbA4H","./util":"d4dJS","./TrackData.ts":"aNEab"}],"liabO":[function(require,module,exports) {
 /**
  * @module ol/Feature
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -26486,9 +26486,7 @@ class TrackData {
         }
         return parsed;
     }
-    /**
-   * @param {ParsedFeatures} parsedFeatures
-   */ restoreParsedFeatures(parsedFeatures) {
+    restoreParsedFeatures(parsedFeatures) {
         const { segments , pois , controlPoints  } = parsedFeatures;
         console.assert(!controlPoints.length && !segments.length || controlPoints.length === segments.length + 1);
         this.clear();
@@ -26497,9 +26495,7 @@ class TrackData {
         this.pois_ = pois;
         this.controlPoints_ = controlPoints;
     }
-    /**
-   * @return {{before: Feature<LineString>|undefined, after: Feature<LineString>|undefined}}
-   */ getAdjacentSegments(controlPoint) {
+    getAdjacentSegments(controlPoint) {
         let before = undefined;
         let after = undefined;
         const index = this.controlPoints_.indexOf(controlPoint);
@@ -26574,8 +26570,6 @@ class TrackData {
     }
     /**
    * Add a new control point at the end.
-   * @param {Feature<Point>} point
-   * @return {{pointFrom: Feature<Point>, pointTo: Feature<Point>, segment: Feature<LineString>|undefined}}
    */ pushControlPoint(point) {
         this.insertControlPointAt(point, this.controlPoints_.length);
         const length = this.controlPoints_.length;
@@ -26608,8 +26602,6 @@ class TrackData {
    * Deletes the supplied point and all adjacent segments.
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
-   * @param {Feature<Point>} point Point to delete.
-   * @return {{deleted: Array<Feature<Point|LineString>>, pointBefore: ?Feature<Point>, pointAfter: ?Feature<Point>, newSegment: ?Feature<LineString>}}
    */ deleteControlPoint(point) {
         const deleteIndex = this.controlPoints_.indexOf(point);
         if (deleteIndex === -1) return {
@@ -26790,7 +26782,7 @@ class GraphHopper {
 }
 exports.default = GraphHopper;
 
-},{"ol/proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./PolylineXYZM.ts":"l0SoC"}],"l0SoC":[function(require,module,exports) {
+},{"ol/proj.js":"SznqC","./PolylineXYZM.ts":"l0SoC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l0SoC":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _polylineJs = require("ol/format/Polyline.js");

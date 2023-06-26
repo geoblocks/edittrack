@@ -7937,11 +7937,13 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
         // for simplicity we directly register the interactions
         // The draw interaction must be added after the modify
         // otherwise clicking on an existing segment or point doesn't add a new point
+        // The delete interaction must be added after the draw otherwise the draw is not passing
+        // the double click event to the delete interaction.
         const map = options.map;
         this.setMap(map);
-        map.addInteraction(this.deletePoint_);
         map.addInteraction(this.modifyTrack_);
         map.addInteraction(this.drawTrack_);
+        map.addInteraction(this.deletePoint_);
     }
     clearSelected() {
         this.deletePoint_.getFeatures().clear();
@@ -23802,7 +23804,7 @@ var _styleJsDefault = parcelHelpers.interopDefault(_styleJs);
 var _textJs = require("./style/Text.js");
 var _textJsDefault = parcelHelpers.interopDefault(_textJs);
 
-},{"./style/Circle.js":"cSS3Y","./style/Fill.js":"4fB56","./style/Icon.js":"dJiIs","./style/IconImage.js":"8WrYM","./style/Image.js":"eyoR9","./style/RegularShape.js":"44xDg","./style/Stroke.js":"5Cq04","./style/Style.js":"fW7vC","./style/Text.js":"dwGM6","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"liv8a":[function(require,module,exports) {
+},{"./style/Circle.js":"cSS3Y","./style/Fill.js":"4fB56","./style/Icon.js":"dJiIs","./style/IconImage.js":false,"./style/Image.js":false,"./style/RegularShape.js":false,"./style/Stroke.js":"5Cq04","./style/Style.js":"fW7vC","./style/Text.js":"dwGM6","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"liv8a":[function(require,module,exports) {
 /**
  * @module ol/renderer/vector
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -26873,7 +26875,7 @@ class GraphHopper {
 }
 exports.default = GraphHopper;
 
-},{"ol/proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./PolylineXYZM.ts":"l0SoC"}],"l0SoC":[function(require,module,exports) {
+},{"ol/proj.js":"SznqC","./PolylineXYZM.ts":"l0SoC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l0SoC":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _polylineJs = require("ol/format/Polyline.js");
