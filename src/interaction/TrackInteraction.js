@@ -1,9 +1,9 @@
 import Interaction from 'ol/interaction/Interaction.js';
 
-import Draw from 'ol/interaction/Draw.js';
 import Select from 'ol/interaction/Select.js';
 import Modify from './TrackInteractionModify.js';
 import {click} from 'ol/events/condition.js';
+import DrawPoint from './DrawPoint.ts';
 
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
@@ -19,6 +19,7 @@ import {click} from 'ol/events/condition.js';
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
+ * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Default is to add a new point on click
  * @property {number} hitTolerance
  */
 
@@ -45,18 +46,14 @@ export default class TrackInteraction extends Interaction {
   /**
    *
    * @param {VectorSource} source
-   * @param {StyleFunction} style
-   * @return {Draw}
+   * @return {DrawPoint}
    */
-  createDrawInteraction(source, style) {
-    const draw = new Draw({
-      type: 'Point',
+  createDrawInteraction(source) {
+    const draw = new DrawPoint({
       source: source,
-      style: style,
-      // don't draw when deleteCondition is true
-      // without condition, don't draw then there is a control point at this pixel
-      condition: (event) => !this.deleteCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
+      condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
     });
+    // @ts-ignore too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
   }
@@ -122,6 +119,7 @@ export default class TrackInteraction extends Interaction {
     this.trackLayer_ = options.trackLayer;
 
     this.userDeleteCondition_ = options.deleteCondition === undefined ? click : options.deleteCondition;
+    this.userAddLastPointCondition_ = options.addLastPointCondition === undefined ? click : options.addLastPointCondition;
 
     const source = options.trackLayer.getSource();
     // FIXME should debounce
@@ -131,7 +129,7 @@ export default class TrackInteraction extends Interaction {
     /**
      * @private
      */
-    this.drawTrack_ = this.createDrawInteraction(source, options.style);
+    this.drawTrack_ = this.createDrawInteraction(source);
 
     /**
      * @private

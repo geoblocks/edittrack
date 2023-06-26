@@ -4,7 +4,7 @@ import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import {View, Map as OLMap} from 'ol';
-
+import {defaults} from 'ol/interaction';
 import {styleFunction} from './style';
 import {createShadowLayer} from './shadowtrack';
 
@@ -42,6 +42,7 @@ export function createMap(target) {
 
   const shadowTrackLayer = createShadowLayer();
   const map = new OLMap({
+    interactions: defaults({doubleClickZoom: false}),
     target,
     view,
     layers: [
