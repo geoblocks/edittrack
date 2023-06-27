@@ -879,14 +879,18 @@ function styleFunction(feature, _) {
                 case "modifying":
                     return trackLineModifying;
                 default:
-                    const styles = [];
-                    if (sketchHitGeometry) {
-                        sketchControlPointHint.forEach((style)=>style.setGeometry(sketchHitGeometry));
-                        styles.push(...sketchControlPointHint);
-                    } else sketchControlPointHint.forEach((style)=>style.setGeometry(null));
                     const intermediatePoint = segmentIntermediatePoint.clone();
                     intermediatePoint.setGeometry(new (0, _pointDefault.default)(feature.getGeometry().getFlatMidpoint()));
-                    styles.push(trackLine, intermediatePoint);
+                    const styles = [
+                        trackLine,
+                        intermediatePoint
+                    ];
+                    if (sketchHitGeometry) {
+                        const dragging = feature.get("dragging");
+                        const pointStyle = (dragging ? sketchControlPointHint : sketchControlPoint).map((style)=>style.clone());
+                        pointStyle.forEach((style)=>style.setGeometry(sketchHitGeometry));
+                        styles.push(...pointStyle);
+                    }
                     return styles;
             }
         default:
@@ -943,7 +947,9 @@ function createMap(target) {
     const trackSource = new (0, _vectorDefault1.default)();
     const trackLayer = new (0, _vectorDefault.default)({
         source: trackSource,
-        style: (0, _style.styleFunction)
+        style: (0, _style.styleFunction),
+        updateWhileAnimating: true,
+        updateWhileInteracting: true
     });
     const extent = (0, _epsg2056.proj).getExtent();
     const view = new (0, _ol.View)({
@@ -978,7 +984,7 @@ function createMap(target) {
     };
 }
 
-},{"@geoblocks/sources/src/Swisstopo":"8D6Vl","@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","./style":"lUZ9u","./shadowtrack":"62tDj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","ol/interaction":"akCDO"}],"8D6Vl":[function(require,module,exports) {
+},{"@geoblocks/sources/src/Swisstopo":"8D6Vl","@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","ol/interaction":"akCDO","./style":"lUZ9u","./shadowtrack":"62tDj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8D6Vl":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "RESOLUTIONS", ()=>RESOLUTIONS);
@@ -1717,35 +1723,7 @@ function createFromCapabilitiesMatrixSet(matrixSet, extent, matrixLimits) {
     });
 }
 
-},{"./TileGrid.js":"cZOJJ","../proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"62tDj":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "style", ()=>style);
-/**
- *
- * @return {VectorLayer}
- */ parcelHelpers.export(exports, "createShadowLayer", ()=>createShadowLayer);
-var _style = require("ol/style");
-var _vectorJs = require("ol/source/Vector.js");
-var _vectorJsDefault = parcelHelpers.interopDefault(_vectorJs);
-var _vectorJs1 = require("ol/layer/Vector.js");
-var _vectorJsDefault1 = parcelHelpers.interopDefault(_vectorJs1);
-const style = new (0, _style.Style)({
-    stroke: new (0, _style.Stroke)({
-        color: "#00cc33aa",
-        width: 6
-    })
-});
-function createShadowLayer() {
-    const source = new (0, _vectorJsDefault.default)();
-    const layer = new (0, _vectorJsDefault1.default)({
-        source,
-        style
-    });
-    return layer;
-}
-
-},{"ol/style":"hEQxF","ol/source/Vector.js":"9w7Fr","ol/layer/Vector.js":"iTrAy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"akCDO":[function(require,module,exports) {
+},{"./TileGrid.js":"cZOJJ","../proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"akCDO":[function(require,module,exports) {
 /**
  * @module ol/interaction
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -1819,7 +1797,35 @@ var _translateJs = require("./interaction/Translate.js");
 var _translateJsDefault = parcelHelpers.interopDefault(_translateJs);
 var _defaultsJs = require("./interaction/defaults.js");
 
-},{"./interaction/DoubleClickZoom.js":false,"./interaction/DblClickDragZoom.js":false,"./interaction/DragAndDrop.js":false,"./interaction/DragBox.js":false,"./interaction/DragPan.js":false,"./interaction/DragRotate.js":false,"./interaction/DragRotateAndZoom.js":false,"./interaction/DragZoom.js":false,"./interaction/Draw.js":false,"./interaction/Extent.js":false,"./interaction/Interaction.js":false,"./interaction/KeyboardPan.js":false,"./interaction/KeyboardZoom.js":false,"./interaction/Link.js":false,"./interaction/Modify.js":false,"./interaction/MouseWheelZoom.js":false,"./interaction/PinchRotate.js":false,"./interaction/PinchZoom.js":false,"./interaction/Pointer.js":false,"./interaction/Select.js":false,"./interaction/Snap.js":false,"./interaction/Translate.js":false,"./interaction/defaults.js":"1L9Hg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eJ2Wz":[function(require,module,exports) {
+},{"./interaction/DoubleClickZoom.js":false,"./interaction/DblClickDragZoom.js":false,"./interaction/DragAndDrop.js":false,"./interaction/DragBox.js":false,"./interaction/DragPan.js":false,"./interaction/DragRotate.js":false,"./interaction/DragRotateAndZoom.js":false,"./interaction/DragZoom.js":false,"./interaction/Draw.js":false,"./interaction/Extent.js":false,"./interaction/Interaction.js":false,"./interaction/KeyboardPan.js":false,"./interaction/KeyboardZoom.js":false,"./interaction/Link.js":false,"./interaction/Modify.js":false,"./interaction/MouseWheelZoom.js":false,"./interaction/PinchRotate.js":false,"./interaction/PinchZoom.js":false,"./interaction/Pointer.js":false,"./interaction/Select.js":false,"./interaction/Snap.js":false,"./interaction/Translate.js":false,"./interaction/defaults.js":"1L9Hg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"62tDj":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "style", ()=>style);
+/**
+ *
+ * @return {VectorLayer}
+ */ parcelHelpers.export(exports, "createShadowLayer", ()=>createShadowLayer);
+var _style = require("ol/style");
+var _vectorJs = require("ol/source/Vector.js");
+var _vectorJsDefault = parcelHelpers.interopDefault(_vectorJs);
+var _vectorJs1 = require("ol/layer/Vector.js");
+var _vectorJsDefault1 = parcelHelpers.interopDefault(_vectorJs1);
+const style = new (0, _style.Style)({
+    stroke: new (0, _style.Stroke)({
+        color: "#00cc33aa",
+        width: 6
+    })
+});
+function createShadowLayer() {
+    const source = new (0, _vectorJsDefault.default)();
+    const layer = new (0, _vectorJsDefault1.default)({
+        source,
+        style
+    });
+    return layer;
+}
+
+},{"ol/style":"hEQxF","ol/source/Vector.js":"9w7Fr","ol/layer/Vector.js":"iTrAy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eJ2Wz":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "getTrack", ()=>getTrack);

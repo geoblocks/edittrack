@@ -7870,7 +7870,7 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
 }
 exports.default = TrackInteraction;
 
-},{"ol/interaction/Interaction.js":"g1FUs","ol/interaction/Select.js":"iBBOO","./TrackInteractionModify.js":"2201G","ol/events/condition.js":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./DrawPoint.ts":"bcWAA"}],"g1FUs":[function(require,module,exports) {
+},{"ol/interaction/Interaction.js":"g1FUs","ol/interaction/Select.js":"iBBOO","./TrackInteractionModify.js":"2201G","ol/events/condition.js":"iQTYY","./DrawPoint.ts":"bcWAA","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"g1FUs":[function(require,module,exports) {
 /**
  * @module ol/interaction/Interaction
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -22180,6 +22180,7 @@ class Modify extends (0, _pointerJsDefault.default) {
             switch(type){
                 case "segment":
                     {
+                        this.overlayFeature_.set("dragging", true);
                         // we create a 3 points linestring
                         const geometry = this.feature_.getGeometry();
                         console.assert(geometry.getType() === "LineString", this.feature_.getProperties());
@@ -22189,6 +22190,7 @@ class Modify extends (0, _pointerJsDefault.default) {
                             event.coordinate,
                             g.getLastCoordinate()
                         ]);
+                        this.overlayFeature_.set("sketchHitGeometry", new (0, _pointJsDefault.default)(event.coordinate));
                         this.involvedFeatures_ = [
                             this.feature_
                         ];
@@ -22196,6 +22198,7 @@ class Modify extends (0, _pointerJsDefault.default) {
                     }
                 case "controlPoint":
                     {
+                        this.feature_.set("dragging", true);
                         // we create a 3 points linestring, doubled if end points clicked
                         const f = /** @type {Feature<Point>} */ this.feature_;
                         const { before, after } = this.trackData_.getAdjacentSegments(f);
@@ -22222,6 +22225,7 @@ class Modify extends (0, _pointerJsDefault.default) {
                         break;
                     }
                 case "POI":
+                    this.feature_.set("dragging", true);
                     this.involvedFeatures_ = [
                         this.feature_
                     ];
@@ -22243,9 +22247,8 @@ class Modify extends (0, _pointerJsDefault.default) {
             console.assert(coordinates.length === 3);
             coordinates[1] = event.coordinate;
             this.overlayLineString_.setCoordinates(coordinates);
-            this.scratchPoint_.setCoordinates(event.coordinate);
-            this.overlayFeature_.set("sketchHitGeometry", this.scratchPoint_);
-            this.pointAtCursorFeature_.set("sketchHitGeometry", this.scratchPoint_);
+            const sketchHitGeometry = this.overlayFeature_.get("sketchHitGeometry");
+            if (sketchHitGeometry) sketchHitGeometry.setCoordinates(event.coordinate);
         }
         if (type === "controlPoint" || type === "POI") {
             const g = /** @type {Point} */ this.feature_.getGeometry();
@@ -22262,6 +22265,9 @@ class Modify extends (0, _pointerJsDefault.default) {
             return false;
         }
         this.dragStarted = false;
+        this.feature_.set("dragging", false);
+        this.overlayFeature_.set("dragging", false);
+        this.overlayFeature_.set("sketchHitGeometry", undefined);
         this.involvedFeatures_.forEach((f)=>{
             f?.get("type") === "segment" && f?.set("subtype", undefined);
         });
@@ -28286,9 +28292,9 @@ const defaultStyleDefs = `
 class Profile {
     constructor(options){
         this.hoverActive = true;
-        this.map_ = options.map;
-        this.profileTarget_ = options.profileTarget;
-        this.styleDefs_ = options.styleDefs || defaultStyleDefs;
+        this.map = options.map;
+        this.profileTarget = options.profileTarget;
+        this.styleDefs = options.styleDefs || defaultStyleDefs;
         const callbacks = this.createProfileCallbacks_();
         function distanceExtractor(item) {
             return item.dist;
@@ -28296,7 +28302,7 @@ class Profile {
         function zExtractor(item) {
             return item.ele;
         }
-        this.profile_ = (0, _d3ElevationJsDefault.default)({
+        this.profile = (0, _d3ElevationJsDefault.default)({
             distanceExtractor,
             linesConfiguration: {
                 elevation: {
@@ -28304,7 +28310,7 @@ class Profile {
                 }
             },
             lightXAxis: options.lightXAxis,
-            styleDefs: this.styleDefs_,
+            styleDefs: this.styleDefs,
             hoverCallback: callbacks.hoverCallback,
             outCallback: callbacks.outCallback
         });
@@ -28314,18 +28320,18 @@ class Profile {
             0,
             0
         ]);
-        this.hoverFeature_ = new (0, _featureJsDefault.default)({
+        this.hoverFeature = new (0, _featureJsDefault.default)({
             geometry: profileHoverGeometry
         });
         const profileHoverVector = new (0, _vectorJsDefault1.default)({
             visible: false,
             source: new (0, _vectorJsDefault.default)({
                 features: [
-                    this.hoverFeature_
+                    this.hoverFeature
                 ]
             })
         });
-        this.map_.addLayer(profileHoverVector);
+        this.map.addLayer(profileHoverVector);
         const outCallback = ()=>{
             profileHoverVector.setVisible(false);
         };
@@ -28365,22 +28371,22 @@ class Profile {
     }
     refreshProfile(segments) {
         const trackProfile = this.getTrackProfile(segments);
-        this.profile_.refreshProfile(this.profileTarget_, trackProfile.length > 0 ? trackProfile : undefined);
+        this.profile.refreshProfile(this.profileTarget, trackProfile.length > 0 ? trackProfile : undefined);
     }
     setTrackHoverStyle(style) {
-        this.hoverFeature_.setStyle(style);
+        this.hoverFeature.setStyle(style);
     }
     /**
    * Remove any highlight.
    * Fire the outCallback callback.
    */ clearHighlight() {
-        this.profile_.clearHighlight();
+        this.profile.clearHighlight();
     }
     /*
    * Highlight the given distance and corresponding elevation on chart.
    * Fire the hoverCallback callback with corresponding point.
    */ highlight(distance) {
-        this.profile_.highlight(distance);
+        this.profile.highlight(distance);
     }
 }
 exports.default = Profile;
