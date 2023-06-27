@@ -29,9 +29,9 @@ interface DeletedControlPoint {
 }
 
 export default class TrackData {
-  private segments_: Array<Feature<LineString>> = [];
-  private controlPoints_: Array<Feature<Point>> = [];
-  private pois_: Array<Feature<Point>> = [];
+  private segments: Array<Feature<LineString>> = [];
+  private controlPoints: Array<Feature<Point>> = [];
+  private pois: Array<Feature<Point>> = [];
 
   parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
     const parsed: ParsedFeatures = {
@@ -63,57 +63,57 @@ export default class TrackData {
     console.assert((!controlPoints.length && !segments.length) || (controlPoints.length === segments.length + 1));
     this.clear();
     controlPoints.sort(sortByIndex);
-    this.segments_ = segments;
-    this.pois_ = pois;
-    this.controlPoints_ = controlPoints;
+    this.segments = segments;
+    this.pois = pois;
+    this.controlPoints = controlPoints;
   }
 
   getAdjacentSegments(controlPoint: Feature<Point>): AdjacentSegments {
     let before = undefined;
     let after = undefined;
-    const index = this.controlPoints_.indexOf(controlPoint);
+    const index = this.controlPoints.indexOf(controlPoint);
 
     if (index >= 1) {
-      before = this.segments_[index - 1];
+      before = this.segments[index - 1];
     }
-    if (index >= 0 && index < this.segments_.length) {
-      after = this.segments_[index];
+    if (index >= 0 && index < this.segments.length) {
+      after = this.segments[index];
     }
 
     return {before, after};
   }
 
   getControlPointBefore(controlPoint: Feature<Point>): Feature<Point> | null {
-    const index = this.controlPoints_.indexOf(controlPoint);
+    const index = this.controlPoints.indexOf(controlPoint);
     if (index > 0) {
-      return this.controlPoints_[index - 1];
+      return this.controlPoints[index - 1];
     }
     return null;
   }
 
   getControlPointAfter(controlPoint: Feature<Point>): Feature<Point> | null {
-    const index = this.controlPoints_.indexOf(controlPoint);
-    if (index >= 0 && index < this.controlPoints_.length - 1) {
-      return this.controlPoints_[index + 1];
+    const index = this.controlPoints.indexOf(controlPoint);
+    if (index >= 0 && index < this.controlPoints.length - 1) {
+      return this.controlPoints[index + 1];
     }
     return null;
   }
 
   getPOIs(): Feature<Point>[] {
-    return this.pois_;
+    return this.pois;
   }
 
   getControlPoints(): Feature<Point>[] {
-    return this.controlPoints_;
+    return this.controlPoints;
   }
 
   getSegments(): Array<Feature<LineString>> {
-    return this.segments_;
+    return this.segments;
   }
 
   getLineString(): LineString {
     const coordinates: Coordinate[] = [];
-    for (const feature of this.segments_) {
+    for (const feature of this.segments) {
       const segment = feature.getGeometry().getCoordinates();
       // remove the overlap between the last coordinate of a segment and
       // the first coordinate of the next one
@@ -129,37 +129,37 @@ export default class TrackData {
   insertControlPointAt(point: Feature<Point>, index: number): Feature<LineString> | undefined {
     let removed = undefined;
     point.set('type', 'controlPoint');
-    console.assert(index >= 0 && index <= this.controlPoints_.length);
+    console.assert(index >= 0 && index <= this.controlPoints.length);
     // add new control point
-    this.controlPoints_.splice(index, 0, point);
+    this.controlPoints.splice(index, 0, point);
 
     // remove segment
-    if (index > 0 && index < this.controlPoints_.length) {
-      removed = this.segments_[index - 1];
-      this.segments_.splice(index - 1, 1);
+    if (index > 0 && index < this.controlPoints.length) {
+      removed = this.segments[index - 1];
+      this.segments.splice(index - 1, 1);
     }
 
     // index > 0
-    const pointBefore = this.controlPoints_[index - 1];
+    const pointBefore = this.controlPoints[index - 1];
     if (pointBefore) {
       // not the first control point
       const segmentBefore = createStraightSegment(pointBefore, point);
       segmentBefore.set('snapped', pointBefore.get('snapped'));
-      this.segments_.splice(index - 1, 0, segmentBefore);
+      this.segments.splice(index - 1, 0, segmentBefore);
     }
 
     // index <= this.controlPoints_.length
-    const pointAfter = this.controlPoints_[index + 1];
+    const pointAfter = this.controlPoints[index + 1];
     if (pointAfter) {
       // not the last control point
       const segmentAfter = createStraightSegment(point, pointAfter);
       segmentAfter.set('snapped', pointAfter.get('snapped'));
-      this.segments_.splice(index - 1, 0, segmentAfter);
+      this.segments.splice(index - 1, 0, segmentAfter);
     }
 
     // update indices property
-    for (let i = index; i < this.controlPoints_.length; ++i) {
-      this.controlPoints_[i].set('index', i);
+    for (let i = index; i < this.controlPoints.length; ++i) {
+      this.controlPoints[i].set('index', i);
     }
     return removed;
   }
@@ -168,8 +168,8 @@ export default class TrackData {
    * Add a new control point at the end.
    */
   pushControlPoint(point: Feature<Point>): AddedControlPoint {
-    this.insertControlPointAt(point, this.controlPoints_.length);
-    const length = this.controlPoints_.length;
+    this.insertControlPointAt(point, this.controlPoints.length);
+    const length = this.controlPoints.length;
 
     if (length === 1) {
       // first control point
@@ -177,7 +177,7 @@ export default class TrackData {
       return {pointFrom: point, pointTo: point, segment: undefined};
     }
     if (length >= 2) {
-      const previous = this.controlPoints_[length - 2];
+      const previous = this.controlPoints[length - 2];
       // change previous point from 'last' to 'control' except if it's the 'first'
       if (length > 2) {
         previous.unset('subtype');
@@ -197,7 +197,7 @@ export default class TrackData {
    * Updates first/last subtype if needed.
    */
   deleteControlPoint(point: Feature<Point>): DeletedControlPoint {
-    const deleteIndex = this.controlPoints_.indexOf(point);
+    const deleteIndex = this.controlPoints.indexOf(point);
     if (deleteIndex === -1) {
       return {
         deleted: [],
@@ -214,12 +214,12 @@ export default class TrackData {
 
     // delete adjacent segments
     if (before) {
-      const segmentBeforeIndex = this.segments_.indexOf(before);
-      deletedFeatures.push(...this.segments_.splice(segmentBeforeIndex, 1));
+      const segmentBeforeIndex = this.segments.indexOf(before);
+      deletedFeatures.push(...this.segments.splice(segmentBeforeIndex, 1));
     }
     if (after) {
-      const segmentAfterIndex = this.segments_.indexOf(after);
-      deletedFeatures.push(...this.segments_.splice(segmentAfterIndex, 1));
+      const segmentAfterIndex = this.segments.indexOf(after);
+      deletedFeatures.push(...this.segments.splice(segmentAfterIndex, 1));
     }
 
     // create new segment if there is still a point before and after
@@ -227,7 +227,7 @@ export default class TrackData {
     if (pointBefore && pointAfter) {
       newSegment = createStraightSegment(pointBefore, pointAfter);
       newSegment.set('snapped', point.get('snapped'));
-      this.segments_.splice(deleteIndex - 1, 0, newSegment);
+      this.segments.splice(deleteIndex - 1, 0, newSegment);
     }
 
     // deleted point was the first point, update new first point
@@ -235,16 +235,16 @@ export default class TrackData {
       pointAfter.set('subtype', 'first');
     }
     // deleted point was the last point, update new last point
-    if (pointBefore && deleteIndex === this.controlPoints_.length - 1 && deleteIndex !== 1) {
+    if (pointBefore && deleteIndex === this.controlPoints.length - 1 && deleteIndex !== 1) {
       pointBefore.set('subtype', 'last');
     }
 
     // delete the point
-    deletedFeatures.push(...this.controlPoints_.splice(deleteIndex, 1));
+    deletedFeatures.push(...this.controlPoints.splice(deleteIndex, 1));
 
     // update indices property
-    for (let i = deleteIndex; i < this.controlPoints_.length; ++i) {
-      this.controlPoints_[i].set('index', i);
+    for (let i = deleteIndex; i < this.controlPoints.length; ++i) {
+      this.controlPoints[i].set('index', i);
     }
     return {
       deleted: deletedFeatures,
@@ -259,11 +259,11 @@ export default class TrackData {
    */
   deleteLastControlPoint(): Feature<Point | LineString>[] {
     const deletedFeatures = [];
-    const point = this.controlPoints_.pop();
+    const point = this.controlPoints.pop();
     if (point !== undefined) {
       //this.source_.removeFeature(point);
-      const length = this.controlPoints_.length;
-      const previous = this.controlPoints_[length - 1];
+      const length = this.controlPoints.length;
+      const previous = this.controlPoints[length - 1];
       // change previous point from 'last' to 'control' except if it's the 'first'
       if (length > 1) {
         previous.set('subtype', 'last');
@@ -271,7 +271,7 @@ export default class TrackData {
       deletedFeatures.push(point);
     }
 
-    const segment = this.segments_.pop();
+    const segment = this.segments.pop();
     if (segment !== undefined) {
       deletedFeatures.push(segment);
     }
@@ -279,15 +279,15 @@ export default class TrackData {
   }
 
   reverse() {
-    const length = this.controlPoints_.length;
+    const length = this.controlPoints.length;
     if (length > 1) {
-      this.controlPoints_.reverse();
-      this.controlPoints_[0].set('subtype', 'first');
-      this.controlPoints_[length - 1].set('subtype', 'last');
-      this.controlPoints_.forEach((p, index) => p.set('index', index));
+      this.controlPoints.reverse();
+      this.controlPoints[0].set('subtype', 'first');
+      this.controlPoints[length - 1].set('subtype', 'last');
+      this.controlPoints.forEach((p, index) => p.set('index', index));
 
-      this.segments_.reverse();
-      for (const segment of this.segments_) {
+      this.segments.reverse();
+      for (const segment of this.segments) {
         const geometry = segment.getGeometry();
         const coordinates = geometry.getCoordinates();
         coordinates.reverse();
@@ -297,7 +297,7 @@ export default class TrackData {
   }
 
   hasData(): boolean {
-    return this.controlPoints_.length > 0 || this.segments_.length > 0 || this.pois_.length > 0;
+    return this.controlPoints.length > 0 || this.segments.length > 0 || this.pois.length > 0;
   }
 
   /*
@@ -305,14 +305,14 @@ export default class TrackData {
    */
   deletePOI(point: Feature<Point>) {
     console.assert(point.get('type') === 'POI');
-    const idx = this.pois_.findIndex(p => p === point);
-    this.pois_.splice(idx, 1);
+    const idx = this.pois.findIndex(p => p === point);
+    this.pois.splice(idx, 1);
   }
 
   clear() {
-    this.controlPoints_.length = 0;
-    this.segments_.length = 0;
-    this.pois_.length = 0;
+    this.controlPoints.length = 0;
+    this.segments.length = 0;
+    this.pois.length = 0;
   }
 }
 
