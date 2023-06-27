@@ -40,10 +40,6 @@ async function main() {
     return doubleClick(mapBrowserEvent) && pointType !== 'POI';
   };
 
-  const addLastPointCondition = function(mapBrowserEvent) {
-    return doubleClick(mapBrowserEvent);
-  };
-
   const trackManager = new TrackManager({
     map: map,
     router: router,
@@ -52,7 +48,6 @@ async function main() {
     shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,
     deleteCondition: deleteCondition,
-    addLastPointCondition: addLastPointCondition,
   });
 
   const search = new URLSearchParams(document.location.search);
