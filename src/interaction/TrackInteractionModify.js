@@ -212,15 +212,18 @@ export default class Modify extends PointerInteraction {
       this.overlayLineString_ = null;
       switch (type) {
         case 'segment': {
+          this.overlayFeature_.set('dragging', true);
           // we create a 3 points linestring
           const geometry = this.feature_.getGeometry();
           console.assert(geometry.getType() === 'LineString', this.feature_.getProperties());
           const g = /** @type {LineString} */ (geometry);
-          this.overlayLineString_  = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()])
+          this.overlayLineString_  = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()]);
+          this.overlayFeature_.set('sketchHitGeometry', new Point(event.coordinate));
           this.involvedFeatures_ = [this.feature_];
           break;
         }
         case 'controlPoint': {
+          this.feature_.set('dragging', true);
           // we create a 3 points linestring, doubled if end points clicked
           const f = /** @type {Feature<Point>} */ (this.feature_);
           const {before, after} = this.trackData_.getAdjacentSegments(f);
@@ -238,6 +241,7 @@ export default class Modify extends PointerInteraction {
           break;
         }
         case 'POI': {
+          this.feature_.set('dragging', true);
           this.involvedFeatures_ = [this.feature_];
           break;
         }
@@ -261,9 +265,10 @@ export default class Modify extends PointerInteraction {
       coordinates[1] = event.coordinate;
       this.overlayLineString_.setCoordinates(coordinates);
 
-      this.scratchPoint_.setCoordinates(event.coordinate);
-      this.overlayFeature_.set('sketchHitGeometry', this.scratchPoint_);
-      this.pointAtCursorFeature_.set('sketchHitGeometry', this.scratchPoint_);
+      const sketchHitGeometry = this.overlayFeature_.get('sketchHitGeometry');
+      if (sketchHitGeometry) {
+        sketchHitGeometry.setCoordinates(event.coordinate);
+      }
     }
 
     if (type === 'controlPoint' || type === 'POI') {
@@ -283,6 +288,10 @@ export default class Modify extends PointerInteraction {
       return false;
     }
     this.dragStarted = false;
+    this.feature_.set('dragging', false);
+    this.overlayFeature_.set('dragging', false);
+    this.overlayFeature_.set('sketchHitGeometry', undefined);
+
     this.involvedFeatures_.forEach(f => {
       f?.get('type') === 'segment' && f?.set('subtype', undefined)
     });

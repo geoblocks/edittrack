@@ -27,6 +27,8 @@ export function createMap(target) {
   const trackLayer = new VectorLayer({
     source: trackSource,
     style: styleFunction,
+    updateWhileAnimating: true,
+    updateWhileInteracting: true,
   });
 
   const extent = proj2056.getExtent();

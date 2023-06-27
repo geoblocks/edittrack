@@ -181,16 +181,15 @@ export function styleFunction(feature, _) {
         case "modifying":
           return trackLineModifying;
         default:
-          const styles = [];
-          if (sketchHitGeometry) {
-            sketchControlPointHint.forEach((style) => style.setGeometry(sketchHitGeometry));
-            styles.push(...sketchControlPointHint);
-          } else {
-            sketchControlPointHint.forEach((style) => style.setGeometry(null));
-          }
           const intermediatePoint = segmentIntermediatePoint.clone();
           intermediatePoint.setGeometry(new Point(feature.getGeometry().getFlatMidpoint()));
-          styles.push(trackLine, intermediatePoint);
+          const styles = [trackLine, intermediatePoint];
+          if (sketchHitGeometry) {
+            const dragging = feature.get("dragging");
+            const pointStyle = (dragging ? sketchControlPointHint : sketchControlPoint).map((style) => style.clone());
+            pointStyle.forEach((style) => style.setGeometry(sketchHitGeometry));
+            styles.push(...pointStyle);
+          }
           return styles;
       }
     default:
