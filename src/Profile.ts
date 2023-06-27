@@ -55,18 +55,18 @@ const defaultStyleDefs = `
 
 class Profile {
   hoverActive: boolean;
-  map_: Map;
-  private profileTarget_: string | HTMLElement;
-  styleDefs_: string;
-  private hoverFeature_: Feature<Point>;
-  private profile_: any; // FIXME: d3js component
+  private map: Map;
+  private profileTarget: string | HTMLElement;
+  private styleDefs: string;
+  private hoverFeature: Feature<Point>;
+  private profile: any; // FIXME: d3js component
 
   constructor(options: Options) {
 
     this.hoverActive = true;
-    this.map_ = options.map;
-    this.profileTarget_ = options.profileTarget;
-    this.styleDefs_ = options.styleDefs || defaultStyleDefs;
+    this.map = options.map;
+    this.profileTarget = options.profileTarget;
+    this.styleDefs = options.styleDefs || defaultStyleDefs;
 
     const callbacks = this.createProfileCallbacks_();
 
@@ -78,7 +78,7 @@ class Profile {
       return item.ele;
     }
 
-    this.profile_ = d3Elevation({
+    this.profile = d3Elevation({
       distanceExtractor,
       linesConfiguration: {
         elevation: {
@@ -86,7 +86,7 @@ class Profile {
         }
       },
       lightXAxis: options.lightXAxis,
-      styleDefs: this.styleDefs_,
+      styleDefs: this.styleDefs,
       hoverCallback: callbacks.hoverCallback,
       outCallback: callbacks.outCallback
     });
@@ -94,17 +94,17 @@ class Profile {
 
   private createProfileCallbacks_(): Callbacks {
     const profileHoverGeometry = new Point([0, 0]);
-    this.hoverFeature_ = new Feature({
+    this.hoverFeature = new Feature({
       geometry: profileHoverGeometry
     });
 
     const profileHoverVector = new VectorLayer({
       visible: false,
       source: new VectorSource({
-        features: [this.hoverFeature_]
+        features: [this.hoverFeature]
       })
     });
-    this.map_.addLayer(profileHoverVector);
+    this.map.addLayer(profileHoverVector);
 
     const outCallback = () => {
       profileHoverVector.setVisible(false);
@@ -146,11 +146,11 @@ class Profile {
 
   refreshProfile(segments: Feature<LineString>[]) {
     const trackProfile = this.getTrackProfile(segments);
-    this.profile_.refreshProfile(this.profileTarget_, trackProfile.length > 0 ? trackProfile : undefined);
+    this.profile.refreshProfile(this.profileTarget, trackProfile.length > 0 ? trackProfile : undefined);
   }
 
   setTrackHoverStyle(style: Style) {
-    this.hoverFeature_.setStyle(style);
+    this.hoverFeature.setStyle(style);
   }
 
   /**
@@ -158,7 +158,7 @@ class Profile {
    * Fire the outCallback callback.
    */
   clearHighlight() {
-    this.profile_.clearHighlight();
+    this.profile.clearHighlight();
   }
 
   /*
@@ -166,7 +166,7 @@ class Profile {
    * Fire the hoverCallback callback with corresponding point.
    */
   highlight(distance: number) {
-    this.profile_.highlight(distance);
+    this.profile.highlight(distance);
   }
 }
 
