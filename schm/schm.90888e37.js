@@ -591,9 +591,9 @@ async function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _swisstopo.createMap)("map");
     const projection = map.getView().getProjection();
     const router = new (0, _graphHopperDefault.default)({
+        map: map,
         url: ROUTING_URL,
-        mapProjection: projection,
-        maxRoutingDistance: 15
+        maxRoutingTolerance: 15
     });
     const profiler = new (0, _index.FallbackProfiler)({
         profilers: [
@@ -617,7 +617,8 @@ async function main() {
         trackLayer: trackLayer,
         shadowTrackLayer: shadowTrackLayer,
         style: (0, _style.styleFunction),
-        deleteCondition: deleteCondition
+        deleteCondition: deleteCondition,
+        hitTolerance: 15
     });
     const search = new URLSearchParams(document.location.search);
     const trackId = search.get("trackId");

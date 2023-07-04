@@ -601,7 +601,7 @@ var _utilTs = require("./util.ts");
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new point to the track. Default is click.
- * @property {number} [hitTolerance=20]
+ * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */ class TrackManager {
     /**
    * @param {Options} options
@@ -26729,8 +26729,8 @@ class GraphHopper {
      */ this.url_ = options.url;
         /**
      * @private
-     * @type {import("ol/proj").ProjectionLike}
-     */ this.mapProjection_ = options.mapProjection;
+     * @type {import("ol/Map").default}
+     */ this.map_ = options.map;
         /**
      * @private
      * @type {PolyLineXYZMFormat}
@@ -26746,6 +26746,7 @@ class GraphHopper {
    * @param {import("ol/Feature").default<Point>} pointTo
    * @return {Promise<boolean>}
    */ async snapSegment(segment, pointFrom, pointTo) {
+        const mapProjection = this.map_.getView().getProjection();
         const pointFromGeometry = pointFrom.getGeometry();
         const pointToGeometry = pointTo.getGeometry();
         const pointFromCoordinates = pointFromGeometry.getCoordinates();
@@ -26753,14 +26754,14 @@ class GraphHopper {
         const coordinates = [
             pointFromCoordinates,
             pointToCoordinates
-        ].map((cc)=>(0, _projJs.toLonLat)(cc.slice(0, 2), this.mapProjection_));
+        ].map((cc)=>(0, _projJs.toLonLat)(cc.slice(0, 2), mapProjection));
         const coordinateString = coordinates.map((c)=>`point=${c.reverse().join(",")}`).join("&");
         const response = await fetch(`${this.url_}&${coordinateString}`);
         const json = await response.json();
         if (json.paths) {
             const path = json.paths[0];
             const resultGeometry = /** @type {import("ol/geom/LineString").default} */ this.polylineFormat_.readGeometry(path.points, {
-                featureProjection: this.mapProjection_
+                featureProjection: mapProjection
             });
             const resultCoordinates = resultGeometry.getCoordinates();
             const resultFromCoordinates = resultCoordinates[0].slice(0, 2);

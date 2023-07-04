@@ -6255,43 +6255,43 @@ class TrackData {
         console.assert(!controlPoints.length && !segments.length || controlPoints.length === segments.length + 1);
         this.clear();
         controlPoints.sort(sortByIndex);
-        this.segments = segments;
-        this.pois = pois;
-        this.controlPoints = controlPoints;
+        this.segments_ = segments;
+        this.pois_ = pois;
+        this.controlPoints_ = controlPoints;
     }
     getAdjacentSegments(controlPoint) {
         let before = undefined;
         let after = undefined;
-        const index = this.controlPoints.indexOf(controlPoint);
-        if (index >= 1) before = this.segments[index - 1];
-        if (index >= 0 && index < this.segments.length) after = this.segments[index];
+        const index = this.controlPoints_.indexOf(controlPoint);
+        if (index >= 1) before = this.segments_[index - 1];
+        if (index >= 0 && index < this.segments_.length) after = this.segments_[index];
         return {
             before,
             after
         };
     }
     getControlPointBefore(controlPoint) {
-        const index = this.controlPoints.indexOf(controlPoint);
-        if (index > 0) return this.controlPoints[index - 1];
+        const index = this.controlPoints_.indexOf(controlPoint);
+        if (index > 0) return this.controlPoints_[index - 1];
         return null;
     }
     getControlPointAfter(controlPoint) {
-        const index = this.controlPoints.indexOf(controlPoint);
-        if (index >= 0 && index < this.controlPoints.length - 1) return this.controlPoints[index + 1];
+        const index = this.controlPoints_.indexOf(controlPoint);
+        if (index >= 0 && index < this.controlPoints_.length - 1) return this.controlPoints_[index + 1];
         return null;
     }
     getPOIs() {
-        return this.pois;
+        return this.pois_;
     }
     getControlPoints() {
-        return this.controlPoints;
+        return this.controlPoints_;
     }
     getSegments() {
-        return this.segments;
+        return this.segments_;
     }
     getLineString() {
         const coordinates = [];
-        for (const feature of this.segments){
+        for (const feature of this.segments_){
             const segment = feature.getGeometry().getCoordinates();
             // remove the overlap between the last coordinate of a segment and
             // the first coordinate of the next one
@@ -6304,39 +6304,39 @@ class TrackData {
     insertControlPointAt(point, index) {
         let removed = undefined;
         point.set("type", "controlPoint");
-        console.assert(index >= 0 && index <= this.controlPoints.length);
+        console.assert(index >= 0 && index <= this.controlPoints_.length);
         // add new control point
-        this.controlPoints.splice(index, 0, point);
+        this.controlPoints_.splice(index, 0, point);
         // remove segment
-        if (index > 0 && index < this.controlPoints.length) {
-            removed = this.segments[index - 1];
-            this.segments.splice(index - 1, 1);
+        if (index > 0 && index < this.controlPoints_.length) {
+            removed = this.segments_[index - 1];
+            this.segments_.splice(index - 1, 1);
         }
         // index > 0
-        const pointBefore = this.controlPoints[index - 1];
+        const pointBefore = this.controlPoints_[index - 1];
         if (pointBefore) {
             // not the first control point
             const segmentBefore = createStraightSegment(pointBefore, point);
             segmentBefore.set("snapped", pointBefore.get("snapped"));
-            this.segments.splice(index - 1, 0, segmentBefore);
+            this.segments_.splice(index - 1, 0, segmentBefore);
         }
         // index <= this.controlPoints_.length
-        const pointAfter = this.controlPoints[index + 1];
+        const pointAfter = this.controlPoints_[index + 1];
         if (pointAfter) {
             // not the last control point
             const segmentAfter = createStraightSegment(point, pointAfter);
             segmentAfter.set("snapped", pointAfter.get("snapped"));
-            this.segments.splice(index - 1, 0, segmentAfter);
+            this.segments_.splice(index - 1, 0, segmentAfter);
         }
         // update indices property
-        for(let i = index; i < this.controlPoints.length; ++i)this.controlPoints[i].set("index", i);
+        for(let i = index; i < this.controlPoints_.length; ++i)this.controlPoints_[i].set("index", i);
         return removed;
     }
     /*
    * Add a new control point at the end.
    */ pushControlPoint(point) {
-        this.insertControlPointAt(point, this.controlPoints.length);
-        const length = this.controlPoints.length;
+        this.insertControlPointAt(point, this.controlPoints_.length);
+        const length = this.controlPoints_.length;
         if (length === 1) {
             // first control point
             point.set("subtype", "first");
@@ -6347,7 +6347,7 @@ class TrackData {
             };
         }
         if (length >= 2) {
-            const previous = this.controlPoints[length - 2];
+            const previous = this.controlPoints_[length - 2];
             // change previous point from 'last' to 'control' except if it's the 'first'
             if (length > 2) previous.unset("subtype");
             // last control point
@@ -6367,7 +6367,7 @@ class TrackData {
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
    */ deleteControlPoint(point) {
-        const deleteIndex = this.controlPoints.indexOf(point);
+        const deleteIndex = this.controlPoints_.indexOf(point);
         if (deleteIndex === -1) return {
             deleted: [],
             pointBefore: null,
@@ -6380,28 +6380,28 @@ class TrackData {
         const { before, after } = this.getAdjacentSegments(point);
         // delete adjacent segments
         if (before) {
-            const segmentBeforeIndex = this.segments.indexOf(before);
-            deletedFeatures.push(...this.segments.splice(segmentBeforeIndex, 1));
+            const segmentBeforeIndex = this.segments_.indexOf(before);
+            deletedFeatures.push(...this.segments_.splice(segmentBeforeIndex, 1));
         }
         if (after) {
-            const segmentAfterIndex = this.segments.indexOf(after);
-            deletedFeatures.push(...this.segments.splice(segmentAfterIndex, 1));
+            const segmentAfterIndex = this.segments_.indexOf(after);
+            deletedFeatures.push(...this.segments_.splice(segmentAfterIndex, 1));
         }
         // create new segment if there is still a point before and after
         let newSegment = null;
         if (pointBefore && pointAfter) {
             newSegment = createStraightSegment(pointBefore, pointAfter);
             newSegment.set("snapped", point.get("snapped"));
-            this.segments.splice(deleteIndex - 1, 0, newSegment);
+            this.segments_.splice(deleteIndex - 1, 0, newSegment);
         }
         // deleted point was the first point, update new first point
         if (pointAfter && deleteIndex === 0) pointAfter.set("subtype", "first");
         // deleted point was the last point, update new last point
-        if (pointBefore && deleteIndex === this.controlPoints.length - 1 && deleteIndex !== 1) pointBefore.set("subtype", "last");
+        if (pointBefore && deleteIndex === this.controlPoints_.length - 1 && deleteIndex !== 1) pointBefore.set("subtype", "last");
         // delete the point
-        deletedFeatures.push(...this.controlPoints.splice(deleteIndex, 1));
+        deletedFeatures.push(...this.controlPoints_.splice(deleteIndex, 1));
         // update indices property
-        for(let i = deleteIndex; i < this.controlPoints.length; ++i)this.controlPoints[i].set("index", i);
+        for(let i = deleteIndex; i < this.controlPoints_.length; ++i)this.controlPoints_[i].set("index", i);
         return {
             deleted: deletedFeatures,
             pointBefore: pointBefore,
@@ -6413,28 +6413,28 @@ class TrackData {
    * Remove the last control point.
    */ deleteLastControlPoint() {
         const deletedFeatures = [];
-        const point = this.controlPoints.pop();
+        const point = this.controlPoints_.pop();
         if (point !== undefined) {
             //this.source_.removeFeature(point);
-            const length = this.controlPoints.length;
-            const previous = this.controlPoints[length - 1];
+            const length = this.controlPoints_.length;
+            const previous = this.controlPoints_[length - 1];
             // change previous point from 'last' to 'control' except if it's the 'first'
             if (length > 1) previous.set("subtype", "last");
             deletedFeatures.push(point);
         }
-        const segment = this.segments.pop();
+        const segment = this.segments_.pop();
         if (segment !== undefined) deletedFeatures.push(segment);
         return deletedFeatures;
     }
     reverse() {
-        const length = this.controlPoints.length;
+        const length = this.controlPoints_.length;
         if (length > 1) {
-            this.controlPoints.reverse();
-            this.controlPoints[0].set("subtype", "first");
-            this.controlPoints[length - 1].set("subtype", "last");
-            this.controlPoints.forEach((p, index)=>p.set("index", index));
-            this.segments.reverse();
-            for (const segment of this.segments){
+            this.controlPoints_.reverse();
+            this.controlPoints_[0].set("subtype", "first");
+            this.controlPoints_[length - 1].set("subtype", "last");
+            this.controlPoints_.forEach((p, index)=>p.set("index", index));
+            this.segments_.reverse();
+            for (const segment of this.segments_){
                 const geometry = segment.getGeometry();
                 const coordinates = geometry.getCoordinates();
                 coordinates.reverse();
@@ -6443,24 +6443,24 @@ class TrackData {
         }
     }
     hasData() {
-        return this.controlPoints.length > 0 || this.segments.length > 0 || this.pois.length > 0;
+        return this.controlPoints_.length > 0 || this.segments_.length > 0 || this.pois_.length > 0;
     }
     /*
    * Deletes the supplied point.
    */ deletePOI(point) {
         console.assert(point.get("type") === "POI");
-        const idx = this.pois.findIndex((p)=>p === point);
-        this.pois.splice(idx, 1);
+        const idx = this.pois_.findIndex((p)=>p === point);
+        this.pois_.splice(idx, 1);
     }
     clear() {
-        this.controlPoints.length = 0;
-        this.segments.length = 0;
-        this.pois.length = 0;
+        this.controlPoints_.length = 0;
+        this.segments_.length = 0;
+        this.pois_.length = 0;
     }
     constructor(){
-        this.segments = [];
-        this.controlPoints = [];
-        this.pois = [];
+        this.segments_ = [];
+        this.controlPoints_ = [];
+        this.pois_ = [];
     }
 }
 exports.default = TrackData;
@@ -26549,32 +26549,32 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 class HistoryManager {
     add(state) {
-        this.historyIndex++;
-        this.history[this.historyIndex] = state;
-        this.history.splice(this.historyIndex + 1);
+        this.historyIndex_++;
+        this.history_[this.historyIndex_] = state;
+        this.history_.splice(this.historyIndex_ + 1);
     }
     clear() {
-        this.history.length = 0;
-        this.historyIndex = -1;
+        this.history_.length = 0;
+        this.historyIndex_ = -1;
     }
     undo() {
-        if (this.historyIndex > 0) {
-            this.historyIndex--;
-            return this.history[this.historyIndex];
+        if (this.historyIndex_ > 0) {
+            this.historyIndex_--;
+            return this.history_[this.historyIndex_];
         }
-        this.historyIndex = -1;
+        this.historyIndex_ = -1;
         return undefined;
     }
     redo() {
-        if (this.historyIndex < this.history.length - 1) {
-            this.historyIndex++;
-            return this.history[this.historyIndex];
+        if (this.historyIndex_ < this.history_.length - 1) {
+            this.historyIndex_++;
+            return this.history_[this.historyIndex_];
         }
         return undefined;
     }
     constructor(){
-        this.history = [];
-        this.historyIndex = -1;
+        this.history_ = [];
+        this.historyIndex_ = -1;
     }
 }
 exports.default = HistoryManager;
@@ -26735,17 +26735,19 @@ class GraphHopper {
             pointFrom.set("snapped", (0, _coordinateJs.distance)(pointFromCoordinates, resultFromCoordinates) < this.maxRoutingDistance_);
             pointTo.set("snapped", (0, _coordinateJs.distance)(pointToCoordinates, resultToCoordinates) < this.maxRoutingDistance_);
             const snapped = pointFrom.get("snapped") && pointTo.get("snapped");
+            segment.set("snapped", snapped);
             if (snapped) {
                 segment.getGeometry().setCoordinates(resultCoordinates, "XYZM");
                 pointFromGeometry.setCoordinates(resultFromCoordinates);
                 pointToGeometry.setCoordinates(resultToCoordinates);
-            } else segment.getGeometry().setCoordinates([
-                pointFromCoordinates,
-                pointToCoordinates
-            ], "XY");
-            segment.set("snapped", snapped);
-            return snapped;
+                return true;
+            }
         }
+        segment.set("snapped", false);
+        segment.getGeometry().setCoordinates([
+            pointFromCoordinates,
+            pointToCoordinates
+        ], "XY");
         return false;
     }
 }
@@ -28259,9 +28261,9 @@ const defaultStyleDefs = `
 class Profile {
     constructor(options){
         this.hoverActive = true;
-        this.map = options.map;
-        this.profileTarget = options.profileTarget;
-        this.styleDefs = options.styleDefs || defaultStyleDefs;
+        this.map_ = options.map;
+        this.profileTarget_ = options.profileTarget;
+        this.styleDefs_ = options.styleDefs || defaultStyleDefs;
         const callbacks = this.createProfileCallbacks_();
         function distanceExtractor(item) {
             return item.dist;
@@ -28269,7 +28271,7 @@ class Profile {
         function zExtractor(item) {
             return item.ele;
         }
-        this.profile = (0, _d3ElevationJsDefault.default)({
+        this.profile_ = (0, _d3ElevationJsDefault.default)({
             distanceExtractor,
             linesConfiguration: {
                 elevation: {
@@ -28277,7 +28279,7 @@ class Profile {
                 }
             },
             lightXAxis: options.lightXAxis,
-            styleDefs: this.styleDefs,
+            styleDefs: this.styleDefs_,
             hoverCallback: callbacks.hoverCallback,
             outCallback: callbacks.outCallback
         });
@@ -28287,18 +28289,18 @@ class Profile {
             0,
             0
         ]);
-        this.hoverFeature = new (0, _featureJsDefault.default)({
+        this.hoverFeature_ = new (0, _featureJsDefault.default)({
             geometry: profileHoverGeometry
         });
         const profileHoverVector = new (0, _vectorJsDefault1.default)({
             visible: false,
             source: new (0, _vectorJsDefault.default)({
                 features: [
-                    this.hoverFeature
+                    this.hoverFeature_
                 ]
             })
         });
-        this.map.addLayer(profileHoverVector);
+        this.map_.addLayer(profileHoverVector);
         const outCallback = ()=>{
             profileHoverVector.setVisible(false);
         };
@@ -28338,22 +28340,22 @@ class Profile {
     }
     refreshProfile(segments) {
         const trackProfile = this.getTrackProfile(segments);
-        this.profile.refreshProfile(this.profileTarget, trackProfile.length > 0 ? trackProfile : undefined);
+        this.profile_.refreshProfile(this.profileTarget_, trackProfile.length > 0 ? trackProfile : undefined);
     }
     setTrackHoverStyle(style) {
-        this.hoverFeature.setStyle(style);
+        this.hoverFeature_.setStyle(style);
     }
     /**
    * Remove any highlight.
    * Fire the outCallback callback.
    */ clearHighlight() {
-        this.profile.clearHighlight();
+        this.profile_.clearHighlight();
     }
     /*
    * Highlight the given distance and corresponding elevation on chart.
    * Fire the hoverCallback callback with corresponding point.
    */ highlight(distance) {
-        this.profile.highlight(distance);
+        this.profile_.highlight(distance);
     }
 }
 exports.default = Profile;

@@ -589,6 +589,7 @@ const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmw
 function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _osm.createMap)("map");
     const router = new (0, _graphHopperDefault.default)({
+        map: map,
         url: ROUTING_URL,
         mapProjection: map.getView().getProjection()
     });
