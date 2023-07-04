@@ -2,7 +2,7 @@
 import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
-import Profile from '../../src/Profile';
+import Profile from '../../src/Profile.ts';
 import {styleFunction, profileHover} from './style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
@@ -15,6 +15,7 @@ async function main() {
 
   const {map, trackLayer, shadowTrackLayer} = createMap('map');
 
+  const projection = map.getView().getProjection();
   const router = new GraphHopperRouter({
     map: map,
     url: ROUTING_URL,
@@ -25,7 +26,7 @@ async function main() {
     profilers: [
       new ExtractFromSegmentProfiler(),
       new SwisstopoProfiler({
-        projection: map.getView().getProjection(),
+        projection: projection,
       })
     ]
   });

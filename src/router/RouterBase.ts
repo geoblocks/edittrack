@@ -1,13 +1,15 @@
-import type Map from 'ol/Map';
 import { distance } from 'ol/coordinate';
+import type Map from 'ol/Map';
 import type { Coordinate } from 'ol/coordinate';
+import type Feature from 'ol/Feature';
+import type { LineString, Point } from 'ol/geom';
 
 type RouterBaseOptions = {
   map: Map;
   maxRoutingTolerance?: number;
 };
 
-export default class RouterBase {
+export default abstract class RouterBase {
   map: Map;
   maxRoutingTolerance: number;
 
@@ -15,6 +17,8 @@ export default class RouterBase {
     this.map = options.map;
     this.maxRoutingTolerance = options.maxRoutingTolerance !== undefined ? options.maxRoutingTolerance : Infinity;
   }
+
+  abstract snapSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>): Promise<boolean>;
 
   isInTolerance(pointA: Coordinate, pointB: Coordinate): boolean {
     const pointAPixel = this.map.getPixelFromCoordinate(pointA);

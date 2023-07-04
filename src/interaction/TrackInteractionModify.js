@@ -153,9 +153,9 @@ export default class Modify extends PointerInteraction {
     const feature = this.getFeatureAtPixel(this.lastPixel_);
     // Adds hit geometries to the hit feature and the sketch feature.
     // The geometry is either the closest point on a line or the point itself
-    this.source_.forEachFeature((f) => f.set('sketchHitGeometry', undefined));
-    this.pointAtCursorFeature_.set('sketchHitGeometry', undefined);
-    this.pointAtCursorFeature_.set('subtype', undefined);
+    this.source_.forEachFeature((f) => f.set('sketchHitGeometry', undefined, true));
+    this.pointAtCursorFeature_.set('sketchHitGeometry', undefined, true);
+    this.pointAtCursorFeature_.set('subtype', undefined, true);
     if (feature) {
       const type = feature.get('type');
       const sketchGeometry = this.pointAtCursorFeature_.getGeometry();
@@ -254,7 +254,7 @@ export default class Modify extends PointerInteraction {
         this.overlay_.getSource().addFeature(this.overlayFeature_);
       }
       this.involvedFeatures_.forEach(f => {
-        f?.get('type') === 'segment' && f?.set('subtype', 'modifying')
+        f?.get('type') === 'segment' && f.set('subtype', 'modifying')
       });
     }
 
@@ -287,15 +287,15 @@ export default class Modify extends PointerInteraction {
       this.feature_ = null;
       return false;
     }
+    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, event.coordinate));
     this.dragStarted = false;
-    this.feature_.set('dragging', false);
-    this.overlayFeature_.set('dragging', false);
-    this.overlayFeature_.set('sketchHitGeometry', undefined);
+    this.feature_.set('dragging', false, true);
+    this.overlayFeature_.set('dragging', false, true);
+    this.overlayFeature_.set('sketchHitGeometry', undefined, true);
 
     this.involvedFeatures_.forEach(f => {
-      f?.get('type') === 'segment' && f?.set('subtype', undefined)
+      f?.get('type') === 'segment' && f.set('subtype', undefined, true)
     });
-    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, event.coordinate));
     if (this.overlayLineString_) {
       this.overlay_.getSource().removeFeature(this.overlayFeature_);
     }

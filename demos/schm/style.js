@@ -147,10 +147,9 @@ trackLineModifying.getStroke().setLineDash([1, 12]);
 
 /**
  * @param {import("ol/Feature").FeatureLike} feature
- * @param {number} _
  * @return {?Style}
  */
-export function styleFunction(feature, _) {
+export function styleFunction(feature) {
   const type = feature.get("type");
   const subtype = feature.get("subtype");
   const sketchHitGeometry = feature.get("sketchHitGeometry");

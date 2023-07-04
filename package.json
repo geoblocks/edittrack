@@ -4,8 +4,7 @@
   "description": "Geoblocks edittrack",
   "module": "src/index.js",
   "scripts": {
-    "eslint": "eslint src test",
-    "eslint-fix": "eslint src test --fix",
+    "eslint": "eslint src test demos",
     "start": "parcel serve demos/*/*.html",
     "build-demo:simple": "parcel build --target demo demos/simple/simple.html",
     "build-demo:schm": "parcel build --target demo demos/schm/schm.html",

@@ -2,7 +2,7 @@
 import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
-import Profile from '../../src/Profile';
+import Profile from '../../src/Profile.ts';
 import {styleFunction} from './style';
 import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './osm';

@@ -146,10 +146,9 @@ export const trackLineModifying = new Style({
 
 /**
  * @param {import("ol/Feature").FeatureLike} feature
- * @param {number} _
  * @return {?Style}
  */
-export function styleFunction(feature, _) {
+export function styleFunction(feature) {
   const type = feature.get('type');
   const subtype = feature.get('subtype');
   const index = feature.get('index');
@@ -189,7 +188,7 @@ export function styleFunction(feature, _) {
 }
 
 /**
- * @param {string=} strokeColor
+ * @param {?string} strokeColor
  * @return {Style}
  */
 export function externalLayerStyle(strokeColor = '#e3ff00') {
