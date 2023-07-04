@@ -731,6 +731,7 @@ var _utilTs = require("./util.ts");
        *
        * @param {import ('./TrackInteractionModify').ModifyEvent} event
        */ (event)=>{
+            this.trackLayer_.getSource().setState("loading");
             const feature = event.feature;
             const type = feature.get("type");
             if (type === "POI") this.onTrackChanged_();
@@ -829,6 +830,7 @@ var _utilTs = require("./util.ts");
         this.mode_ = mode || "";
     }
     onTrackChanged_() {
+        this.trackLayer_.getSource().setState("ready");
         // notify observers
         this.notifyTrackChangeEventListeners_();
     }
@@ -7789,6 +7791,7 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
             condition: (event)=>!this.deleteCondition_(event),
             hitTolerance: hitTolerance
         });
+        source.addFeature(modify.overlayFeature);
         // @ts-ignore too complicate to declare proper events
         modify.on("modifyend", (evt)=>this.dispatchEvent(evt));
         return modify;
@@ -22073,7 +22076,7 @@ class Modify extends (0, _pointerJsDefault.default) {
      */ this.feature_ = null;
         /**
      * Editing vertex.
-     */ this.overlayFeature_ = new (0, _featureJsDefault.default)({
+     */ this.overlayFeature = new (0, _featureJsDefault.default)({
             type: "segment"
         });
         /**
@@ -22180,7 +22183,7 @@ class Modify extends (0, _pointerJsDefault.default) {
             switch(type){
                 case "segment":
                     {
-                        this.overlayFeature_.set("dragging", true);
+                        this.overlayFeature.set("dragging", true);
                         // we create a 3 points linestring
                         const geometry = this.feature_.getGeometry();
                         console.assert(geometry.getType() === "LineString", this.feature_.getProperties());
@@ -22190,7 +22193,7 @@ class Modify extends (0, _pointerJsDefault.default) {
                             event.coordinate,
                             g.getLastCoordinate()
                         ]);
-                        this.overlayFeature_.set("sketchHitGeometry", new (0, _pointJsDefault.default)(event.coordinate));
+                        this.overlayFeature.set("sketchHitGeometry", new (0, _pointJsDefault.default)(event.coordinate));
                         this.involvedFeatures_ = [
                             this.feature_
                         ];
@@ -22233,10 +22236,7 @@ class Modify extends (0, _pointerJsDefault.default) {
                 default:
                     throw new Error("unknown feature");
             }
-            if (this.overlayLineString_) {
-                this.overlayFeature_.setGeometry(this.overlayLineString_);
-                this.overlay_.getSource().addFeature(this.overlayFeature_);
-            }
+            if (this.overlayLineString_) this.overlayFeature.setGeometry(this.overlayLineString_);
             this.involvedFeatures_.forEach((f)=>{
                 f?.get("type") === "segment" && f.set("subtype", "modifying");
             });
@@ -22247,7 +22247,7 @@ class Modify extends (0, _pointerJsDefault.default) {
             console.assert(coordinates.length === 3);
             coordinates[1] = event.coordinate;
             this.overlayLineString_.setCoordinates(coordinates);
-            const sketchHitGeometry = this.overlayFeature_.get("sketchHitGeometry");
+            const sketchHitGeometry = this.overlayFeature.get("sketchHitGeometry");
             if (sketchHitGeometry) sketchHitGeometry.setCoordinates(event.coordinate);
         }
         if (type === "controlPoint" || type === "POI") {
@@ -22266,13 +22266,12 @@ class Modify extends (0, _pointerJsDefault.default) {
         }
         this.dispatchEvent(new ModifyEvent("modifyend", this.feature_, event.coordinate));
         this.dragStarted = false;
-        this.feature_.set("dragging", false, true);
-        this.overlayFeature_.set("dragging", false, true);
-        this.overlayFeature_.set("sketchHitGeometry", undefined, true);
+        this.overlayFeature.setGeometry(null);
+        this.overlayFeature.set("dragging", false, true);
+        this.overlayFeature.set("sketchHitGeometry", undefined, true);
         this.involvedFeatures_.forEach((f)=>{
             f?.get("type") === "segment" && f.set("subtype", undefined, true);
         });
-        if (this.overlayLineString_) this.overlay_.getSource().removeFeature(this.overlayFeature_);
         this.feature_ = null;
         return false;
     }

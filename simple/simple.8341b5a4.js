@@ -580,8 +580,8 @@ var _trackManagerDefault = parcelHelpers.interopDefault(_trackManager);
 var _graphHopper = require("../../src/router/GraphHopper");
 var _graphHopperDefault = parcelHelpers.interopDefault(_graphHopper);
 var _index = require("../../src/profiler/index");
-var _profile = require("../../src/Profile");
-var _profileDefault = parcelHelpers.interopDefault(_profile);
+var _profileTs = require("../../src/Profile.ts");
+var _profileTsDefault = parcelHelpers.interopDefault(_profileTs);
 var _style = require("./style");
 var _style1 = require("ol/style");
 var _osm = require("./osm");
@@ -625,7 +625,7 @@ function main() {
     window.trackManager = trackManager;
     /**
    * @type {Profile}
-   */ const d3Profile = new (0, _profileDefault.default)({
+   */ const d3Profile = new (0, _profileTsDefault.default)({
         map: map,
         profileTarget: "#profile"
     });
@@ -674,7 +674,7 @@ function main() {
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile":"i4hMD","./style":"bV6WG","ol/style":"hEQxF","./osm":"2SIll","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile.ts":"i4hMD","./style":"bV6WG","ol/style":"hEQxF","./osm":"2SIll","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
@@ -687,11 +687,10 @@ parcelHelpers.export(exports, "trackLine", ()=>trackLine);
 parcelHelpers.export(exports, "trackLineModifying", ()=>trackLineModifying);
 /**
  * @param {import("ol/Feature").FeatureLike} feature
- * @param {number} _
  * @return {?Style}
  */ parcelHelpers.export(exports, "styleFunction", ()=>styleFunction);
 /**
- * @param {string=} strokeColor
+ * @param {?string} strokeColor
  * @return {Style}
  */ parcelHelpers.export(exports, "externalLayerStyle", ()=>externalLayerStyle);
 /**
@@ -813,7 +812,7 @@ const trackLineModifying = new (0, _styleJs.Style)({
         ]
     })
 });
-function styleFunction(feature, _) {
+function styleFunction(feature) {
     const type = feature.get("type");
     const subtype = feature.get("subtype");
     const index = feature.get("index");
