@@ -49,7 +49,7 @@ export class ModifyEvent extends Event {
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent): boolean} condition
- * @property {number} hitTolerance
+ * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */
 
 

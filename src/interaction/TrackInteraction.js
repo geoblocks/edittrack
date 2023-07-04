@@ -20,7 +20,7 @@ import DrawPoint from './DrawPoint.ts';
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Default is to add a new point on click
- * @property {number} hitTolerance
+ * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */
 
 

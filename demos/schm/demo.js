@@ -15,18 +15,17 @@ async function main() {
 
   const {map, trackLayer, shadowTrackLayer} = createMap('map');
 
-  const projection = map.getView().getProjection();
   const router = new GraphHopperRouter({
+    map: map,
     url: ROUTING_URL,
-    mapProjection: projection,
-    maxRoutingDistance: 15,
+    maxRoutingTolerance: 15,
   });
 
   const profiler = new FallbackProfiler({
     profilers: [
       new ExtractFromSegmentProfiler(),
       new SwisstopoProfiler({
-        projection: projection
+        projection: map.getView().getProjection(),
       })
     ]
   });
@@ -48,6 +47,7 @@ async function main() {
     shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,
     deleteCondition: deleteCondition,
+    hitTolerance: 15,
   });
 
   const search = new URLSearchParams(document.location.search);

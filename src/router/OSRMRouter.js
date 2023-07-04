@@ -1,4 +1,5 @@
 import {fromLonLat, toLonLat} from 'ol/proj.js';
+import RouterBase from './RouterBase.ts';
 
 /**
  * @typedef {import("ol/proj").ProjectionLike} ProjectionLike
@@ -9,7 +10,8 @@ import {fromLonLat, toLonLat} from 'ol/proj.js';
 
 /**
  * @typedef {Object} Options
- * @property {ProjectionLike} mapProjection
+ * @property {import("ol/Map").default} map
+ * @property {number} [maxRoutingTolerance=Infinity]
  * @property {string} url The URL profile prefix to use, see *_PROFILE_URL.
  * @property {string} extraParams Parameters like access token.
  * @property {number} radius
@@ -27,12 +29,14 @@ export const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foo
 export const OSRM_DEFAULT_PROFILE_URL = 'https://router.project-osrm.org/route/v1/driving';
 
 
-export default class OSRMRouter {
+export default class OSRMRouter extends RouterBase {
 
   /**
    * @param {Options} options
    */
   constructor(options) {
+    super(options);
+
     /**
      * @private
      * @type {string}
@@ -44,12 +48,6 @@ export default class OSRMRouter {
      * @type {number}
      */
     this.radius_ = options.radius || 10000;
-
-    /**
-     * @private
-     * @type {ProjectionLike}
-     */
-    this.mapProjection_ = options.mapProjection;
 
     /**
      * @private
@@ -65,9 +63,10 @@ export default class OSRMRouter {
    * @return {Promise<boolean>}
    */
   async snapSegment(segment, pointFrom, pointTo) {
+    const mapProjection = this.map.getView().getProjection();
     const pointFromGeometry = pointFrom.getGeometry();
     const pointToGeometry = pointTo.getGeometry();
-    const coordinates = [pointFromGeometry.getCoordinates(), pointToGeometry.getCoordinates()].map(cc => toLonLat(cc.slice(0, 2), this.mapProjection_));
+    const coordinates = [pointFromGeometry.getCoordinates(), pointToGeometry.getCoordinates()].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
 
     // [ [a,b] , [c,d] ] -> 'a,b;c,d'
     const coordinateString = coordinates.map(c => c.join(',')).join(';');
@@ -82,7 +81,7 @@ export default class OSRMRouter {
     console.assert(jsonResponse.code === 'Ok');
     console.assert(jsonResponse.routes.length === 1);
     const route = jsonResponse.routes[0];
-    const segmentCoordinates = /** @type {import('ol/coordinate').Coordinate[]} */ (route.geometry.coordinates).map(cc => fromLonLat(cc, this.mapProjection_));
+    const segmentCoordinates = /** @type {import('ol/coordinate').Coordinate[]} */ (route.geometry.coordinates).map(cc => fromLonLat(cc, mapProjection));
     const segmentGeometry = segment.getGeometry();
     segmentGeometry.setCoordinates(segmentCoordinates);
 
