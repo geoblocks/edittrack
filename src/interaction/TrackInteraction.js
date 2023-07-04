@@ -74,6 +74,7 @@ export default class TrackInteraction extends Interaction {
       condition: (event) => !this.deleteCondition_(event),
       hitTolerance: hitTolerance,
     });
+    source.addFeature(modify.overlayFeature);
     // @ts-ignore too complicate to declare proper events
     modify.on('modifyend', (evt) => this.dispatchEvent(evt));
     return modify;

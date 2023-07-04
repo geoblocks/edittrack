@@ -85,7 +85,7 @@ export default class Modify extends PointerInteraction {
     /**
      * Editing vertex.
      */
-    this.overlayFeature_ = new Feature({
+    this.overlayFeature = new Feature({
       type: 'segment'
     });
 
@@ -212,13 +212,13 @@ export default class Modify extends PointerInteraction {
       this.overlayLineString_ = null;
       switch (type) {
         case 'segment': {
-          this.overlayFeature_.set('dragging', true);
+          this.overlayFeature.set('dragging', true);
           // we create a 3 points linestring
           const geometry = this.feature_.getGeometry();
           console.assert(geometry.getType() === 'LineString', this.feature_.getProperties());
           const g = /** @type {LineString} */ (geometry);
           this.overlayLineString_  = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()]);
-          this.overlayFeature_.set('sketchHitGeometry', new Point(event.coordinate));
+          this.overlayFeature.set('sketchHitGeometry', new Point(event.coordinate));
           this.involvedFeatures_ = [this.feature_];
           break;
         }
@@ -250,8 +250,7 @@ export default class Modify extends PointerInteraction {
       }
 
       if (this.overlayLineString_) {
-        this.overlayFeature_.setGeometry(this.overlayLineString_);
-        this.overlay_.getSource().addFeature(this.overlayFeature_);
+        this.overlayFeature.setGeometry(this.overlayLineString_);
       }
       this.involvedFeatures_.forEach(f => {
         f?.get('type') === 'segment' && f.set('subtype', 'modifying')
@@ -265,7 +264,7 @@ export default class Modify extends PointerInteraction {
       coordinates[1] = event.coordinate;
       this.overlayLineString_.setCoordinates(coordinates);
 
-      const sketchHitGeometry = this.overlayFeature_.get('sketchHitGeometry');
+      const sketchHitGeometry = this.overlayFeature.get('sketchHitGeometry');
       if (sketchHitGeometry) {
         sketchHitGeometry.setCoordinates(event.coordinate);
       }
@@ -289,16 +288,14 @@ export default class Modify extends PointerInteraction {
     }
     this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, event.coordinate));
     this.dragStarted = false;
-    this.feature_.set('dragging', false, true);
-    this.overlayFeature_.set('dragging', false, true);
-    this.overlayFeature_.set('sketchHitGeometry', undefined, true);
+
+    this.overlayFeature.setGeometry(null);
+    this.overlayFeature.set('dragging', false, true);
+    this.overlayFeature.set('sketchHitGeometry', undefined, true);
 
     this.involvedFeatures_.forEach(f => {
       f?.get('type') === 'segment' && f.set('subtype', undefined, true)
     });
-    if (this.overlayLineString_) {
-      this.overlay_.getSource().removeFeature(this.overlayFeature_);
-    }
     this.feature_ = null;
     return false;
   }
