@@ -31,7 +31,7 @@ import {debounce, setZ} from './util.ts';
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new point to the track. Default is click.
- * @property {number} [hitTolerance=20]
+ * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */
 
 

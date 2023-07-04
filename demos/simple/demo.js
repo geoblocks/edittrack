@@ -14,6 +14,7 @@ function main() {
   const {map, trackLayer, shadowTrackLayer} = createMap('map');
 
   const router = new GraphHopperRouter({
+    map: map,
     url: ROUTING_URL,
     mapProjection: map.getView().getProjection()
   });
