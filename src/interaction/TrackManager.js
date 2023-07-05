@@ -414,32 +414,30 @@ class TrackManager {
    * @param {Array<Feature<Point|LineString>>} features
    * @return {Promise<any>}
    */
-  restoreFeaturesInternal_(features) {
-    this.clearInternal_();
+  async restoreFeaturesInternal_(features) {
     // should parse features first, compute profile, and then replace the trackdata and add history
     const parsedFeatures = this.trackData_.parseFeatures(features);
     this.source_.addFeatures(features);
     const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
-    return Promise.all(profileRequests).then(() => {
-      this.trackData_.restoreParsedFeatures(parsedFeatures);
-    });
+    await Promise.all(profileRequests);
+    this.trackData_.restoreParsedFeatures(parsedFeatures);
   }
 
   /**
    * @param {Array<Feature<Point|LineString>>} features
    * @return {Promise<any>}
    */
-    restoreFeatures(features) {
-      return this.restoreFeaturesInternal_(features).then(() => {
-        this.onTrackChanged_();
-      });
-    }
+  async restoreFeatures(features) {
+    await this.restoreFeaturesInternal_(features);
+    this.onTrackChanged_();
+  }
+
   /**
    * @return {Feature<Point>[]}
    */
-    getPOIs() {
-      return this.trackData_.getPOIs().map(point => point.clone());
-    }
+  getPOIs() {
+    return this.trackData_.getPOIs().map(point => point.clone());
+  }
 
   /**
    * @return {Feature<Point>[]}
@@ -522,11 +520,10 @@ class TrackManager {
     this.trackHoverEventListeners_.forEach(handler => handler(distance));
   }
 
-
   /**
    * Undo one drawing step
    */
-   undo() {
+  undo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.undo();
       if (features) {
