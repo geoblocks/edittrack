@@ -49,6 +49,7 @@ export class ModifyEvent extends Event {
  * @property {import('./TrackData').default} trackData
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent): boolean} condition
+ * @property {function(MapBrowserEvent): boolean} addControlPointCondition
  * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */
 
@@ -71,6 +72,8 @@ export default class Modify extends PointerInteraction {
     this.dragStarted = false;
 
     this.condition_ = options.condition;
+
+    this.addControlPointCondition_ = options.addControlPointCondition;
 
     this.source_ = options.source;
 
@@ -186,6 +189,23 @@ export default class Modify extends PointerInteraction {
    * @param {MapBrowserEvent} event
    * @return {boolean}
    */
+  handleEvent(event) {
+    const stop = super.handleEvent(event);
+    if (this.addControlPointCondition_(event)) {
+      const feature = this.getFeatureAtPixel(event.pixel);
+      if (feature && feature.get('type') === 'segment') {
+        console.log(feature);
+        this.dispatchEvent(new ModifyEvent('modifyend', feature, event.coordinate));
+        return false
+      }
+    }
+    return stop;
+  }
+
+  /**
+   * @param {MapBrowserEvent} event
+   * @return {boolean}
+   */
   handleDownEvent(event) {
     if (!this.condition_(event)) {
       return false;
@@ -208,6 +228,7 @@ export default class Modify extends PointerInteraction {
 
     const type = this.feature_.get('type');
     if (!this.dragStarted) {
+      this.dispatchEvent(new ModifyEvent('modifystart', this.feature_, event.coordinate));
       this.dragStarted = true;
       this.overlayLineString_ = null;
       switch (type) {
