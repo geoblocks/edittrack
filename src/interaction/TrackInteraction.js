@@ -4,6 +4,7 @@ import Select from 'ol/interaction/Select.js';
 import Modify from './TrackInteractionModify.js';
 import {click} from 'ol/events/condition.js';
 import DrawPoint from './DrawPoint.ts';
+import {FALSE} from 'ol/functions';
 
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
@@ -20,6 +21,7 @@ import DrawPoint from './DrawPoint.ts';
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Default is to add a new point on click
+ * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
  * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */
 
@@ -72,11 +74,18 @@ export default class TrackInteraction extends Interaction {
       source: source,
       style: style,
       condition: (event) => !this.deleteCondition_(event),
+      addControlPointCondition: (event) => this.userAddControlPointCondition_(event),
       hitTolerance: hitTolerance,
     });
-    source.addFeature(modify.overlayFeature);
     // @ts-ignore too complicate to declare proper events
-    modify.on('modifyend', (evt) => this.dispatchEvent(evt));
+    modify.on('modifystart', () => {
+      source.addFeature(modify.overlayFeature);
+    });
+    // @ts-ignore too complicate to declare proper events
+    modify.on('modifyend', (evt) => {
+      source.removeFeature(modify.overlayFeature);
+      this.dispatchEvent(evt);
+    });
     return modify;
   }
 
@@ -121,6 +130,7 @@ export default class TrackInteraction extends Interaction {
 
     this.userDeleteCondition_ = options.deleteCondition === undefined ? click : options.deleteCondition;
     this.userAddLastPointCondition_ = options.addLastPointCondition === undefined ? click : options.addLastPointCondition;
+    this.userAddControlPointCondition_ = options.addControlPointCondition === undefined ? FALSE : options.addControlPointCondition;
 
     const source = options.trackLayer.getSource();
     // FIXME should debounce

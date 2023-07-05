@@ -30,7 +30,8 @@ import {debounce, setZ} from './util.ts';
  * @property {geoblocks.Profiler} profiler
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
- * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new point to the track. Default is click.
+ * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
+ * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
  * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */
 
@@ -130,6 +131,7 @@ class TrackManager {
       map: this.map_,
       deleteCondition: options.deleteCondition,
       addLastPointCondition: options.addLastPointCondition,
+      addControlPointCondition: options.addControlPointCondition,
       hitTolerance: this.hitTolerance_,
     });
 

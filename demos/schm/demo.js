@@ -6,7 +6,7 @@ import Profile from '../../src/Profile.ts';
 import {styleFunction, profileHover} from './style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
-import {doubleClick} from 'ol/events/condition';
+import {doubleClick, singleClick} from 'ol/events/condition';
 
 const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
@@ -48,6 +48,8 @@ async function main() {
     shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,
     deleteCondition: deleteCondition,
+    addLastPointCondition: singleClick,  // we have to use single click otherwise the double click is not fired
+    addControlPointCondition: doubleClick,
     hitTolerance: 15,
   });
 
