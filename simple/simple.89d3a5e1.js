@@ -600,7 +600,8 @@ var _utilTs = require("./util.ts");
  * @property {geoblocks.Profiler} profiler
  * @property {StyleFunction} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
- * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new point to the track. Default is click.
+ * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
+ * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
  * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
  */ class TrackManager {
     /**
@@ -667,6 +668,7 @@ var _utilTs = require("./util.ts");
             map: this.map_,
             deleteCondition: options.deleteCondition,
             addLastPointCondition: options.addLastPointCondition,
+            addControlPointCondition: options.addControlPointCondition,
             hitTolerance: this.hitTolerance_
         });
         // Hack to test profile synchro
@@ -7744,6 +7746,7 @@ var _trackInteractionModifyJsDefault = parcelHelpers.interopDefault(_trackIntera
 var _conditionJs = require("ol/events/condition.js");
 var _drawPointTs = require("./DrawPoint.ts");
 var _drawPointTsDefault = parcelHelpers.interopDefault(_drawPointTs);
+var _functions = require("ol/functions");
 class TrackInteraction extends (0, _interactionJsDefault.default) {
     /**
    *
@@ -7784,11 +7787,18 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
             source: source,
             style: style,
             condition: (event)=>!this.deleteCondition_(event),
+            addControlPointCondition: (event)=>this.userAddControlPointCondition_(event),
             hitTolerance: hitTolerance
         });
-        source.addFeature(modify.overlayFeature);
         // @ts-ignore too complicate to declare proper events
-        modify.on("modifyend", (evt)=>this.dispatchEvent(evt));
+        modify.on("modifystart", ()=>{
+            source.addFeature(modify.overlayFeature);
+        });
+        // @ts-ignore too complicate to declare proper events
+        modify.on("modifyend", (evt)=>{
+            source.removeFeature(modify.overlayFeature);
+            this.dispatchEvent(evt);
+        });
         return modify;
     }
     /**
@@ -7825,6 +7835,7 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
         this.trackLayer_ = options.trackLayer;
         this.userDeleteCondition_ = options.deleteCondition === undefined ? (0, _conditionJs.click) : options.deleteCondition;
         this.userAddLastPointCondition_ = options.addLastPointCondition === undefined ? (0, _conditionJs.click) : options.addLastPointCondition;
+        this.userAddControlPointCondition_ = options.addControlPointCondition === undefined ? (0, _functions.FALSE) : options.addControlPointCondition;
         const source = options.trackLayer.getSource();
         // FIXME should debounce
         source.on("addfeature", ()=>requestAnimationFrame(()=>this.modifyTrack_.updateSketchFeature()));
@@ -7868,7 +7879,7 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
 }
 exports.default = TrackInteraction;
 
-},{"ol/interaction/Interaction.js":"g1FUs","ol/interaction/Select.js":"iBBOO","./TrackInteractionModify.js":"2201G","ol/events/condition.js":"iQTYY","./DrawPoint.ts":"bcWAA","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"g1FUs":[function(require,module,exports) {
+},{"ol/interaction/Interaction.js":"g1FUs","ol/interaction/Select.js":"iBBOO","./TrackInteractionModify.js":"2201G","ol/events/condition.js":"iQTYY","./DrawPoint.ts":"bcWAA","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","ol/functions":"iqv8I"}],"g1FUs":[function(require,module,exports) {
 /**
  * @module ol/interaction/Interaction
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -22063,6 +22074,7 @@ class Modify extends (0, _pointerJsDefault.default) {
         super();
         this.dragStarted = false;
         this.condition_ = options.condition;
+        this.addControlPointCondition_ = options.addControlPointCondition;
         this.source_ = options.source;
         this.hitTolerance_ = options.hitTolerance;
         /**
@@ -22159,6 +22171,21 @@ class Modify extends (0, _pointerJsDefault.default) {
     /**
    * @param {MapBrowserEvent} event
    * @return {boolean}
+   */ handleEvent(event) {
+        const stop = super.handleEvent(event);
+        if (this.addControlPointCondition_(event)) {
+            const feature = this.getFeatureAtPixel(event.pixel);
+            if (feature && feature.get("type") === "segment") {
+                console.log(feature);
+                this.dispatchEvent(new ModifyEvent("modifyend", feature, event.coordinate));
+                return false;
+            }
+        }
+        return stop;
+    }
+    /**
+   * @param {MapBrowserEvent} event
+   * @return {boolean}
    */ handleDownEvent(event) {
         if (!this.condition_(event)) return false;
         console.assert(!this.feature_);
@@ -22173,6 +22200,7 @@ class Modify extends (0, _pointerJsDefault.default) {
         this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
         const type = this.feature_.get("type");
         if (!this.dragStarted) {
+            this.dispatchEvent(new ModifyEvent("modifystart", this.feature_, event.coordinate));
             this.dragStarted = true;
             this.overlayLineString_ = null;
             switch(type){

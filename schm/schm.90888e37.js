@@ -618,6 +618,8 @@ async function main() {
         shadowTrackLayer: shadowTrackLayer,
         style: (0, _style.styleFunction),
         deleteCondition: deleteCondition,
+        addLastPointCondition: (0, _condition.singleClick),
+        addControlPointCondition: (0, _condition.doubleClick),
         hitTolerance: 15
     });
     const search = new URLSearchParams(document.location.search);
