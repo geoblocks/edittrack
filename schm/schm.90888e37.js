@@ -586,7 +586,7 @@ var _style = require("./style");
 var _swisstopo = require("./swisstopo");
 var _track = require("./track");
 var _condition = require("ol/events/condition");
-const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true";
+const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmneutral&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true";
 async function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _swisstopo.createMap)("map");
     const projection = map.getView().getProjection();

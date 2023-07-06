@@ -7879,7 +7879,7 @@ class TrackInteraction extends (0, _interactionJsDefault.default) {
 }
 exports.default = TrackInteraction;
 
-},{"ol/interaction/Interaction.js":"g1FUs","ol/interaction/Select.js":"iBBOO","./TrackInteractionModify.js":"2201G","ol/events/condition.js":"iQTYY","./DrawPoint.ts":"bcWAA","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","ol/functions":"iqv8I"}],"g1FUs":[function(require,module,exports) {
+},{"ol/interaction/Interaction.js":"g1FUs","ol/interaction/Select.js":"iBBOO","./TrackInteractionModify.js":"2201G","ol/events/condition.js":"iQTYY","./DrawPoint.ts":"bcWAA","ol/functions":"iqv8I","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"g1FUs":[function(require,module,exports) {
 /**
  * @module ol/interaction/Interaction
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -22144,9 +22144,11 @@ class Modify extends (0, _pointerJsDefault.default) {
         const feature = this.getFeatureAtPixel(this.lastPixel_);
         // Adds hit geometries to the hit feature and the sketch feature.
         // The geometry is either the closest point on a line or the point itself
-        this.source_.forEachFeature((f)=>f.set("sketchHitGeometry", undefined, true));
-        this.pointAtCursorFeature_.set("sketchHitGeometry", undefined, true);
-        this.pointAtCursorFeature_.set("subtype", undefined, true);
+        this.source_.forEachFeature((f)=>f.set("sketchHitGeometry", undefined));
+        this.pointAtCursorFeature_.setProperties({
+            "sketchHitGeometry": undefined,
+            "subtype": undefined
+        });
         if (feature) {
             const type = feature.get("type");
             const sketchGeometry = this.pointAtCursorFeature_.getGeometry();
@@ -22157,8 +22159,10 @@ class Modify extends (0, _pointerJsDefault.default) {
                 hitGeometry = this.scratchPoint_;
             } else hitGeometry = featureGeometry;
             feature.set("sketchHitGeometry", hitGeometry);
-            this.pointAtCursorFeature_.set("sketchHitGeometry", sketchGeometry);
-            this.pointAtCursorFeature_.set("subtype", type);
+            this.pointAtCursorFeature_.setProperties({
+                "sketchHitGeometry": sketchGeometry,
+                "subtype": type
+            });
         }
     }
     /**
@@ -22290,10 +22294,10 @@ class Modify extends (0, _pointerJsDefault.default) {
         this.dispatchEvent(new ModifyEvent("modifyend", this.feature_, event.coordinate));
         this.dragStarted = false;
         this.overlayFeature.setGeometry(null);
-        this.overlayFeature.set("dragging", false, true);
-        this.overlayFeature.set("sketchHitGeometry", undefined, true);
+        this.overlayFeature.set("dragging", false);
+        this.overlayFeature.set("sketchHitGeometry", undefined);
         this.involvedFeatures_.forEach((f)=>{
-            f?.get("type") === "segment" && f.set("subtype", undefined, true);
+            f?.get("type") === "segment" && f.set("subtype", undefined);
         });
         this.feature_ = null;
         return false;
