@@ -156,9 +156,11 @@ export default class Modify extends PointerInteraction {
     const feature = this.getFeatureAtPixel(this.lastPixel_);
     // Adds hit geometries to the hit feature and the sketch feature.
     // The geometry is either the closest point on a line or the point itself
-    this.source_.forEachFeature((f) => f.set('sketchHitGeometry', undefined, true));
-    this.pointAtCursorFeature_.set('sketchHitGeometry', undefined, true);
-    this.pointAtCursorFeature_.set('subtype', undefined, true);
+    this.source_.forEachFeature((f) => f.set('sketchHitGeometry', undefined));
+    this.pointAtCursorFeature_.setProperties({
+      'sketchHitGeometry': undefined,
+      'subtype': undefined,
+    });
     if (feature) {
       const type = feature.get('type');
       const sketchGeometry = this.pointAtCursorFeature_.getGeometry();
@@ -171,8 +173,10 @@ export default class Modify extends PointerInteraction {
         hitGeometry = featureGeometry;
       }
       feature.set('sketchHitGeometry', hitGeometry);
-      this.pointAtCursorFeature_.set('sketchHitGeometry', sketchGeometry);
-      this.pointAtCursorFeature_.set('subtype', type);
+      this.pointAtCursorFeature_.setProperties({
+        'sketchHitGeometry': sketchGeometry,
+        'subtype': type,
+      });
     }
   }
 
@@ -311,11 +315,11 @@ export default class Modify extends PointerInteraction {
     this.dragStarted = false;
 
     this.overlayFeature.setGeometry(null);
-    this.overlayFeature.set('dragging', false, true);
-    this.overlayFeature.set('sketchHitGeometry', undefined, true);
+    this.overlayFeature.set('dragging', false);
+    this.overlayFeature.set('sketchHitGeometry', undefined);
 
     this.involvedFeatures_.forEach(f => {
-      f?.get('type') === 'segment' && f.set('subtype', undefined, true)
+      f?.get('type') === 'segment' && f.set('subtype', undefined)
     });
     this.feature_ = null;
     return false;
