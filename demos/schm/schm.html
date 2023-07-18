@@ -1,56 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <title>Edit track demo</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css"
+      integrity="sha512-wMgv53RaFRJEYY55kgTe9rv1s3A75Ph6q8N42gB6SqupPnIQveEO00rpsC+v/g66hDZ8YRbnB/R8MySKSG6tZg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script src="./demo.js" type="module"></script>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Inter"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      #map {
+        height: 100vh;
+        width: 100%;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+      }
+    </style>
+  </head>
 
-<head>
-  <title>Edit track demo</title>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/7.4.0/ol.css" integrity="sha512-wMgv53RaFRJEYY55kgTe9rv1s3A75Ph6q8N42gB6SqupPnIQveEO00rpsC+v/g66hDZ8YRbnB/R8MySKSG6tZg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <script src="./demo.js" type="module"></script>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter">
-  <style>
-    html, body, main {
-      height: 100%;
-      margin: 0;
-    }
-    main {
-      display: flex;
-    }
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
-    #profile {
-      height: 150px;
-      width: 300px;
-    }
-  </style>
-</head>
-
-<body>
-  <main>
-    <div>
-      <div id="profile"></div>
-      <select id="trackmode">
-        <option value="edit">edit</option>
-        <option value="">view</option>
-      </select>
-      <br />
-      <a href="#" id="snap">Snap</a>
-      <br />
-      <a href="#" id="delete">delete last point</a>
-      <br />
-      <a href="#" id="undo">Undo</a>
-      <br />
-      <a href="#" id="redo">Redo</a>
-      <br />
-      <a href="#" id="clear">clear track</a>
-      <br />
-      <a href="#" id="getTrackData">save & restore</a>
-      <br />
-      <a href="#" id="reverse">reverse</a>
-  </div>
+  <body>
     <div id="map"></div>
-  </main>
-</body>
-
+  </body>
 </html>
