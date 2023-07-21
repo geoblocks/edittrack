@@ -580,8 +580,6 @@ var _trackManagerDefault = parcelHelpers.interopDefault(_trackManager);
 var _graphHopper = require("../../src/router/GraphHopper");
 var _graphHopperDefault = parcelHelpers.interopDefault(_graphHopper);
 var _index = require("../../src/profiler/index");
-var _profileTs = require("../../src/Profile.ts");
-var _profileTsDefault = parcelHelpers.interopDefault(_profileTs);
 var _style = require("./style");
 var _swisstopo = require("./swisstopo");
 var _track = require("./track");
@@ -638,50 +636,11 @@ async function main() {
             ]
         });
     }
-    /**
-   * @type {Profile}
-   */ const d3Profile = new (0, _profileTsDefault.default)({
-        map: map,
-        profileTarget: "#profile"
-    });
-    trackManager.addTrackChangeEventListener(()=>{
-        const segments = trackManager.getSegments();
-        d3Profile.refreshProfile(segments);
-    });
-    trackManager.addTrackHoverEventListener((distance)=>{
-        if (distance !== undefined) d3Profile.highlight(distance);
-        else d3Profile.clearHighlight();
-    });
     trackManager.mode = "edit";
-    const tmEl = document.querySelector("#trackmode");
-    tmEl.addEventListener("change", (evt)=>trackManager.mode = evt.target.value);
-    document.querySelector("#snap").addEventListener("click", ()=>{
-        trackManager.snapping = !trackManager.snapping;
-    });
-    document.querySelector("#delete").addEventListener("click", ()=>{
-        trackManager.deleteLastPoint();
-    });
-    document.querySelector("#clear").addEventListener("click", ()=>{
-        trackManager.clear();
-    });
-    document.querySelector("#undo").addEventListener("click", ()=>trackManager.undo());
-    document.querySelector("#redo").addEventListener("click", ()=>trackManager.redo());
-    document.querySelector("#getTrackData").addEventListener("click", ()=>{
-        trackManager.getTrackFeature();
-        const features = [
-            ...trackManager.getControlPoints(),
-            ...trackManager.getSegments()
-        ];
-        trackManager.restoreFeatures(features);
-    });
-    document.querySelector("#reverse").addEventListener("click", ()=>{
-        trackManager.reverse();
-    });
-    d3Profile.setTrackHoverStyle((0, _style.profileHover));
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile.ts":"i4hMD","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
@@ -733,6 +692,7 @@ const poiSvgSketchHit = `
   <path fill="${(0, _color.toString)(focusRed)}" stroke="white" stroke-width="2" paint-oder="stroke" d="M18 8.177c-5 0-9.5 3-9.5 9 0 4 9.5 24 9.5 24s9.5-20 9.5-24c0-6-4.5-9-9.5-9Z"/>
 </svg>
 `;
+const withPointerDevice = window.matchMedia("(pointer: coarse)").matches;
 const controlPoint = new (0, _style.Style)({
     zIndex: 100,
     image: new (0, _style.Circle)({
@@ -859,15 +819,15 @@ function styleFunction(feature) {
     const sketchHitGeometry = feature.get("sketchHitGeometry");
     switch(type){
         case "sketch":
-            if (subtype) {
+            if (!withPointerDevice && subtype) {
                 sketchLabel.getText().setText(sketchLabelText[subtype]);
                 return sketchLabel;
             }
-            return sketchControlPoint;
+            return withPointerDevice ? null : sketchControlPoint;
         case "POI":
             return sketchHitGeometry ? poiPointSketchHit : poiPoint;
         case "controlPoint":
-            if (sketchHitGeometry) return sketchControlPointHint;
+            if (!withPointerDevice && sketchHitGeometry) return sketchControlPointHint;
             switch(subtype){
                 case "first":
                     return firstControlPoint;
@@ -887,7 +847,7 @@ function styleFunction(feature) {
                         trackLine,
                         intermediatePoint
                     ];
-                    if (sketchHitGeometry) {
+                    if (!withPointerDevice && sketchHitGeometry) {
                         const dragging = feature.get("dragging");
                         const pointStyle = (dragging ? sketchControlPointHint : sketchControlPoint).map((style)=>style.clone());
                         pointStyle.forEach((style)=>style.setGeometry(sketchHitGeometry));
