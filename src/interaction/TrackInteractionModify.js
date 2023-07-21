@@ -184,6 +184,9 @@ export default class Modify extends PointerInteraction {
    * @param {MapBrowserEvent} event
    */
   handleMoveEvent(event) {
+    if (event.dragging) {
+      return;
+    }
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
     this.lastPixel_ = event.pixel;
     this.updateSketchFeature();
@@ -198,7 +201,6 @@ export default class Modify extends PointerInteraction {
     if (this.addControlPointCondition_(event)) {
       const feature = this.getFeatureAtPixel(event.pixel);
       if (feature && feature.get('type') === 'segment') {
-        console.log(feature);
         this.dispatchEvent(new ModifyEvent('modifyend', feature, event.coordinate));
         return false
       }

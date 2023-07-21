@@ -2,8 +2,7 @@
 import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
-import Profile from '../../src/Profile.ts';
-import {styleFunction, profileHover} from './style';
+import {styleFunction} from './style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
 import {doubleClick, singleClick} from 'ol/events/condition';
@@ -65,57 +64,7 @@ async function main() {
     });
   }
 
-  /**
-   * @type {Profile}
-   */
-  const d3Profile = new Profile({
-    map: map,
-    profileTarget: '#profile',
-  });
-
-
-  trackManager.addTrackChangeEventListener(() => {
-    const segments = trackManager.getSegments();
-    d3Profile.refreshProfile(segments);
-  });
-
-  trackManager.addTrackHoverEventListener((distance) => {
-    if (distance !== undefined) {
-      d3Profile.highlight(distance);
-    } else {
-      d3Profile.clearHighlight();
-    }
-  });
-
   trackManager.mode = 'edit';
-  const tmEl = document.querySelector('#trackmode');
-  tmEl.addEventListener('change', evt => trackManager.mode = evt.target.value);
-
-  document.querySelector('#snap').addEventListener('click', () => {
-    trackManager.snapping = ! trackManager.snapping;
-  });
-  document.querySelector('#delete').addEventListener('click', () => {
-    trackManager.deleteLastPoint();
-  });
-  document.querySelector('#clear').addEventListener('click', () => {
-    trackManager.clear();
-  });
-
-  document.querySelector('#undo').addEventListener('click', () => trackManager.undo());
-  document.querySelector('#redo').addEventListener('click', () => trackManager.redo());
-  document.querySelector('#getTrackData').addEventListener('click', () => {
-    trackManager.getTrackFeature();
-    const features = [
-      ...trackManager.getControlPoints(),
-      ...trackManager.getSegments()
-    ];
-    trackManager.restoreFeatures(features)
-  });
-  document.querySelector('#reverse').addEventListener('click', () => {
-    trackManager.reverse();
-  });
-
-  d3Profile.setTrackHoverStyle(profileHover);
 }
 
 main();

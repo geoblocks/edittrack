@@ -21,6 +21,8 @@ const poiSvgSketchHit = `
 </svg>
 `;
 
+const withPointerDevice = window.matchMedia("(pointer: coarse)").matches;
+
 export const controlPoint = new Style({
   zIndex: 100,
   image: new Circle({
@@ -156,15 +158,15 @@ export function styleFunction(feature) {
 
   switch (type) {
     case "sketch":
-      if (subtype) {
+      if (!withPointerDevice && subtype) {
         sketchLabel.getText().setText(sketchLabelText[subtype]);
         return sketchLabel;
       }
-      return sketchControlPoint;
+      return withPointerDevice ? null : sketchControlPoint;
     case "POI":
       return sketchHitGeometry ? poiPointSketchHit : poiPoint;
     case "controlPoint":
-      if (sketchHitGeometry) {
+      if (!withPointerDevice && sketchHitGeometry) {
         return sketchControlPointHint;
       }
       switch (subtype) {
@@ -183,7 +185,7 @@ export function styleFunction(feature) {
           const intermediatePoint = segmentIntermediatePoint.clone();
           intermediatePoint.setGeometry(new Point(feature.getGeometry().getFlatMidpoint()));
           const styles = [trackLine, intermediatePoint];
-          if (sketchHitGeometry) {
+          if (!withPointerDevice && sketchHitGeometry) {
             const dragging = feature.get("dragging");
             const pointStyle = (dragging ? sketchControlPointHint : sketchControlPoint).map((style) => style.clone());
             pointStyle.forEach((style) => style.setGeometry(sketchHitGeometry));
