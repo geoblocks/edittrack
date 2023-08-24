@@ -39,7 +39,7 @@
     "@types/proj4": "2.5.2",
     "@typescript-eslint/eslint-plugin": "6.4.1",
     "@typescript-eslint/parser": "6.4.1",
-    "chai": "4.3.7",
+    "chai": "4.3.8",
     "eslint": "8.47.0",
     "eslint-config-openlayers": "18.0.0",
     "gh-pages": "6.0.0",
