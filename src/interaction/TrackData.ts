@@ -1,6 +1,7 @@
 import {equals} from 'ol/coordinate.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
+import MultiPoint from 'ol/geom/MultiPoint.js';
 import type Point from 'ol/geom/Point.js';
 import type {Coordinate} from 'ol/coordinate.js';
 
@@ -66,6 +67,7 @@ export default class TrackData {
     this.segments = segments;
     this.pois = pois;
     this.controlPoints = controlPoints;
+    this.updatePOIIndexes();
   }
 
   getAdjacentSegments(controlPoint: Feature<Point>): AdjacentSegments {
@@ -252,6 +254,21 @@ export default class TrackData {
       pointAfter: pointAfter,
       newSegment: newSegment
     };
+  }
+
+  updatePOIIndexes() {
+    // build a multi point geometry from all segments coordinates
+    const points = new MultiPoint(this.segments.map((s) => s.getGeometry().getCoordinates()).flat());
+    const pointsCoordinates = points.getCoordinates();
+    const sorted = this.pois.map((poi) => {
+      // find the closest point to the POI and returns its index; that's it's "distance" from the start
+      const closestPoint = points.getClosestPoint(poi.getGeometry().getCoordinates());
+      return {
+        poi: poi,
+        index: pointsCoordinates.findIndex((c) => equals(c, closestPoint))
+      };
+    }).sort((a, b) => a.index - b.index);
+    sorted.forEach((s, index) => s.poi.set('index', index));
   }
 
   /*
