@@ -759,7 +759,6 @@ const poiPoint = new (0, _style.Style)({
     }),
     text: new (0, _style.Text)({
         font: "11px Inter",
-        text: "99",
         offsetY: -10,
         fill: new (0, _style.Fill)({
             color: "#fff"
@@ -773,7 +772,6 @@ const poiPointSketchHit = new (0, _style.Style)({
     }),
     text: new (0, _style.Text)({
         font: "11px Inter",
-        text: "99",
         offsetY: -10,
         fill: new (0, _style.Fill)({
             color: "#fff"
@@ -825,7 +823,10 @@ function styleFunction(feature) {
             }
             return withPointerDevice ? null : sketchControlPoint;
         case "POI":
-            return sketchHitGeometry ? poiPointSketchHit : poiPoint;
+            if (sketchHitGeometry) return poiPointSketchHit;
+            const index = feature.get("index");
+            if (index !== undefined) poiPoint.getText().setText((index + 1).toString());
+            return poiPoint;
         case "controlPoint":
             if (!withPointerDevice && sketchHitGeometry) return sketchControlPointHint;
             switch(subtype){
