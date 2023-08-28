@@ -126,7 +126,6 @@ export function getClosestPoint(
       closestPoint.length = stride;
       index += stride;
     } else {
-      // console.log('no match', index);
       // Skip ahead multiple points, because we know that all the skipped
       // points cannot be any closer than the closest point we have found so
       // far.  We know this because we know how close the current point is, how

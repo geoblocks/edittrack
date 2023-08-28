@@ -171,6 +171,7 @@ class TrackManager {
             setZ(segment, segmentProfile[0][2], segmentProfile[segmentProfile.length - 1][2]);
           }
         }
+        this.trackData_.updatePOIIndexes();
         this.onTrackChanged_();
       }
     });
@@ -300,6 +301,7 @@ class TrackManager {
               segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
             }
             Promise.all(segmentUpdates).then(() => {
+              this.trackData_.updatePOIIndexes();
               this.onTrackChanged_();
             });
           });
