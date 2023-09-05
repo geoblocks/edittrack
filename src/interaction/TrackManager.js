@@ -529,12 +529,11 @@ class TrackManager {
   undo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.undo();
+      this.clearInternal_();
       if (features) {
         this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
-      } else {
-        this.clearInternal_();
+        this.notifyTrackChangeEventListeners_(false);
       }
-      this.notifyTrackChangeEventListeners_(false);
     }
   }
 
@@ -544,6 +543,7 @@ class TrackManager {
   redo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.redo();
+      this.clearInternal_();
       if (features) {
         this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
         this.notifyTrackChangeEventListeners_(false);
