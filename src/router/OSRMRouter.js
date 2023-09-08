@@ -38,10 +38,10 @@ export default class OSRMRouter extends RouterBase {
     super(options);
 
     /**
-     * @private
+     * @public
      * @type {string}
      */
-    this.url_ = options.url;
+    this.url = options.url;
 
     /**
      * @private
@@ -72,7 +72,7 @@ export default class OSRMRouter extends RouterBase {
     const coordinateString = coordinates.map(c => c.join(',')).join(';');
     const radiuses = coordinates.map(() => this.radius_).join(';');
 
-    let url = `${this.url_}/${coordinateString}?radiuses=${radiuses}&geometries=geojson`;
+    let url = `${this.url}/${coordinateString}?radiuses=${radiuses}&geometries=geojson`;
     if (this.extraParams_) {
       url += `&${this.extraParams_}`;
     }
@@ -92,12 +92,5 @@ export default class OSRMRouter extends RouterBase {
     pointTo.set('snapped', true);
 
     return true;
-  }
-
-  /**
-   * @param {string} url
-   */
-  setUrl(url) {
-    this.url_ = url;
   }
 }

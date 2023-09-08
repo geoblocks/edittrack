@@ -22,10 +22,10 @@ export default class GraphHopper extends RouterBase {
     super(options);
 
     /**
-     * @private
+     * @public
      * @type {string}
      */
-    this.url_ = options.url;
+    this.url = options.url;
 
     /**
      * @private
@@ -50,7 +50,7 @@ export default class GraphHopper extends RouterBase {
     const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
     const coordinateString = coordinates.map(c => `point=${c.reverse().join(',')}`).join('&');
 
-    const response = await fetch(`${this.url_}&${coordinateString}`);
+    const response = await fetch(`${this.url}&${coordinateString}`);
     const json = await response.json();
     if (json.paths) {
       const path = json.paths[0];
