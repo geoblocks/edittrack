@@ -1,9 +1,11 @@
 import {equals} from 'ol/coordinate.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
-import MultiPoint from 'ol/geom/MultiPoint.js';
+import {maxSquaredDelta} from 'ol/geom/flat/closest.js';
+import {getClosestPoint} from '../closest.ts';
 import type Point from 'ol/geom/Point.js';
 import type {Coordinate} from 'ol/coordinate.js';
+
 
 interface ParsedFeatures {
   segments: Array<Feature<LineString>>;
@@ -257,17 +259,18 @@ export default class TrackData {
   }
 
   updatePOIIndexes() {
-    // build a multi point geometry from all segments coordinates
-    const points = new MultiPoint(this.segments.map((s) => s.getGeometry().getCoordinates()).flat());
-    const pointsCoordinates = points.getCoordinates();
+    const lineFlatCoordinates = this.segments.map(s => s.getGeometry().getFlatCoordinates()).flat()
+    const lineMaxDelta = maxSquaredDelta(lineFlatCoordinates, 0, lineFlatCoordinates.length, 2, 0)
+
     const sorted = this.pois.map((poi) => {
-      // find the closest point to the POI and returns its index; that's it's "distance" from the start
-      const closestPoint = points.getClosestPoint(poi.getGeometry().getCoordinates());
+      const point = poi.getGeometry().getCoordinates();
+      const {totalSquaredDistance} = getClosestPoint(lineFlatCoordinates, 0, lineFlatCoordinates.length, 2, lineMaxDelta, point[0], point[1]);
+
       return {
         poi: poi,
-        index: pointsCoordinates.findIndex((c) => equals(c, closestPoint))
+        distance: totalSquaredDistance
       };
-    }).sort((a, b) => a.index - b.index);
+    }).sort((a, b) => a.distance - b.distance);
     sorted.forEach((s, index) => s.poi.set('index', index));
   }
 
