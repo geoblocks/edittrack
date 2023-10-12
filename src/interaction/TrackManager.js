@@ -19,6 +19,7 @@ import {debounce, setZ} from './util.ts';
 /** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
 
 /** @typedef {'edit'|''} TrackMode */
+/** @typedef {'addpoi'|'editpoi'|''} TrackSubMode */
 
 /**
  * @typedef Options
@@ -33,7 +34,10 @@ import {debounce, setZ} from './util.ts';
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
  * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
  * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
+ * @property {import("ol/Overlay").default} [poiOverlay] Overlay will be shown during placing POI
  */
+
+/** @typedef {{name: string, description?: string, img?: string}} PoiMeta */
 
 
 class TrackManager {
@@ -74,6 +78,11 @@ class TrackManager {
     this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
 
     /**
+     * @type {import("ol/Overlay").default}
+     */
+    this.poiOverlay = options.poiOverlay
+
+    /**
      * @type {boolean}
      */
     this.snapping = true;
@@ -83,6 +92,12 @@ class TrackManager {
      * @type {TrackMode}
      */
     this.mode_ = '';
+
+    /**
+     * @private
+     * @type {TrackSubMode}
+     */
+    this.submode_ = '';
 
     /**
      * @type {Array<Function>}
@@ -95,6 +110,12 @@ class TrackManager {
      * @private
      */
     this.trackHoverEventListeners_ = [];
+
+    /**
+     * @type {Array<Function>}
+     * @private
+     */
+    this.poiAddedEventListeners_ = [];
 
     /**
      * @private
@@ -188,7 +209,7 @@ class TrackManager {
        * @param {boolean} hover
        */
       (coordinate, hover) => {
-      if (hover && this.trackData_.getSegments().length > 0) {
+      if (hover && this.trackData_.getSegments().length > 0 && this.submode !== 'addpoi') {
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
         this.onTrackHovered_(best);
@@ -209,7 +230,24 @@ class TrackManager {
       if (!this.interaction_.getActive()) {
         debouncedMapToProfileUpdater(event.coordinate, hover);
       }
+      if (this.submode === 'addpoi' && this.poiOverlay) {
+        this.poiOverlay.setPosition(event.coordinate)
+      }
     });
+
+    this.map_.on('click', (event) => {
+      if (this.submode === 'addpoi') {
+        if (this.poiOverlay) {
+          this.map_.removeOverlay(this.poiOverlay);
+        }
+        const point = new Feature({geometry: new Point(event.coordinate), type: 'POI', state: 'wip'});
+        this.source_.addFeature(point);
+        this.trackData_.addPOI(point);
+        this.trackData_.updatePOIIndexes()
+        this.submode = 'editpoi'
+        this.notifyAndRemovePoiAddedEventListeners_();
+      }
+    })
 
     this.interaction_.on(
       // @ts-ignore too complicate to declare proper events
@@ -347,6 +385,26 @@ class TrackManager {
     }
     this.interaction_.setActive(edit);
     this.mode_ = mode || '';
+  }
+
+  /**
+   * @return {TrackSubMode} submode
+   */
+  get submode() {
+    return this.submode_;
+  }
+
+  /**
+   * @param {TrackSubMode} submode
+   */
+  set submode(submode) {
+    const addpoi = submode === 'addpoi'
+    const editpoi = submode === 'editpoi'
+    if (addpoi) {
+      this.map_.addOverlay(this.poiOverlay)
+    }
+    this.interaction_.setActive(!addpoi && !editpoi && this.mode === 'edit');
+    this.submode_ = submode || '';
   }
 
   onTrackChanged_() {
@@ -524,6 +582,22 @@ class TrackManager {
   }
 
   /**
+   * Add new event listener to be notified on POI added on map.
+   * @param {Function} fn EventListener
+   */
+  addPoiAddedEventListener(fn) {
+    this.poiAddedEventListeners_.push(fn);
+  }
+
+  /**
+   * @private
+   */
+  notifyAndRemovePoiAddedEventListeners_() {
+    this.poiAddedEventListeners_.forEach(handler => handler());
+    this.poiAddedEventListeners_ = []
+  }
+
+  /**
    * Undo one drawing step
    */
   undo() {
@@ -548,6 +622,40 @@ class TrackManager {
         this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
         this.notifyTrackChangeEventListeners_(false);
       }
+    }
+  }
+
+  /**
+   * @private
+   * @return {Feature<Point> | undefined}
+   */
+  get wipPOIFeature_ () {
+    const parsedFeatures = this.trackData_.parseFeatures(this.source_.getFeatures());
+    return  parsedFeatures.pois.find(pFeature => pFeature.get('state') === 'wip')
+  }
+
+  /**
+   * @param {PoiMeta} meta
+   */
+  finishPOIDrawing(meta) {
+    if (this.submode !== 'editpoi') {
+      return;
+    }
+    const wipFeature = this.wipPOIFeature_;
+    wipFeature?.set('meta', meta);
+    wipFeature?.unset('state');
+    this.submode = '';
+    this.pushNewStateToHistoryManager_();
+  }
+
+  cancelPOIDrawing() {
+    this.submode = ''
+    if (this.poiOverlay) {
+      this.map_.removeOverlay(this.poiOverlay);
+    }
+    const wipFeature = this.wipPOIFeature_;
+    if (wipFeature) {
+      this.source_.removeFeature(wipFeature);
     }
   }
 }

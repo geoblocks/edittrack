@@ -2,7 +2,7 @@ import {equals} from 'ol/coordinate.js';
 import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
 import MultiPoint from 'ol/geom/MultiPoint.js';
-import type Point from 'ol/geom/Point.js';
+import Point from 'ol/geom/Point.js';
 import type {Coordinate} from 'ol/coordinate.js';
 
 interface ParsedFeatures {
@@ -324,6 +324,11 @@ export default class TrackData {
     console.assert(point.get('type') === 'POI');
     const idx = this.pois.findIndex(p => p === point);
     this.pois.splice(idx, 1);
+  }
+
+  addPOI(point: Feature<Point>) {
+    console.assert(point.get('type') === 'POI');
+    this.pois.push(point)
   }
 
   clear() {
