@@ -37,7 +37,7 @@ import {debounce, setZ} from './util.ts';
  * @property {import("ol/Overlay").default} [poiOverlay] Overlay will be shown during placing POI
  */
 
-/** @typedef {{name: string, description?: string, img?: string}} PoiMeta */
+/** @typedef {{name: string, description?: string, img?: File}} PoiMeta */
 
 
 class TrackManager {
@@ -447,7 +447,10 @@ class TrackManager {
         this.updater_.changeAdjacentSegmentsStyling(point, '');
         this.updater_.computeAdjacentSegmentsProfile(point);
       })
-      .then(() => this.onTrackChanged_());
+      .then(() => {
+        this.trackData_.updatePOIIndexes();
+        this.onTrackChanged_()
+      });
     }
   }
 
@@ -593,6 +596,7 @@ class TrackManager {
    * @private
    */
   notifyAndRemovePoiAddedEventListeners_() {
+    this.notifyTrackChangeEventListeners_(false);
     this.poiAddedEventListeners_.forEach(handler => handler());
     this.poiAddedEventListeners_ = []
   }
