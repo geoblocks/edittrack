@@ -34,7 +34,6 @@ import {debounce, setZ} from './util.ts';
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
  * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
  * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
- * @property {import("ol/Overlay").default} [poiOverlay] Overlay will be shown during placing POI
  */
 
 /** @typedef {{name: string, description?: string, img?: File}} PoiMeta */
@@ -76,11 +75,6 @@ class TrackManager {
      * @private
      */
     this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
-
-    /**
-     * @type {import("ol/Overlay").default}
-     */
-    this.poiOverlay = options.poiOverlay
 
     /**
      * @type {boolean}
@@ -636,6 +630,18 @@ class TrackManager {
   get wipPOIFeature_ () {
     const parsedFeatures = this.trackData_.parseFeatures(this.source_.getFeatures());
     return  parsedFeatures.pois.find(pFeature => pFeature.get('state') === 'wip')
+  }
+
+  /**
+   * @param {import("ol/Overlay").default} poiOverlay
+   * @param {() => void} [onAddListener]
+   */
+  addPOI(poiOverlay, onAddListener) {
+    this.poiOverlay = poiOverlay;
+    this.submode = 'addpoi';
+    if (onAddListener) {
+      this.addPoiAddedEventListener(onAddListener);
+    }
   }
 
   /**

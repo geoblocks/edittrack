@@ -111,13 +111,13 @@ function main() {
         '        <rect id="Rechteck_3117" data-name="Rechteck 3117" width="24" height="24" fill="none"/>\n' +
         '        <path id="icons8-location" d="M12,2.01A7,7,0,0,0,5.008,9c0,4.483,5.967,11.765,6.221,12.072l.771.936.771-.936c.254-.308,6.221-7.589,6.221-12.072A7,7,0,0,0,12,2.01Zm0,2A5,5,0,0,1,16.992,9c0,2.7-3.114,7.357-4.992,9.822C10.122,16.363,7.008,11.713,7.008,9A5,5,0,0,1,12,4.01ZM12,6.5A2.5,2.5,0,1,0,14.5,9,2.5,2.5,0,0,0,12,6.5Z" transform="translate(0.992 -1.01)"/>\n' +
         '      </svg>'
-    trackManager.poiOverlay  = new Overlay({
+    const poiOverlay  = new Overlay({
       positioning: 'center-center',
       offset: [0, -16],
       position: null,
       element: elem,
     });
-    trackManager.addPoiAddedEventListener(() => {
+    const onAddListener = () => {
       document.querySelector('#poiForm').style.display = 'block'
       const save = () => {
         trackManager.finishPOIDrawing({name: document.querySelector('#poiNameInput').value})
@@ -131,8 +131,8 @@ function main() {
       }
       document.querySelector('#poiSave').addEventListener('click', save)
       document.querySelector('#poiCancel').addEventListener('click', cancel)
-    })
-    trackManager.submode = 'addpoi'
+    }
+    trackManager.addPOI(poiOverlay, onAddListener)
   });
 
   d3Profile.setTrackHoverStyle(new Style({
