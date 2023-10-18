@@ -34,7 +34,7 @@
     "@geoblocks/d3profile": "0.0.6",
     "@geoblocks/proj": "0.4.8",
     "@geoblocks/sources": "0.3.2",
-    "@types/chai": "4.3.8",
+    "@types/chai": "4.3.9",
     "@types/mocha": "10.0.2",
     "@types/proj4": "2.5.3",
     "@typescript-eslint/eslint-plugin": "6.8.0",
