@@ -44,7 +44,6 @@ export function createMap(target) {
 
   const shadowTrackLayer = createShadowLayer();
   const map = new OLMap({
-    interactions: defaults({doubleClickZoom: false}),
     target,
     view,
     layers: [

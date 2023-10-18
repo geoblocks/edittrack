@@ -263,6 +263,7 @@ class TrackManager {
        * @param {import ('ol/interaction/Select').SelectEvent} event
        */
       (event) => {
+        event.mapBrowserEvent.stopPropagation();
         const selected = /** @type {Feature<Point>} */ (event.selected[0]);
         console.assert(selected.getGeometry().getType() === 'Point');
         const type = selected.get('type');
