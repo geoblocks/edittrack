@@ -37,7 +37,13 @@ export const poiPoint = new Style({
     fill: new Fill({
       color: 'yellow'
     })
-  })
+  }),
+  text: new Text({
+    font: 'bold 11px Inter',
+    fill: new Fill({
+      color: '#000',
+    }),
+  }),
 });
 
 /**
@@ -161,7 +167,10 @@ export function styleFunction(feature) {
       return sketchControlPoint;
     }
     case 'POI':
-      return poiPoint;
+      if (index !== undefined) {
+        poiPoint.getText().setText(index.toString());
+      }
+      return poiPoint
     case 'controlPoint':
       switch (subtype) {
         case 'first':
