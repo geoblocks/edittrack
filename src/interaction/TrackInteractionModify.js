@@ -135,6 +135,16 @@ export default class Modify extends PointerInteraction {
   }
 
   /**
+   * @param {boolean} active
+   */
+  setActive(active) {
+    if (this.overlay_) {
+      this.overlay_.setVisible(active);
+    }
+    super.setActive(active);
+  }
+
+  /**
    * Get the first feature at pixel, favor points over lines
    * @param {import("ol/pixel").Pixel} pixel
    * @return {Feature<LineString|Point>|undefined}
