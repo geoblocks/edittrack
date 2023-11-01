@@ -369,7 +369,11 @@ class TrackManager {
     if (edit) {
       if (this.shadowTrackLayer_) {
         this.shadowTrackLayer_.getSource().addFeatures(
-          this.source_.getFeatures().map(f => f.clone())
+          this.source_.getFeatures().map(f => {
+            const clone = f.clone();
+            clone.setId(f.getId());
+            return clone;
+          })
         );
       }
     } else {
@@ -495,7 +499,11 @@ class TrackManager {
    * @return {Feature<Point>[]}
    */
   getPOIs() {
-    return this.trackData_.getPOIs().map(point => point.clone());
+    return this.trackData_.getPOIs().map((point) => {
+      const clone = point.clone();
+      clone.setId(point.getId());
+      return clone;
+    });
   }
 
   /**
@@ -504,6 +512,7 @@ class TrackManager {
   getControlPoints() {
     return this.trackData_.getControlPoints().map((point, index) => {
       const clone = point.clone();
+      clone.setId(point.getId());
       clone.set('index', index);
       return clone;
     });
@@ -515,6 +524,7 @@ class TrackManager {
   getSegments() {
     return this.trackData_.getSegments().map((segment, index) => {
       const clone = segment.clone();
+      clone.setId(segment.getId());
       clone.set('index', index);
       return clone;
     });
@@ -604,7 +614,12 @@ class TrackManager {
       const features = this.historyManager_.undo();
       this.clearInternal_();
       if (features) {
-        this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
+        this.restoreFeaturesInternal_(features.map(feature => {
+          const clone = feature.clone();
+          clone.setId(feature.getId());
+          return clone;
+        }
+        ));
         this.notifyTrackChangeEventListeners_(false);
       }
     }
@@ -618,7 +633,11 @@ class TrackManager {
       const features = this.historyManager_.redo();
       this.clearInternal_();
       if (features) {
-        this.restoreFeaturesInternal_(features.map(feature => feature.clone()));
+        this.restoreFeaturesInternal_(features.map(feature => {
+          const clone = feature.clone();
+          clone.setId(feature.getId());
+          return clone;
+        }));
         this.notifyTrackChangeEventListeners_(false);
       }
     }
