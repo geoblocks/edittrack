@@ -114,18 +114,18 @@ export default class TrackData {
   }
 
   getLineString(): LineString {
-    const coordinates: Coordinate[] = [];
+    const lineCoords: Coordinate[] = [];
     for (const feature of this.segments) {
-      const segment = feature.getGeometry().getCoordinates();
+      const segmentCoords = feature.getGeometry().getCoordinates();
       // remove the overlap between the last coordinate of a segment and
       // the first coordinate of the next one
-      const overlap = coordinates.length > 0 && equals(segment[0], coordinates[coordinates.length - 1]);
-      for (let i = overlap ? 1 : 0; i < coordinates.length; ++i) {
-        coordinates.push(coordinates[i].slice(0, 3));
+      const overlapping = lineCoords.length > 0 && equals(segmentCoords[0], lineCoords[lineCoords.length - 1]);
+      for (let i = overlapping ? 1 : 0; i < segmentCoords.length; ++i) {
+        lineCoords.push(segmentCoords[i].slice(0, 3));
       }
     }
-    console.assert(isXYZ(coordinates));
-    return new LineString(coordinates);
+    console.assert(isXYZ(lineCoords));
+    return new LineString(lineCoords);
   }
 
   insertControlPointAt(point: Feature<Point>, index: number): Feature<LineString> | undefined {
