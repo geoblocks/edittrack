@@ -4,7 +4,7 @@ import type { Coordinate } from 'ol/coordinate';
 import type Feature from 'ol/Feature';
 import type { LineString, Point } from 'ol/geom';
 
-type RouterBaseOptions = {
+export type RouterBaseOptions = {
   map: Map;
   maxRoutingTolerance?: number;
 };
