@@ -22,7 +22,7 @@ export default class PolylineXYZM extends Polyline {
     });
   }
 
-  protected readGeometryFromText(text: string, opt_options: ReadOptions): LineString {
+  protected override readGeometryFromText(text: string, opt_options: ReadOptions): LineString {
     const stride = 3;
     const flatCoordinates = decodeDeltas(text, stride, 1e5);
     flipXY(flatCoordinates, 0, flatCoordinates.length, stride, flatCoordinates);
@@ -60,7 +60,7 @@ export default class PolylineXYZM extends Polyline {
    * @param {WriteOptions} [options] Write options.
    * @return {string} 3D polyline text.
    */
-  protected writeGeometryText(geometry: LineString, options: WriteOptions): string {
+  protected override writeGeometryText(geometry: LineString, options: WriteOptions): string {
     geometry = transformGeometryWithOptions(
       geometry,
       true,
