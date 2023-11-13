@@ -3,7 +3,6 @@ import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
 import MultiPoint from 'ol/geom/MultiPoint.js';
 import Point from 'ol/geom/Point.js';
-import type {Coordinate} from 'ol/coordinate.js';
 
 interface ParsedFeatures {
   segments: Array<Feature<LineString>>;
@@ -111,21 +110,6 @@ export default class TrackData {
 
   getSegments(): Array<Feature<LineString>> {
     return this.segments;
-  }
-
-  getLineString(): LineString {
-    const lineCoords: Coordinate[] = [];
-    for (const feature of this.segments) {
-      const segmentCoords = feature.getGeometry().getCoordinates();
-      // remove the overlap between the last coordinate of a segment and
-      // the first coordinate of the next one
-      const overlapping = lineCoords.length > 0 && equals(segmentCoords[0], lineCoords[lineCoords.length - 1]);
-      for (let i = overlapping ? 1 : 0; i < segmentCoords.length; ++i) {
-        lineCoords.push(segmentCoords[i].slice(0, 3));
-      }
-    }
-    console.assert(isXYZ(lineCoords));
-    return new LineString(lineCoords);
   }
 
   insertControlPointAt(point: Feature<Point>, index: number): Feature<LineString> | undefined {
@@ -352,14 +336,4 @@ function createStraightSegment(featureFrom: Feature<Point>, featureTo: Feature<P
   segment.set('type', 'segment');
 
   return segment;
-}
-
-function isXYZ(coordinates: Coordinate[]): boolean {
-  for (let i = 0, ii = coordinates.length; i < ii; i++) {
-    const coord = coordinates[i];
-    if (coord.length !== 3 || !coord.every(num => typeof num === 'number')) {
-      return false;
-    }
-  }
-  return true;
 }

@@ -531,14 +531,6 @@ class TrackManager {
   }
 
   /**
-   * Return the whole track as one line string in a feature.
-   * @return {Feature<LineString>}
-   */
-  getTrackFeature() {
-    return new Feature(this.trackData_.getLineString());
-  }
-
-  /**
    * Add new event listener to be notified on track changes.
    * @param {Function} fn EventListener
    */
