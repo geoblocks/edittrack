@@ -94,7 +94,6 @@ function main() {
   document.querySelector('#undo').addEventListener('click', () => trackManager.undo());
   document.querySelector('#redo').addEventListener('click', () => trackManager.redo());
   document.querySelector('#getTrackData').addEventListener('click', () => {
-    trackManager.getTrackFeature();
     const features = [
       ...trackManager.getControlPoints(),
       ...trackManager.getSegments(),
