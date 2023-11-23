@@ -3,7 +3,7 @@ import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper.ts';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index';
 import Profile from '../../src/Profile.ts';
-import {styleFunction} from './style';
+import {styleRules} from './style';
 import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './osm';
 import {Overlay} from "ol";
@@ -48,7 +48,7 @@ function main() {
     profiler: profiler,
     trackLayer: trackLayer,
     shadowTrackLayer: shadowTrackLayer,
-    style: styleFunction,
+    style: styleRules,
     deleteCondition: deleteCondition,
     hitTolerance: 10,
   });

@@ -1,227 +1,115 @@
-import {Circle, Fill, Stroke, Style, Icon, Text} from 'ol/style.js';
-
-
-/**
- * @type {Style}
- */
-export const controlPoint = new Style({
-  zIndex: 10,
-  image: new Circle({
-    radius: 8,
-    fill: new Fill({
-      color: 'white'
-    })
-  })
-});
-
-/**
- * @type {Style}
- */
-export const firstControlPoint = new Style({
-  zIndex: 10,
-  image: new Circle({
-    radius: 8,
-    fill: new Fill({
-      color: 'green'
-    })
-  })
-});
-
-/**
- * @type {Style}
- */
-export const poiPoint = new Style({
-  zIndex: 100,
-  image: new Circle({
-    radius: 8,
-    fill: new Fill({
-      color: 'yellow'
-    })
-  }),
-  text: new Text({
-    font: 'bold 11px Inter',
-    fill: new Fill({
-      color: '#000',
-    }),
-  }),
-});
-
-/**
- * @type {Style}
- */
-export const lastControlPoint = new Style({
-  zIndex: 10,
-  image: new Circle({
-    radius: 8,
-    fill: new Fill({
-      color: 'red'
-    })
-  })
-});
-
-
-/**
- * @type {Style}
- */
- export const numberedControlPoint = new Style({
-  zIndex: 10,
-  image: new Circle({
-    radius: 8,
-    fill: new Fill({
-      color: '#ffffffdd'
-    })
-  }),
-  text: new Text({
-    fill: new Fill({
-      color: 'blue'
-    })
-  })
-});
-
-
-/**
- * @type {Style}
- */
- export const sketchControlPoint = new Style({
-  image: new Circle({
-    radius: 5,
-    fill: new Fill({
-      color: '#ffffffdd'
-    })
-  })
-});
-
-const sketchLabel = {
-  'POI': new Style({
-    text: new Text({
-      font: '20px sans-serif',
-      offsetX: 20,
-      textAlign: 'left',
-      backgroundFill: new Fill({
-        color: '#ffffffaa'
-      }),
-      text: 'click to delete\ndrag to move POI'
-    }),
-  }),
-  'cp': new Style({
-    text: new Text({
-      font: '20px sans-serif',
-      offsetX: 20,
-      textAlign: 'left',
-      backgroundFill: new Fill({
-        color: '#ffffffaa'
-      }),
-      text: 'click to delete\ndrag to move point'
-    }),
-  }),
-  'segment': new Style({
-    text: new Text({
-      backgroundFill: new Fill({
-        color: '#ffffffaa'
-      }),
-      offsetX: 20,
-      textAlign: 'left',
-      font: '20px sans-serif',
-      text: 'drag to create point'
-    }),
-  })
+export const controlPoint = {
+  "z-index": 10,
+  "circle-radius": 8,
+  "circle-fill-color": "white",
 };
 
+export const firstControlPoint = {
+  ...controlPoint,
+  "circle-fill-color": "green",
+};
 
-/**
- * @type {Style}
- */
-export const trackLine = new Style({
-  stroke: new Stroke({
-    color: 'purple',
-    width: 6
-  })
-});
+export const lastControlPoint = {
+  ...controlPoint,
+  "circle-fill-color": "red",
+};
 
-/**
- * @type {Style}
- */
-export const trackLineModifying = new Style({
-  stroke: new Stroke({
-    color: 'purple',
-    width: 3,
-    lineDash: [5, 9]
-  })
-});
+export const sketchControlPoint = {
+  "circle-radius": 5,
+  "circle-fill-color": "#ffffffdd",
+};
 
+export const trackLine = {
+  "stroke-width": 6,
+  "stroke-color": "purple",
+};
 
-/**
- * @param {import("ol/Feature").FeatureLike} feature
- * @return {?Style}
- */
-export function styleFunction(feature) {
-  const type = feature.get('type');
-  const subtype = feature.get('subtype');
-  const index = feature.get('index');
+export const trackLineModifying = {
+  ...trackLine,
+  "stroke-width": 3,
+  "stroke-line-dash": [5, 9],
+};
 
-  switch (type) {
-    case 'sketch': {
-      if (subtype) {
-        return [sketchControlPoint, sketchLabel[subtype]];
-      }
-      return sketchControlPoint;
-    }
-    case 'POI':
-      if (index !== undefined) {
-        poiPoint.getText().setText(index.toString());
-      }
-      return poiPoint
-    case 'controlPoint':
-      switch (subtype) {
-        case 'first':
-          return firstControlPoint;
-        case 'last':
-          return lastControlPoint;
-        default:
-          if (index !== undefined) {
-            numberedControlPoint.getText().setText(index.toString());
-            return numberedControlPoint;
-          }
-          return controlPoint;
-      }
-    case 'segment':
-      switch (subtype) {
-        case 'modifying':
-          return trackLineModifying;
-        default:
-          return trackLine;
-      }
-    default:
-      return null;
-  }
-}
+export const poiPoint = {
+  "z-index": 100,
+  "circle-radius": 8,
+  "circle-fill-color": "yellow",
+  "text-font": "bold 11px Inter",
+  "text-fill-color": "#000",
+  // use 'concat' to convert number to string
+  "text-value": ["concat", ["get", "index"], ""],
+};
 
-/**
- * @param {?string} strokeColor
- * @return {Style}
- */
-export function externalLayerStyle(strokeColor = '#e3ff00') {
-  return new Style({
-    stroke: new Stroke({
-      color: strokeColor,
-      width: 3
-    })
-  });
-}
+export const numberedControlPoint = {
+  ...controlPoint,
+  "circle-fill-color": "#ffffffdd",
+  "text-color": "blue",
+  // use 'concat' to convert number to string
+  "text-value": ["concat", ["get", "index"], ""],
+};
 
-/**
- * @typedef {Object} TrackHoverUrlOptions
- * @property {string} src
- * @property {[number, number]} imgSize
- * @property {number} scale
- */
+export const sketchLabel = {
+  "text-font": "20px sans-serif",
+  "text-offset-x": 20,
+  "text-align": "left",
+  "text-background-fill-color": "#ffffffaa",
+};
 
-/**
- * @param {TrackHoverUrlOptions} options
- * @return {Style}
- */
-export function createProfileHoverStyle(options) {
-  return new Style({
-    image: new Icon(options)
-  });
-}
+export const sketchLabelPOI = {
+  ...sketchLabel,
+  "text-value": "click to delete\ndrag to move POI",
+};
+
+export const sketchLabelControlPoint = {
+  ...sketchLabel,
+  "text-value": "click to delete\ndrag to move point",
+};
+
+export const sketchLabelSegment = {
+  ...sketchLabel,
+  "text-value": "drag to create point",
+};
+
+export const styleRules = [
+  {
+    filter: ["==", ["get", "type"], "sketch"],
+    style: sketchControlPoint,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "sketch"], ["==", ["get", "subtype"], "POI"]],
+    style: sketchLabelPOI,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "sketch"], ["==", ["get", "subtype"], "controlPoint"]],
+    style: sketchLabelControlPoint,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "sketch"], ["==", ["get", "subtype"], "segment"]],
+    style: sketchLabelSegment,
+  },
+  {
+    filter: ["==", ["get", "type"], "POI"],
+    style: poiPoint,
+  },
+  {
+    // FIXME: shorter filter?
+    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["!=", ["get", "subtype"], "first"], ["!=", ["get", "subtype"], "last"]],
+    style: numberedControlPoint,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["==", ["get", "subtype"], "first"]],
+    style: firstControlPoint,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["==", ["get", "subtype"], "last"]],
+    style: lastControlPoint,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "segment"], ["!=", ["get", "subtype"], "modifying"]],
+    style: trackLine,
+  },
+  {
+    filter: ["all", ["==", ["get", "type"], "segment"], ["==", ["get", "subtype"], "modifying"]],
+    style: trackLineModifying,
+  },
+];

@@ -8,7 +8,8 @@ import {FALSE} from 'ol/functions';
 
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
-/** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
+/** @typedef {import('ol/style/Style').StyleLike} StyleLike */
+/** @typedef {import('ol/style/flat').FlatStyleLike} FlatStyleLike */
 /** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
 /** @typedef {import('ol/Feature.js').FeatureLike} FeatureLike */
 
@@ -18,7 +19,7 @@ import {FALSE} from 'ol/functions';
  * @property {import("ol/Map").default} map
  * @property {VectorLayer} trackLayer
  * @property {import('./TrackData').default} trackData
- * @property {StyleFunction} style
+ * @property {StyleLike | FlatStyleLike} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Default is to add a new point on click
  * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
@@ -64,7 +65,7 @@ export default class TrackInteraction extends Interaction {
    *
    * @param {import('./TrackData').default} trackData
    * @param {VectorSource} source
-   * @param {StyleFunction} style
+   * @param {StyleLike | FlatStyleLike} style
    * @param {number} hitTolerance
    * @return {Modify}
    */

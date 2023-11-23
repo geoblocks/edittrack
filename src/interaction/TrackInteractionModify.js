@@ -40,14 +40,15 @@ export class ModifyEvent extends Event {
 }
 
 
-/** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
+/** @typedef {import('ol/style/Style').StyleLike} StyleLike */
+/** @typedef {import('ol/style/flat').FlatStyleLike} FlatStyleLike */
 
 /**
  * @typedef Options
  * @type {Object}
  * @property {VectorSource<any>} source
  * @property {import('./TrackData').default} trackData
- * @property {StyleFunction} style
+ * @property {StyleLike | FlatStyleLike} style
  * @property {function(MapBrowserEvent): boolean} condition
  * @property {function(MapBrowserEvent): boolean} addControlPointCondition
  * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
@@ -99,7 +100,7 @@ export default class Modify extends PointerInteraction {
       source: new VectorSource({
         useSpatialIndex: false
       }),
-      style: (feature, resolution) => options.style(feature, resolution),
+      style: options.style,
       updateWhileAnimating: true,
       updateWhileInteracting: true
     });
