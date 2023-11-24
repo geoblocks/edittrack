@@ -5,7 +5,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import {View, Map as OLMap} from 'ol';
 
-import {styleFunction} from './style';
+import {styleRules} from './style';
 import {transform, transformExtent} from 'ol/proj';
 import {createShadowLayer} from './shadowtrack';
 
@@ -14,7 +14,7 @@ export function createMap(target) {
   const trackSource = new VectorSource();
   const trackLayer = new VectorLayer({
     source: trackSource,
-    style: styleFunction,
+    style: styleRules,
   });
 
   const extent = transformExtent(proj2056.getExtent(), EPSG_2056, 'EPSG:3857');

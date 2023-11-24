@@ -14,7 +14,8 @@ import {debounce, setZ} from './util.ts';
 /** @typedef {import('ol/geom/LineString').default} LineString */
 /** @typedef {import('ol/source/Vector').default<any>} VectorSource */
 /** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
-/** @typedef {import('ol/style/Style').StyleFunction} StyleFunction */
+/** @typedef {import('ol/style/Style').StyleLike} StyleLike */
+/** @typedef {import('ol/style/flat').FlatStyleLike} FlatStyleLike */
 /** @typedef {import('./closestfinder').ClosestPoint} ClosestPoint */
 /** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
 
@@ -29,7 +30,7 @@ import {debounce, setZ} from './util.ts';
  * @property {VectorLayer} [shadowTrackLayer]
  * @property {geoblocks.Router} router
  * @property {geoblocks.Profiler} profiler
- * @property {StyleFunction} style
+ * @property {StyleLike | FlatStyleLike} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
  * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
