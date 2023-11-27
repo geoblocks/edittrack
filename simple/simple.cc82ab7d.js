@@ -732,15 +732,19 @@ var _utilTs = require("./util.ts");
         "modifyend", /**
        *
        * @param {import ('./TrackInteractionModify').ModifyEvent} event
-       */ (event)=>{
+       */ async (event)=>{
             const feature = event.feature;
             const type = feature.get("type");
-            if (type === "POI") this.onTrackChanged_();
-            else if (type === "controlPoint") this.updater_.updateAdjacentSegmentsGeometries(feature).then(()=>{
+            if (type === "POI") {
+                this.trackData_.updatePOIIndexes();
+                this.onTrackChanged_();
+            } else if (type === "controlPoint") {
+                await this.updater_.updateAdjacentSegmentsGeometries(feature);
                 this.updater_.changeAdjacentSegmentsStyling(feature, "");
-                this.updater_.computeAdjacentSegmentsProfile(feature);
-            }).then(()=>this.onTrackChanged_());
-            else if (type === "segment") {
+                await this.updater_.computeAdjacentSegmentsProfile(feature);
+                this.trackData_.updatePOIIndexes();
+                this.onTrackChanged_();
+            } else if (type === "segment") {
                 const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
                 console.assert(indexOfSegment >= 0);
                 const controlPoint = new (0, _featureJsDefault.default)({
@@ -756,10 +760,11 @@ var _utilTs = require("./util.ts");
                     before,
                     after
                 ]);
-                this.updater_.updateAdjacentSegmentsGeometries(controlPoint).then(()=>{
-                    this.updater_.changeAdjacentSegmentsStyling(controlPoint, "");
-                    this.updater_.computeAdjacentSegmentsProfile(controlPoint);
-                }).then(()=>this.onTrackChanged_());
+                await this.updater_.updateAdjacentSegmentsGeometries(controlPoint);
+                this.updater_.changeAdjacentSegmentsStyling(controlPoint, "");
+                await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
+                this.trackData_.updatePOIIndexes();
+                this.onTrackChanged_();
             }
         });
         this.interaction_.on(// @ts-ignore too complicate to declare proper events
@@ -1977,6 +1982,13 @@ parcelHelpers.export(exports, "binarySearch", ()=>binarySearch);
  *     argument is less than, equal to, or greater than the second.
  */ parcelHelpers.export(exports, "ascending", ()=>ascending);
 /**
+ * Compare function sorting arrays in descending order.  Safe to use for numeric values.
+ * @param {*} a The first object to be compared.
+ * @param {*} b The second object to be compared.
+ * @return {number} A negative number, zero, or a positive number as the first
+ *     argument is greater than, equal to, or less than the second.
+ */ parcelHelpers.export(exports, "descending", ()=>descending);
+/**
  * {@link module:ol/tilegrid/TileGrid~TileGrid#getZForResolution} can use a function
  * of this type to determine which nearest resolution to use.
  *
@@ -2051,6 +2063,9 @@ function binarySearch(haystack, needle, comparator) {
 }
 function ascending(a, b) {
     return a > b ? 1 : a < b ? -1 : 0;
+}
+function descending(a, b) {
+    return a < b ? 1 : a > b ? -1 : 0;
 }
 function linearFindNearest(arr, target, direction) {
     if (arr[0] <= target) return 0;
@@ -2323,7 +2338,7 @@ function abstract() {
 function getUid(obj) {
     return obj.ol_uid || (obj.ol_uid = String(++uidCounter_));
 }
-const VERSION = "7.4.0";
+const VERSION = "7.5.1";
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"e4TiF":[function(require,module,exports) {
 /**
@@ -5400,7 +5415,8 @@ function ceil(n, decimals) {
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
- * An array of numbers representing an xy coordinate. Example: `[16, 48]`.
+ * An array of numbers representing an `xy`, `xyz` or `xyzm` coordinate.
+ * Example: `[16, 48]`.
  * @typedef {Array<number>} Coordinate
  * @api
  */ /**
@@ -6259,6 +6275,7 @@ class TrackData {
         this.segments = segments;
         this.pois = pois;
         this.controlPoints = controlPoints;
+        this.updatePOIIndexes();
     }
     getAdjacentSegments(controlPoint) {
         let before = undefined;
@@ -6409,6 +6426,32 @@ class TrackData {
             pointAfter: pointAfter,
             newSegment: newSegment
         };
+    }
+    updatePOIIndexes() {
+        // const line = new LineString(this.segments.map((s) => s.getGeometry().getCoordinates()).flat());
+        const lineFlatCoordinates = this.segments.map((s)=>s.getGeometry().getFlatCoordinates()).flat();
+        const lineMaxDelta = maxSquaredDelta(lineFlatCoordinates, 0, lineFlatCoordinates.length, 2, 0);
+        const sorted = this.pois.map((poi)=>{
+            // const point = poi.getGeometry().getCoordinates();
+            // const closestPoint = [NaN, NaN];
+            // const result = assignClosestPoint();
+            // const closestPoint = line.getClosestPoint(poi.getGeometry().getCoordinates());
+            debugger;
+        }).sort((a, b)=>a.index - b.index);
+        sorted.forEach((s, index)=>s.poi.set("index", index));
+        debugger;
+    // // build a multi point geometry from all segments coordinates
+    // const points = new MultiPoint(this.segments.map((s) => s.getGeometry().getCoordinates()).flat());
+    // const pointsCoordinates = points.getCoordinates();
+    // const sorted = this.pois.map((poi) => {
+    //   // find the closest point to the POI and returns its index; that's it's "distance" from the start
+    //   const closestPoint = points.getClosestPoint(poi.getGeometry().getCoordinates());
+    //   return {
+    //     poi: poi,
+    //     index: pointsCoordinates.findIndex((c) => equals(c, closestPoint))
+    //   };
+    // }).sort((a, b) => a.index - b.index);
+    // sorted.forEach((s, index) => s.poi.set('index', index));
     }
     /*
    * Remove the last control point.
@@ -11993,6 +12036,7 @@ function circular(center, radius, n, sphereRadius) {
     ]);
 }
 function fromExtent(extent) {
+    if ((0, _extentJs.isEmpty)(extent)) throw new Error("Cannot create polygon from empty extent");
     const minX = extent[0];
     const minY = extent[1];
     const maxX = extent[2];
@@ -12750,7 +12794,7 @@ var _assertsJs = require("../asserts.js");
  * 1. The pixel coordinates of the geometry in GeoJSON notation.
  * 2. The {@link module:ol/render~State} of the layer renderer.
  *
- * @typedef {function((import("../coordinate.js").Coordinate|Array<import("../coordinate.js").Coordinate>|Array<Array<import("../coordinate.js").Coordinate>>),import("../render.js").State): void} RenderFunction
+ * @typedef {function((import("../coordinate.js").Coordinate|Array<import("../coordinate.js").Coordinate>|Array<Array<import("../coordinate.js").Coordinate>>|Array<Array<Array<import("../coordinate.js").Coordinate>>>),import("../render.js").State): void} RenderFunction
  */ /**
  * @typedef {Object} Options
  * @property {string|import("../geom/Geometry.js").default|GeometryFunction} [geometry] Feature property or geometry
@@ -15010,7 +15054,7 @@ parcelHelpers.defineInteropFlag(exports);
  * contain line breaks (`\n`). For rich text provide an array of text/font tuples. A tuple consists of the text to
  * render and the font to use (or `''` to use the text style's font). A line break has to be a separate tuple (i.e. `'\n', ''`).
  * **Example:** `['foo', 'bold 10px sans-serif', ' bar', 'italic 10px sans-serif', ' baz', '']` will yield "**foo** *bar* baz".
- * **Note:** Rich text is not supported for the immediate rendering API.
+ * **Note:** Rich text is not supported for `'text-placement': 'line'` or the immediate rendering API.
  * @property {string} [text-font] Font style as CSS `font` value, see:
  * https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/font. Default is `'10px sans-serif'`
  * @property {number} [text-max-angle=Math.PI/4] When `text-placement` is set to `'line'`, allow a maximum angle between adjacent characters.
@@ -15026,17 +15070,17 @@ parcelHelpers.defineInteropFlag(exports);
  * @property {boolean} [text-rotate-with-view=false] Whether to rotate the text with the view.
  * @property {number} [text-rotation=0] Rotation in radians (positive rotation clockwise).
  * @property {CanvasTextAlign} [text-align] Text alignment. Possible values: `'left'`, `'right'`, `'center'`, `'end'` or `'start'`.
- * Default is `'center'` for `text-placement: 'point'`. For `text-placement: 'line'`, the default is to let the renderer choose a
+ * Default is `'center'` for `'text-placement': 'point'`. For `'text-placement': 'line'`, the default is to let the renderer choose a
  * placement where `text-max-angle` is not exceeded.
  * @property {import('./Text.js').TextJustify} [text-justify] Text justification within the text box.
  * If not set, text is justified towards the `textAlign` anchor.
  * Otherwise, use options `'left'`, `'center'`, or `'right'` to justify the text within the text box.
- * **Note:** `text-justify` is ignored for immediate rendering and also for `text-placement: 'line'`.
+ * **Note:** `text-justify` is ignored for immediate rendering and also for `'text-placement': 'line'`.
  * @property {CanvasTextBaseline} [text-baseline='middle'] Text base line. Possible values: `'bottom'`, `'top'`, `'middle'`, `'alphabetic'`,
  * `'hanging'`, `'ideographic'`.
  * @property {Array<number>} [text-padding=[0, 0, 0, 0]] Padding in pixels around the text for decluttering and background. The order of
  * values in the array is `[top, right, bottom, left]`.
- * @property {import("../color.js").Color|import("../colorlike.js").ColorLike} [text-fill-color] The fill color.
+ * @property {import("../color.js").Color|import("../colorlike.js").ColorLike} [text-fill-color] The fill color. Specify `'none'` to avoid hit detection on the fill.
  * @property {import("../color.js").Color|import("../colorlike.js").ColorLike} [text-background-fill-color] The fill color.
  * @property {import("../color.js").Color|import("../colorlike.js").ColorLike} [text-stroke-color] The stroke color.
  * @property {CanvasLineCap} [text-stroke-line-cap='round'] Line cap style: `butt`, `round`, or `square`.
@@ -15142,6 +15186,9 @@ parcelHelpers.defineInteropFlag(exports);
  * @param {FlatStyle} flatStyle A flat style literal.
  * @return {import("./Style.js").default} A style instance.
  */ parcelHelpers.export(exports, "toStyle", ()=>toStyle);
+/**
+ * @return {import('./flat.js').FlatStyle} The default flat style.
+ */ parcelHelpers.export(exports, "createDefaultStyle", ()=>createDefaultStyle);
 var _circleJs = require("../style/Circle.js");
 var _circleJsDefault = parcelHelpers.interopDefault(_circleJs);
 var _fillJs = require("./Fill.js");
@@ -15168,10 +15215,11 @@ function toStyle(flatStyle) {
 /**
  * @param {FlatStyle} flatStyle The flat style.
  * @param {string} prefix The property prefix.
- * @return {Fill|undefined} The fill (if any).
+ * @return {Fill|null|undefined} The fill (if any).
  */ function getFill(flatStyle, prefix) {
     const color = flatStyle[prefix + "fill-color"];
     if (!color) return;
+    if (color === "none") return null;
     return new (0, _fillJsDefault.default)({
         color: color
     });
@@ -15288,6 +15336,17 @@ function toStyle(flatStyle) {
         return circle;
     }
     return;
+}
+function createDefaultStyle() {
+    return {
+        "fill-color": "rgba(255,255,255,0.4)",
+        "stroke-color": "#3399CC",
+        "stroke-width": 1.25,
+        "circle-radius": 5,
+        "circle-fill-color": "rgba(255,255,255,0.4)",
+        "circle-stroke-width": 1.25,
+        "circle-stroke-color": "#3399CC"
+    };
 }
 
 },{"../style/Circle.js":"cSS3Y","./Fill.js":"4fB56","./Icon.js":"dJiIs","./RegularShape.js":"44xDg","./Stroke.js":"5Cq04","./Style.js":"fW7vC","./Text.js":"dwGM6","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dJiIs":[function(require,module,exports) {
@@ -16297,7 +16356,7 @@ var _sizeJs = require("../size.js");
  * contain line breaks (`\n`). For rich text provide an array of text/font tuples. A tuple consists of the text to
  * render and the font to use (or `''` to use the text style's font). A line break has to be a separate tuple (i.e. `'\n', ''`).
  * **Example:** `['foo', 'bold 10px sans-serif', ' bar', 'italic 10px sans-serif', ' baz', '']` will yield "**foo** *bar* baz".
- * **Note:** Rich text is not supported for the immediate rendering API.
+ * **Note:** Rich text is not supported for `placement: 'line'` or the immediate rendering API.
  * @property {CanvasTextAlign} [textAlign] Text alignment. Possible values: `'left'`, `'right'`, `'center'`, `'end'` or `'start'`.
  * Default is `'center'` for `placement: 'point'`. For `placement: 'line'`, the default is to let the renderer choose a
  * placement where `maxAngle` is not exceeded.
@@ -16307,7 +16366,7 @@ var _sizeJs = require("../size.js");
  * **Note:** `justify` is ignored for immediate rendering and also for `placement: 'line'`.
  * @property {CanvasTextBaseline} [textBaseline='middle'] Text base line. Possible values: `'bottom'`, `'top'`, `'middle'`, `'alphabetic'`,
  * `'hanging'`, `'ideographic'`.
- * @property {import("./Fill.js").default} [fill] Fill style. If none is provided, we'll use a dark fill-style (#333).
+ * @property {import("./Fill.js").default|null} [fill] Fill style. If none is provided, we'll use a dark fill-style (#333). Specify `null` for no fill.
  * @property {import("./Stroke.js").default} [stroke] Stroke style.
  * @property {import("./Fill.js").default} [backgroundFill] Fill style for the text background when `placement` is
  * `'point'`. Default is no fill.
@@ -16740,6 +16799,8 @@ var _layerJs = require("./Layer.js");
 var _layerJsDefault = parcelHelpers.interopDefault(_layerJs);
 var _executorGroupJs = require("../../render/canvas/ExecutorGroup.js");
 var _executorGroupJsDefault = parcelHelpers.interopDefault(_executorGroupJs);
+var _eventTypeJs = require("../../render/EventType.js");
+var _eventTypeJsDefault = parcelHelpers.interopDefault(_eventTypeJs);
 var _viewHintJs = require("../../ViewHint.js");
 var _viewHintJsDefault = parcelHelpers.interopDefault(_viewHintJs);
 var _hitdetectJs = require("../../render/canvas/hitdetect.js");
@@ -16884,8 +16945,8 @@ var _coordinateJs = require("../../coordinate.js");
     /**
    * Render the layer.
    * @param {import("../../Map.js").FrameState} frameState Frame state.
-   * @param {HTMLElement} target Target that may be used to render content to.
-   * @return {HTMLElement} The rendered element.
+   * @param {HTMLElement|null} target Target that may be used to render content to.
+   * @return {HTMLElement|null} The rendered element.
    */ renderFrame(frameState, target) {
         const pixelRatio = frameState.pixelRatio;
         const layerState = frameState.layerStatesArray[frameState.layerIndex];
@@ -16898,7 +16959,11 @@ var _coordinateJs = require("../../coordinate.js");
         const canvas = context.canvas;
         const replayGroup = this.replayGroup_;
         const declutterExecutorGroup = this.declutterExecutorGroup;
-        if ((!replayGroup || replayGroup.isEmpty()) && (!declutterExecutorGroup || declutterExecutorGroup.isEmpty())) return null;
+        let render = replayGroup && !replayGroup.isEmpty() || declutterExecutorGroup && !declutterExecutorGroup.isEmpty();
+        if (!render) {
+            const hasRenderListeners = this.getLayer().hasListener((0, _eventTypeJsDefault.default).PRERENDER) || this.getLayer().hasListener((0, _eventTypeJsDefault.default).POSTRENDER);
+            if (!hasRenderListeners) return null;
+        }
         // resize and clear
         const width = Math.round(frameState.size[0] * pixelRatio);
         const height = Math.round(frameState.size[1] * pixelRatio);
@@ -16914,8 +16979,7 @@ var _coordinateJs = require("../../coordinate.js");
         this.setupCompositionContext_();
         // clipped rendering if layer extent is set
         let clipped = false;
-        let render = true;
-        if (layerState.extent && this.clipping) {
+        if (render && layerState.extent && this.clipping) {
             const layerExtent = (0, _projJs.fromUserExtent)(layerState.extent, projection);
             render = (0, _extentJs.intersects)(layerExtent, frameState.extent);
             clipped = render && !(0, _extentJs.containsExtent)(layerExtent, frameState.extent);
@@ -17183,7 +17247,7 @@ var _coordinateJs = require("../../coordinate.js");
 }
 exports.default = CanvasVectorLayerRenderer;
 
-},{"../../render/canvas/BuilderGroup.js":"kQbDd","./Layer.js":"fY3ny","../../render/canvas/ExecutorGroup.js":"eUidV","../../ViewHint.js":"6THmF","../../render/canvas/hitdetect.js":"hriIE","../../transform.js":"1BqUf","../../extent.js":"6YrVc","../../dom.js":"84QzQ","../vector.js":"liv8a","../../array.js":"1Fbic","../../proj.js":"SznqC","../../util.js":"pLBjQ","../../coordinate.js":"85Vu7","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kQbDd":[function(require,module,exports) {
+},{"../../render/canvas/BuilderGroup.js":"kQbDd","./Layer.js":"fY3ny","../../render/canvas/ExecutorGroup.js":"eUidV","../../render/EventType.js":"5G9JA","../../ViewHint.js":"6THmF","../../render/canvas/hitdetect.js":"hriIE","../../transform.js":"1BqUf","../../extent.js":"6YrVc","../../dom.js":"84QzQ","../vector.js":"liv8a","../../array.js":"1Fbic","../../proj.js":"SznqC","../../util.js":"pLBjQ","../../coordinate.js":"85Vu7","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kQbDd":[function(require,module,exports) {
 /**
  * @module ol/render/canvas/BuilderGroup
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -18005,7 +18069,7 @@ class CanvasImageBuilder extends (0, _builderJsDefault.default) {
             this.anchorX_,
             this.anchorY_,
             this.height_,
-            this.opacity_,
+            1,
             this.originX_,
             this.originY_,
             this.rotateWithView_,
@@ -18058,7 +18122,7 @@ class CanvasImageBuilder extends (0, _builderJsDefault.default) {
             this.anchorX_,
             this.anchorY_,
             this.height_,
-            this.opacity_,
+            1,
             this.originX_,
             this.originY_,
             this.rotateWithView_,
@@ -18197,8 +18261,8 @@ class CanvasLineStringBuilder extends (0, _builderJsDefault.default) {
             state.lineCap,
             state.lineJoin,
             state.miterLimit,
-            state.lineDash,
-            state.lineDashOffset
+            (0, _canvasJs.defaultLineDash),
+            (0, _canvasJs.defaultLineDashOffset)
         ], (0, _instructionJs.beginPathInstruction));
         const ends = multiLineStringGeometry.getEnds();
         const flatCoordinates = multiLineStringGeometry.getFlatCoordinates();
@@ -18315,8 +18379,8 @@ class CanvasPolygonBuilder extends (0, _builderJsDefault.default) {
             state.lineCap,
             state.lineJoin,
             state.miterLimit,
-            state.lineDash,
-            state.lineDashOffset
+            (0, _canvasJs.defaultLineDash),
+            (0, _canvasJs.defaultLineDashOffset)
         ]);
         const flatCoordinates = circleGeometry.getFlatCoordinates();
         const stride = circleGeometry.getStride();
@@ -18359,8 +18423,8 @@ class CanvasPolygonBuilder extends (0, _builderJsDefault.default) {
             state.lineCap,
             state.lineJoin,
             state.miterLimit,
-            state.lineDash,
-            state.lineDashOffset
+            (0, _canvasJs.defaultLineDash),
+            (0, _canvasJs.defaultLineDashOffset)
         ]);
         const ends = polygonGeometry.getEnds();
         const flatCoordinates = polygonGeometry.getOrientedFlatCoordinates();
@@ -18389,8 +18453,8 @@ class CanvasPolygonBuilder extends (0, _builderJsDefault.default) {
             state.lineCap,
             state.lineJoin,
             state.miterLimit,
-            state.lineDash,
-            state.lineDashOffset
+            (0, _canvasJs.defaultLineDash),
+            (0, _canvasJs.defaultLineDashOffset)
         ]);
         const endss = multiPolygonGeometry.getEndss();
         const flatCoordinates = multiPolygonGeometry.getOrientedFlatCoordinates();
@@ -18444,10 +18508,8 @@ var _linechunkJs = require("../../geom/flat/linechunk.js");
 var _straightchunkJs = require("../../geom/flat/straightchunk.js");
 const TEXT_ALIGN = {
     "left": 0,
-    "end": 0,
     "center": 0.5,
     "right": 1,
-    "start": 1,
     "top": 0,
     "middle": 0.5,
     "hanging": 0.2,
@@ -18494,6 +18556,9 @@ class CanvasTextBuilder extends (0, _builderJsDefault.default) {
         /**
      * @type {!Object<string, import("../canvas.js").FillState>}
      */ this.fillStates = {};
+        this.fillStates[0, _canvasJs.defaultFillStyle] = {
+            fillStyle: (0, _canvasJs.defaultFillStyle)
+        };
         /**
      * @private
      * @type {?import("../canvas.js").StrokeState}
@@ -18637,10 +18702,7 @@ class CanvasTextBuilder extends (0, _builderJsDefault.default) {
             this.saveTextStates_();
             if (textState.backgroundFill || textState.backgroundStroke) {
                 this.setFillStrokeStyle(textState.backgroundFill, textState.backgroundStroke);
-                if (textState.backgroundFill) {
-                    this.updateFillStyle(this.state, this.createFill);
-                    this.hitDetectionInstructions.push(this.createFill(this.state));
-                }
+                if (textState.backgroundFill) this.updateFillStyle(this.state, this.createFill);
                 if (textState.backgroundStroke) {
                     this.updateStrokeStyle(this.state, this.applyStroke);
                     this.hitDetectionInstructions.push(this.createStroke(this.state));
@@ -18707,6 +18769,12 @@ class CanvasTextBuilder extends (0, _builderJsDefault.default) {
                 geometryWidths
             ]);
             const scale = 1 / pixelRatio;
+            // Set default fill for hit detection background
+            const currentFillStyle = this.state.fillStyle;
+            if (textState.backgroundFill) {
+                this.state.fillStyle = (0, _canvasJs.defaultFillStyle);
+                this.hitDetectionInstructions.push(this.createFill(this.state));
+            }
             this.hitDetectionInstructions.push([
                 (0, _instructionJsDefault.default).DRAW_IMAGE,
                 begin,
@@ -18733,11 +18801,16 @@ class CanvasTextBuilder extends (0, _builderJsDefault.default) {
                 this.text_,
                 this.textKey_,
                 this.strokeKey_,
-                this.fillKey_,
+                this.fillKey_ ? (0, _canvasJs.defaultFillStyle) : this.fillKey_,
                 this.textOffsetX_,
                 this.textOffsetY_,
                 geometryWidths
             ]);
+            // Reset previous fill
+            if (textState.backgroundFill) {
+                this.state.fillStyle = currentFillStyle;
+                this.hitDetectionInstructions.push(this.createFill(this.state));
+            }
             this.endGeometry(feature);
         }
     }
@@ -18812,7 +18885,7 @@ class CanvasTextBuilder extends (0, _builderJsDefault.default) {
             end,
             baseline,
             textState.overflow,
-            fillKey,
+            fillKey ? (0, _canvasJs.defaultFillStyle) : fillKey,
             textState.maxAngle,
             1,
             offsetY,
@@ -19141,7 +19214,7 @@ function createPixelContext() {
             this.container = null;
             this.context = null;
             this.containerReused = false;
-        }
+        } else if (this.container) this.container.style.backgroundColor = null;
         if (!this.container) {
             container = document.createElement("div");
             container.className = layerClassName;
@@ -19302,8 +19375,8 @@ var _utilJs = require("../util.js");
    * Render the layer.
    * @abstract
    * @param {import("../Map.js").FrameState} frameState Frame state.
-   * @param {HTMLElement} target Target that may be used to render content to.
-   * @return {HTMLElement} The rendered element.
+   * @param {HTMLElement|null} target Target that may be used to render content to.
+   * @return {HTMLElement|null} The rendered element.
    */ renderFrame(frameState, target) {
         return (0, _utilJs.abstract)();
     }
@@ -19362,7 +19435,7 @@ var _utilJs = require("../util.js");
    * @private
    */ handleImageChange_(event) {
         const image = /** @type {import("../Image.js").default} */ event.target;
-        if (image.getState() === (0, _imageStateJsDefault.default).LOADED) this.renderIfReadyAndVisible();
+        if (image.getState() === (0, _imageStateJsDefault.default).LOADED || image.getState() === (0, _imageStateJsDefault.default).ERROR) this.renderIfReadyAndVisible();
     }
     /**
    * Load the image if not already loaded, and register the image change
@@ -19771,7 +19844,8 @@ const rtlRegEx = new RegExp(/* eslint-disable prettier/prettier */ "[" + String.
  * @param {CanvasTextAlign} align Alignment.
  * @return {number} Text alignment.
  */ function horizontalTextAlign(text, align) {
-    if ((align === "start" || align === "end") && !rtlRegEx.test(text)) align = align === "start" ? "left" : "right";
+    if (align === "start") align = rtlRegEx.test(text) ? "right" : "left";
+    else if (align === "end") align = rtlRegEx.test(text) ? "left" : "right";
     return (0, _textBuilderJs.TEXT_ALIGN)[align];
 }
 /**
@@ -20354,7 +20428,7 @@ class Executor {
                     const textLength = Math.abs(textScale[0]) * (0, _canvasJs.measureAndCacheTextWidth)(font, text, cachedWidths);
                     if (overflow || textLength <= pathLength) {
                         const textAlign = this.textStates[textKey].textAlign;
-                        const startM = (pathLength - textLength) * (0, _textBuilderJs.TEXT_ALIGN)[textAlign];
+                        const startM = (pathLength - textLength) * horizontalTextAlign(text, textAlign);
                         const parts = (0, _textpathJs.drawTextOnPath)(pixelCoordinates, begin, end, 2, text, startM, maxAngle, Math.abs(textScale[0]), (0, _canvasJs.measureAndCacheTextWidth), font, cachedWidths, viewRotationFromTransform ? 0 : this.viewRotation_);
                         drawChars: if (parts) {
                             /** @type {Array<ReplayImageOrLabelArgs>} */ const replayImageOrLabelArgs = [];
@@ -20680,7 +20754,7 @@ function createHitDetectionImageData(size, transforms, features, styleFunction, 
     for(let i = 1; i <= featureCount; ++i){
         const feature = features[i - 1];
         const featureStyleFunction = feature.getStyleFunction() || styleFunction;
-        if (!styleFunction) continue;
+        if (!featureStyleFunction) continue;
         let styles = featureStyleFunction(feature, resolution);
         if (!styles) continue;
         if (!Array.isArray(styles)) styles = [
@@ -20702,7 +20776,7 @@ function createHitDetectionImageData(size, transforms, features, styleFunction, 
             }
             style.setText(undefined);
             const image = originalStyle.getImage();
-            if (image && image.getOpacity() !== 0) {
+            if (image) {
                 const imgSize = image.getImageSize();
                 if (!imgSize) continue;
                 const imgContext = (0, _domJs.createCanvasContext2D)(imgSize[0], imgSize[1], undefined, {
@@ -21876,6 +21950,7 @@ parcelHelpers.export(exports, "singleClick", ()=>singleClick);
 parcelHelpers.export(exports, "doubleClick", ()=>doubleClick);
 parcelHelpers.export(exports, "noModifierKeys", ()=>noModifierKeys);
 parcelHelpers.export(exports, "platformModifierKeyOnly", ()=>platformModifierKeyOnly);
+parcelHelpers.export(exports, "platformModifierKey", ()=>platformModifierKey);
 parcelHelpers.export(exports, "shiftKeyOnly", ()=>shiftKeyOnly);
 parcelHelpers.export(exports, "targetNotEditable", ()=>targetNotEditable);
 parcelHelpers.export(exports, "mouseOnly", ()=>mouseOnly);
@@ -21942,6 +22017,10 @@ const noModifierKeys = function(mapBrowserEvent) {
 const platformModifierKeyOnly = function(mapBrowserEvent) {
     const originalEvent = /** @type {KeyboardEvent|MouseEvent|TouchEvent} */ mapBrowserEvent.originalEvent;
     return !originalEvent.altKey && ((0, _hasJs.MAC) ? originalEvent.metaKey : originalEvent.ctrlKey) && !originalEvent.shiftKey;
+};
+const platformModifierKey = function(mapBrowserEvent) {
+    const originalEvent = /** @type {KeyboardEvent|MouseEvent|TouchEvent} */ mapBrowserEvent.originalEvent;
+    return (0, _hasJs.MAC) ? originalEvent.metaKey : originalEvent.ctrlKey;
 };
 const shiftKeyOnly = function(mapBrowserEvent) {
     const originalEvent = /** @type {KeyboardEvent|MouseEvent|TouchEvent} */ mapBrowserEvent.originalEvent;
@@ -22536,6 +22615,7 @@ class VectorSourceEvent extends (0, _eventJsDefault.default) {
  *   import("../Observable").CombinedOnSignature<import("../Observable").EventTypes|import("../ObjectEventType").Types|
  *     import("./VectorEventType").VectorSourceEventTypes, Return>} VectorSourceOnSignature
  */ /**
+ * @template {import("../geom/Geometry.js").default} [Geometry=import("../geom/Geometry.js").default]
  * @typedef {Object} Options
  * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
  * @property {Array<import("../Feature.js").default<Geometry>>|Collection<import("../Feature.js").default<Geometry>>} [features]
@@ -22625,7 +22705,6 @@ class VectorSourceEvent extends (0, _eventJsDefault.default) {
  * @property {boolean} [wrapX=true] Wrap the world horizontally. For vector editing across the
  * -180° and 180° meridians to work properly, this should be set to `false`. The
  * resulting geometry coordinates will then exceed the world bounds.
- * @template {import("../geom/Geometry.js").default} [Geometry=import("../geom/Geometry.js").default]
  */ /**
  * @classdesc
  * Provides a source of features for vector layers. Vector features provided
@@ -24463,7 +24542,7 @@ class DrawEvent extends (0, _eventJsDefault.default) {
      * @private
      */ this.downPx_ = null;
         /**
-     * @type {?}
+     * @type {ReturnType<typeof setTimeout>}
      * @private
      */ this.downTimeout_;
         /**
@@ -25396,7 +25475,7 @@ var _transformJs = require("./flat/transform.js");
    * @param {!import("../coordinate.js").Coordinate} center Center.
    *     For internal use, flat coordinates in combination with `layout` and no
    *     `radius` are also accepted.
-   * @param {number} [radius] Radius.
+   * @param {number} [radius] Radius in units of the projection.
    * @param {import("./Geometry.js").GeometryLayout} [layout] Layout.
    */ constructor(center, radius, layout){
         super();
@@ -38765,6 +38844,16 @@ parcelHelpers.defineInteropFlag(exports);
  * @return {Promise<Projection>} The projection.
  * @api
  */ parcelHelpers.export(exports, "fromEPSGCode", ()=>fromEPSGCode);
+/**
+ * Generate an EPSG lookup function which uses the MapTiler Coordinates API to find projection
+ * definitions which do not require proj4 to be configured to handle `+nadgrids` parameters.
+ * Call {@link module:ol/proj/proj4.setEPSGLookup} use the function for lookups
+ * `setEPSGLookup(epsgLookupMapTiler('{YOUR_MAPTILER_API_KEY_HERE}'))`.
+ *
+ * @param {string} key MapTiler API key.  Get your own API key at https://www.maptiler.com/cloud/.
+ * @return {function(number):Promise<string>} The EPSG lookup function.
+ * @api
+ */ parcelHelpers.export(exports, "epsgLookupMapTiler", ()=>epsgLookupMapTiler);
 var _projectionJs = require("./Projection.js");
 var _projectionJsDefault = parcelHelpers.interopDefault(_projectionJs);
 var _projJs = require("../proj.js");
@@ -38839,6 +38928,31 @@ async function fromEPSGCode(code) {
     proj4.defs(epsgCode, await epsgLookup(code));
     register(proj4);
     return (0, _projJs.get)(epsgCode);
+}
+function epsgLookupMapTiler(key) {
+    return async function(code) {
+        const response = await fetch(`https://api.maptiler.com/coordinates/search/code:${code}.json?transformations=true&exports=true&key=${key}`);
+        if (!response.ok) throw new Error(`Unexpected response from maptiler.com: ${response.status}`);
+        return response.json().then((json)=>{
+            const results = json["results"];
+            if (results?.length > 0) {
+                const result = results.filter((r)=>r["id"]?.["authority"] === "EPSG" && r["id"]?.["code"] === code)[0];
+                if (result) {
+                    const transforms = result["transformations"];
+                    if (transforms?.length > 0) {
+                        // use default transform if it does not require grids
+                        const defaultTransform = result["default_transformation"];
+                        if (transforms.filter((t)=>t["id"]?.["authority"] === defaultTransform?.["authority"] && t["id"]?.["code"] === defaultTransform?.["code"] && t["grids"]?.length === 0).length > 0) return result["exports"]?.["proj4"];
+                        // otherwise use most accurate alternative without grids
+                        const transform = transforms.filter((t)=>t["grids"]?.length === 0 && t["target_crs"]?.["authority"] === "EPSG" && t["target_crs"]?.["code"] === 4326 && t["deprecated"] === false && t["usable"] === true).sort((t1, t2)=>t1["accuracy"] - t2["accuracy"])[0]?.["exports"]?.["proj4"];
+                        if (transform) return transform;
+                    }
+                    // fallback to default
+                    return result["exports"]?.["proj4"];
+                }
+            }
+        });
+    };
 }
 
 },{"./Projection.js":"7HvLt","../proj.js":"SznqC","./transforms.js":"gPHoN","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3ytzs":[function(require,module,exports) {
@@ -39922,7 +40036,7 @@ var _consoleJs = require("./console.js");
      */ this.pixelRatio_ = options.pixelRatio !== undefined ? options.pixelRatio : (0, _hasJs.DEVICE_PIXEL_RATIO);
         /**
      * @private
-     * @type {*}
+     * @type {ReturnType<typeof setTimeout>}
      */ this.postRenderTimeoutHandle_;
         /**
      * @private
@@ -40705,6 +40819,17 @@ var _consoleJs = require("./console.js");
         if (this.renderer_ && this.animationDelayKey_ === undefined) this.animationDelayKey_ = requestAnimationFrame(this.animationDelay_);
     }
     /**
+   * This method is meant to be called in a layer's `prerender` listener. It causes all collected
+   * declutter items to be decluttered and rendered on the map immediately. This is useful for
+   * layers that need to appear entirely above the decluttered items of layers lower in the layer
+   * stack.
+   * @api
+   */ flushDeclutterItems() {
+        const frameState = this.frameState_;
+        if (!frameState) return;
+        this.renderer_.flushDeclutterItems(frameState);
+    }
+    /**
    * Remove the given control from the map.
    * @param {import("./control/Control.js").default} control Control.
    * @return {import("./control/Control.js").default|undefined} The removed control (or undefined
@@ -40997,6 +41122,9 @@ var _domJs = require("../dom.js");
      * @private
      * @type {boolean}
      */ this.renderedVisible_ = true;
+        /**
+     * @type {Array<import("../layer/BaseVector.js").default>}
+     */ this.declutterLayers_ = [];
     }
     /**
    * @param {import("../render/EventType.js").default} type Event type.
@@ -41031,9 +41159,8 @@ var _domJs = require("../dom.js");
         });
         const viewState = frameState.viewState;
         this.children_.length = 0;
-        /**
-     * @type {Array<import("../layer/BaseVector.js").default>}
-     */ const declutterLayers = [];
+        const declutterLayers = this.declutterLayers_;
+        declutterLayers.length = 0;
         let previousElement = null;
         for(let i = 0, ii = layerStatesArray.length; i < ii; ++i){
             const layerState = layerStatesArray[i];
@@ -41052,7 +41179,7 @@ var _domJs = require("../dom.js");
             }
             if ("getDeclutter" in layer) declutterLayers.push(/** @type {import("../layer/BaseVector.js").default} */ layer);
         }
-        for(let i = declutterLayers.length - 1; i >= 0; --i)declutterLayers[i].renderDeclutter(frameState);
+        this.flushDeclutterItems(frameState);
         (0, _domJs.replaceChildren)(this.element_, this.children_);
         this.dispatchRenderEvent((0, _eventTypeJsDefault.default).POSTCOMPOSE, frameState);
         if (!this.renderedVisible_) {
@@ -41060,6 +41187,14 @@ var _domJs = require("../dom.js");
             this.renderedVisible_ = true;
         }
         this.scheduleExpireIconCache(frameState);
+    }
+    /**
+   * @param {import("../Map.js").FrameState} frameState Frame state.
+   */ flushDeclutterItems(frameState) {
+        const layers = this.declutterLayers_;
+        for(let i = layers.length - 1; i >= 0; --i)layers[i].renderDeclutter(frameState);
+        frameState.declutterTree = null;
+        layers.length = 0;
     }
 }
 exports.default = CompositeMapRenderer;
@@ -41079,13 +41214,13 @@ var _iconImageCacheJs = require("../style/IconImageCache.js");
 var _layerJs = require("../layer/Layer.js");
 var _coordinateJs = require("../coordinate.js");
 /**
+ * @template T
  * @typedef HitMatch
  * @property {import("../Feature.js").FeatureLike} feature Feature.
  * @property {import("../layer/Layer.js").default} layer Layer.
  * @property {import("../geom/SimpleGeometry.js").default} geometry Geometry.
  * @property {number} distanceSq Squared distance.
  * @property {import("./vector.js").FeatureCallback<T>} callback Callback.
- * @template T
  */ /**
  * @abstract
  */ class MapRenderer extends (0, _disposableJsDefault.default) {
@@ -41217,6 +41352,9 @@ var _coordinateJs = require("../coordinate.js");
    */ renderFrame(frameState) {
         (0, _utilJs.abstract)();
     }
+    /**
+   * @param {import("../Map.js").FrameState} frameState Frame state.
+   */ flushDeclutterItems(frameState) {}
     /**
    * @param {import("../Map.js").FrameState} frameState Frame state.
    * @protected
@@ -41518,7 +41656,7 @@ class MapBrowserEventHandler extends (0, _targetJsDefault.default) {
      * @private
      */ this.map_ = map;
         /**
-     * @type {any}
+     * @type {ReturnType<typeof setTimeout>}
      * @private
      */ this.clickTimeoutId_;
         /**
@@ -41710,7 +41848,8 @@ class MapBrowserEventHandler extends (0, _targetJsDefault.default) {
    * @private
    */ handleTouchMove_(event) {
         // Due to https://github.com/mpizenberg/elm-pep/issues/2, `this.originalPointerMoveEvent_`
-        // may not be initialized yet when we get here on a platform without native pointer events.
+        // may not be initialized yet when we get here on a platform without native pointer events,
+        // when elm-pep is used as pointer events polyfill.
         const originalEvent = this.originalPointerMoveEvent_;
         if ((!originalEvent || originalEvent.defaultPrevented) && (typeof event.cancelable !== "boolean" || event.cancelable === true)) event.preventDefault();
     }
@@ -43681,8 +43820,10 @@ var _conditionJs = require("../events/condition.js");
  * @property {number} [duration=100] Animation duration in milliseconds.
  * @property {import("../events/condition.js").Condition} [condition] A function that
  * takes an {@link module:ol/MapBrowserEvent~MapBrowserEvent} and returns a
- * boolean to indicate whether that event should be handled. Default is
- * {@link module:ol/events/condition.targetNotEditable}.
+ * boolean to indicate whether that event should be handled. The default condition is
+ * that {@link module:ol/events/condition.targetNotEditable} is fulfilled and that
+ * the platform modifier key isn't pressed
+ * (!{@link module:ol/events/condition.platformModifierKey}).
  * @property {number} [delta=1] The zoom level delta on each key press.
  */ /**
  * @classdesc
@@ -43705,7 +43846,9 @@ var _conditionJs = require("../events/condition.js");
         /**
      * @private
      * @type {import("../events/condition.js").Condition}
-     */ this.condition_ = options.condition ? options.condition : (0, _conditionJs.targetNotEditable);
+     */ this.condition_ = options.condition ? options.condition : function(mapBrowserEvent) {
+            return !(0, _conditionJs.platformModifierKey)(mapBrowserEvent) && (0, _conditionJs.targetNotEditable)(mapBrowserEvent);
+        };
         /**
      * @private
      * @type {number}
@@ -43824,7 +43967,7 @@ var _mathJs = require("../math.js");
      */ this.startTime_ = undefined;
         /**
      * @private
-     * @type {?}
+     * @type {ReturnType<typeof setTimeout>}
      */ this.timeoutId_;
         /**
      * @private
@@ -43833,10 +43976,12 @@ var _mathJs = require("../math.js");
         /**
      * Trackpad events separated by this delay will be considered separate
      * interactions.
+     * @private
      * @type {number}
      */ this.trackpadEventGap_ = 400;
         /**
-     * @type {?}
+     * @private
+     * @type {ReturnType<typeof setTimeout>}
      */ this.trackpadTimeoutId_;
         /**
      * The number of delta values per zoom level

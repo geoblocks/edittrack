@@ -6520,7 +6520,7 @@ function isXYZ(coordinates) {
     return true;
 }
 
-},{"ol/coordinate.js":"85Vu7","ol/Feature.js":"liabO","ol/geom/LineString.js":"jLUiq","ol/geom/MultiPoint.js":"k4LcJ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jLUiq":[function(require,module,exports) {
+},{"ol/coordinate.js":"85Vu7","ol/Feature.js":"liabO","ol/geom/LineString.js":"jLUiq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","ol/geom/MultiPoint.js":"k4LcJ"}],"jLUiq":[function(require,module,exports) {
 /**
  * @module ol/geom/LineString
  */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");

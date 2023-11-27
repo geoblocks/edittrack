@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"g2M0B":[function(require,module,exports) {
+})({"i6XE1":[function(require,module,exports) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -227,9 +227,15 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
     var hostname = getHostname();
     var port = getPort();
     var protocol = HMR_SECURE || location.protocol == "https:" && !/localhost|127.0.0.1|0.0.0.0/.test(hostname) ? "wss" : "ws";
-    var ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    var ws;
+    try {
+        ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    } catch (err) {
+        if (err.message) console.error(err.message);
+        ws = {};
+    }
     // Web extension context
-    var extCtx = typeof chrome === "undefined" ? typeof browser === "undefined" ? null : browser : chrome;
+    var extCtx = typeof browser === "undefined" ? typeof chrome === "undefined" ? null : chrome : browser;
     // Safari doesn't support sourceURL in error stacks.
     // eval may also be disabled via CSP, so do a quick check.
     var supportsSourceURL = false;
@@ -293,7 +299,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
         }
     };
     ws.onerror = function(e) {
-        console.error(e.message);
+        if (e.message) console.error(e.message);
     };
     ws.onclose = function() {
         console.warn("[parcel] \uD83D\uDEA8 Connection to the HMR server was lost");
@@ -303,7 +309,7 @@ function removeErrorOverlay() {
     var overlay = document.getElementById(OVERLAY_ID);
     if (overlay) {
         overlay.remove();
-        console.log("[parcel] ✨ Error resolved");
+        console.log("[parcel] \u2728 Error resolved");
     }
 }
 function createErrorOverlay(diagnostics) {
@@ -319,13 +325,13 @@ ${frame.code}`;
         errorHTML += `
       <div>
         <div style="font-size: 18px; font-weight: bold; margin-top: 20px;">
-          🚨 ${diagnostic.message}
+          \u{1F6A8} ${diagnostic.message}
         </div>
         <pre>${stack}</pre>
         <div>
           ${diagnostic.hints.map((hint)=>"<div>\uD83D\uDCA1 " + hint + "</div>").join("")}
         </div>
-        ${diagnostic.documentation ? `<div>📝 <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
+        ${diagnostic.documentation ? `<div>\u{1F4DD} <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
       </div>
     `;
     }
@@ -421,15 +427,10 @@ async function hmrApplyUpdates(assets) {
             let promises = assets.map((asset)=>{
                 var _hmrDownload;
                 return (_hmrDownload = hmrDownload(asset)) === null || _hmrDownload === void 0 ? void 0 : _hmrDownload.catch((err)=>{
-                    // Web extension bugfix for Chromium
-                    // https://bugs.chromium.org/p/chromium/issues/detail?id=1255412#c12
-                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3) {
-                        if (typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
-                            extCtx.runtime.reload();
-                            return;
-                        }
-                        asset.url = extCtx.runtime.getURL("/__parcel_hmr_proxy__?url=" + encodeURIComponent(asset.url + "?t=" + Date.now()));
-                        return hmrDownload(asset);
+                    // Web extension fix
+                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3 && typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
+                        extCtx.runtime.reload();
+                        return;
                     }
                     throw err;
                 });
@@ -577,8 +578,8 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 var _trackManager = require("../../src/interaction/TrackManager");
 var _trackManagerDefault = parcelHelpers.interopDefault(_trackManager);
-var _graphHopper = require("../../src/router/GraphHopper");
-var _graphHopperDefault = parcelHelpers.interopDefault(_graphHopper);
+var _graphHopperTs = require("../../src/router/GraphHopper.ts");
+var _graphHopperTsDefault = parcelHelpers.interopDefault(_graphHopperTs);
 var _index = require("../../src/profiler/index");
 var _style = require("./style");
 var _swisstopo = require("./swisstopo");
@@ -588,7 +589,7 @@ const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmn
 async function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _swisstopo.createMap)("map");
     const projection = map.getView().getProjection();
-    const router = new (0, _graphHopperDefault.default)({
+    const router = new (0, _graphHopperTsDefault.default)({
         map: map,
         url: ROUTING_URL,
         maxRoutingTolerance: 15
@@ -640,7 +641,7 @@ async function main() {
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper.ts":"fak2b","../../src/profiler/index":"d5CmD","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
@@ -877,7 +878,6 @@ var _vectorDefault = parcelHelpers.interopDefault(_vector);
 var _vector1 = require("ol/source/Vector");
 var _vectorDefault1 = parcelHelpers.interopDefault(_vector1);
 var _ol = require("ol");
-var _interaction = require("ol/interaction");
 var _style = require("./style");
 var _shadowtrack = require("./shadowtrack");
 const RESOLUTIONS = [
@@ -928,9 +928,6 @@ function createMap(target) {
     const bgLayer = createSwisstopoLayer("ch.swisstopo.pixelkarte-farbe");
     const shadowTrackLayer = (0, _shadowtrack.createShadowLayer)();
     const map = new (0, _ol.Map)({
-        interactions: (0, _interaction.defaults)({
-            doubleClickZoom: false
-        }),
         target,
         view,
         layers: [
@@ -947,7 +944,7 @@ function createMap(target) {
     };
 }
 
-},{"@geoblocks/sources/src/Swisstopo":"8D6Vl","@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","ol/interaction":"akCDO","./style":"lUZ9u","./shadowtrack":"62tDj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8D6Vl":[function(require,module,exports) {
+},{"@geoblocks/sources/src/Swisstopo":"8D6Vl","@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","./style":"lUZ9u","./shadowtrack":"62tDj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8D6Vl":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "RESOLUTIONS", ()=>RESOLUTIONS);
@@ -1521,7 +1518,7 @@ function optionsFromCapabilities(wmtsCap, config) {
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "appendParams", ()=>appendParams);
 function appendParams(uri, params) {
-    const keyParams = [];
+    /** @type {Array<string>} */ const keyParams = [];
     // Skip any null or undefined parameter values
     Object.keys(params).forEach(function(k) {
         if (params[k] !== null && params[k] !== undefined) keyParams.push(k + "=" + encodeURIComponent(params[k]));
@@ -1686,81 +1683,7 @@ function createFromCapabilitiesMatrixSet(matrixSet, extent, matrixLimits) {
     });
 }
 
-},{"./TileGrid.js":"cZOJJ","../proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"akCDO":[function(require,module,exports) {
-/**
- * @module ol/interaction
- */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "DoubleClickZoom", ()=>(0, _doubleClickZoomJsDefault.default));
-parcelHelpers.export(exports, "DblClickDragZoom", ()=>(0, _dblClickDragZoomJsDefault.default));
-parcelHelpers.export(exports, "DragAndDrop", ()=>(0, _dragAndDropJsDefault.default));
-parcelHelpers.export(exports, "DragBox", ()=>(0, _dragBoxJsDefault.default));
-parcelHelpers.export(exports, "DragPan", ()=>(0, _dragPanJsDefault.default));
-parcelHelpers.export(exports, "DragRotate", ()=>(0, _dragRotateJsDefault.default));
-parcelHelpers.export(exports, "DragRotateAndZoom", ()=>(0, _dragRotateAndZoomJsDefault.default));
-parcelHelpers.export(exports, "DragZoom", ()=>(0, _dragZoomJsDefault.default));
-parcelHelpers.export(exports, "Draw", ()=>(0, _drawJsDefault.default));
-parcelHelpers.export(exports, "Extent", ()=>(0, _extentJsDefault.default));
-parcelHelpers.export(exports, "Interaction", ()=>(0, _interactionJsDefault.default));
-parcelHelpers.export(exports, "KeyboardPan", ()=>(0, _keyboardPanJsDefault.default));
-parcelHelpers.export(exports, "KeyboardZoom", ()=>(0, _keyboardZoomJsDefault.default));
-parcelHelpers.export(exports, "Link", ()=>(0, _linkJsDefault.default));
-parcelHelpers.export(exports, "Modify", ()=>(0, _modifyJsDefault.default));
-parcelHelpers.export(exports, "MouseWheelZoom", ()=>(0, _mouseWheelZoomJsDefault.default));
-parcelHelpers.export(exports, "PinchRotate", ()=>(0, _pinchRotateJsDefault.default));
-parcelHelpers.export(exports, "PinchZoom", ()=>(0, _pinchZoomJsDefault.default));
-parcelHelpers.export(exports, "Pointer", ()=>(0, _pointerJsDefault.default));
-parcelHelpers.export(exports, "Select", ()=>(0, _selectJsDefault.default));
-parcelHelpers.export(exports, "Snap", ()=>(0, _snapJsDefault.default));
-parcelHelpers.export(exports, "Translate", ()=>(0, _translateJsDefault.default));
-parcelHelpers.export(exports, "defaults", ()=>(0, _defaultsJs.defaults));
-var _doubleClickZoomJs = require("./interaction/DoubleClickZoom.js");
-var _doubleClickZoomJsDefault = parcelHelpers.interopDefault(_doubleClickZoomJs);
-var _dblClickDragZoomJs = require("./interaction/DblClickDragZoom.js");
-var _dblClickDragZoomJsDefault = parcelHelpers.interopDefault(_dblClickDragZoomJs);
-var _dragAndDropJs = require("./interaction/DragAndDrop.js");
-var _dragAndDropJsDefault = parcelHelpers.interopDefault(_dragAndDropJs);
-var _dragBoxJs = require("./interaction/DragBox.js");
-var _dragBoxJsDefault = parcelHelpers.interopDefault(_dragBoxJs);
-var _dragPanJs = require("./interaction/DragPan.js");
-var _dragPanJsDefault = parcelHelpers.interopDefault(_dragPanJs);
-var _dragRotateJs = require("./interaction/DragRotate.js");
-var _dragRotateJsDefault = parcelHelpers.interopDefault(_dragRotateJs);
-var _dragRotateAndZoomJs = require("./interaction/DragRotateAndZoom.js");
-var _dragRotateAndZoomJsDefault = parcelHelpers.interopDefault(_dragRotateAndZoomJs);
-var _dragZoomJs = require("./interaction/DragZoom.js");
-var _dragZoomJsDefault = parcelHelpers.interopDefault(_dragZoomJs);
-var _drawJs = require("./interaction/Draw.js");
-var _drawJsDefault = parcelHelpers.interopDefault(_drawJs);
-var _extentJs = require("./interaction/Extent.js");
-var _extentJsDefault = parcelHelpers.interopDefault(_extentJs);
-var _interactionJs = require("./interaction/Interaction.js");
-var _interactionJsDefault = parcelHelpers.interopDefault(_interactionJs);
-var _keyboardPanJs = require("./interaction/KeyboardPan.js");
-var _keyboardPanJsDefault = parcelHelpers.interopDefault(_keyboardPanJs);
-var _keyboardZoomJs = require("./interaction/KeyboardZoom.js");
-var _keyboardZoomJsDefault = parcelHelpers.interopDefault(_keyboardZoomJs);
-var _linkJs = require("./interaction/Link.js");
-var _linkJsDefault = parcelHelpers.interopDefault(_linkJs);
-var _modifyJs = require("./interaction/Modify.js");
-var _modifyJsDefault = parcelHelpers.interopDefault(_modifyJs);
-var _mouseWheelZoomJs = require("./interaction/MouseWheelZoom.js");
-var _mouseWheelZoomJsDefault = parcelHelpers.interopDefault(_mouseWheelZoomJs);
-var _pinchRotateJs = require("./interaction/PinchRotate.js");
-var _pinchRotateJsDefault = parcelHelpers.interopDefault(_pinchRotateJs);
-var _pinchZoomJs = require("./interaction/PinchZoom.js");
-var _pinchZoomJsDefault = parcelHelpers.interopDefault(_pinchZoomJs);
-var _pointerJs = require("./interaction/Pointer.js");
-var _pointerJsDefault = parcelHelpers.interopDefault(_pointerJs);
-var _selectJs = require("./interaction/Select.js");
-var _selectJsDefault = parcelHelpers.interopDefault(_selectJs);
-var _snapJs = require("./interaction/Snap.js");
-var _snapJsDefault = parcelHelpers.interopDefault(_snapJs);
-var _translateJs = require("./interaction/Translate.js");
-var _translateJsDefault = parcelHelpers.interopDefault(_translateJs);
-var _defaultsJs = require("./interaction/defaults.js");
-
-},{"./interaction/DoubleClickZoom.js":false,"./interaction/DblClickDragZoom.js":false,"./interaction/DragAndDrop.js":false,"./interaction/DragBox.js":false,"./interaction/DragPan.js":false,"./interaction/DragRotate.js":false,"./interaction/DragRotateAndZoom.js":false,"./interaction/DragZoom.js":false,"./interaction/Draw.js":false,"./interaction/Extent.js":false,"./interaction/Interaction.js":false,"./interaction/KeyboardPan.js":false,"./interaction/KeyboardZoom.js":false,"./interaction/Link.js":false,"./interaction/Modify.js":false,"./interaction/MouseWheelZoom.js":false,"./interaction/PinchRotate.js":false,"./interaction/PinchZoom.js":false,"./interaction/Pointer.js":false,"./interaction/Select.js":false,"./interaction/Snap.js":false,"./interaction/Translate.js":false,"./interaction/defaults.js":"1L9Hg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"62tDj":[function(require,module,exports) {
+},{"./TileGrid.js":"cZOJJ","../proj.js":"SznqC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"62tDj":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "style", ()=>style);
@@ -1841,46 +1764,7 @@ async function getPOIs(id, projection) {
     });
 }
 
-},{"ol/coordinate":"85Vu7","ol/format/GeoJSON":"1bsdX","ol/Feature":"liabO","ol/geom":"8Nc7o","@geoblocks/proj/src/EPSG_21781":"6TlJ1","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8Nc7o":[function(require,module,exports) {
-/**
- * @module ol/geom
- */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "Circle", ()=>(0, _circleJsDefault.default));
-parcelHelpers.export(exports, "Geometry", ()=>(0, _geometryJsDefault.default));
-parcelHelpers.export(exports, "GeometryCollection", ()=>(0, _geometryCollectionJsDefault.default));
-parcelHelpers.export(exports, "LinearRing", ()=>(0, _linearRingJsDefault.default));
-parcelHelpers.export(exports, "LineString", ()=>(0, _lineStringJsDefault.default));
-parcelHelpers.export(exports, "MultiLineString", ()=>(0, _multiLineStringJsDefault.default));
-parcelHelpers.export(exports, "MultiPoint", ()=>(0, _multiPointJsDefault.default));
-parcelHelpers.export(exports, "MultiPolygon", ()=>(0, _multiPolygonJsDefault.default));
-parcelHelpers.export(exports, "Point", ()=>(0, _pointJsDefault.default));
-parcelHelpers.export(exports, "Polygon", ()=>(0, _polygonJsDefault.default));
-parcelHelpers.export(exports, "SimpleGeometry", ()=>(0, _simpleGeometryJsDefault.default));
-var _circleJs = require("./geom/Circle.js");
-var _circleJsDefault = parcelHelpers.interopDefault(_circleJs);
-var _geometryJs = require("./geom/Geometry.js");
-var _geometryJsDefault = parcelHelpers.interopDefault(_geometryJs);
-var _geometryCollectionJs = require("./geom/GeometryCollection.js");
-var _geometryCollectionJsDefault = parcelHelpers.interopDefault(_geometryCollectionJs);
-var _linearRingJs = require("./geom/LinearRing.js");
-var _linearRingJsDefault = parcelHelpers.interopDefault(_linearRingJs);
-var _lineStringJs = require("./geom/LineString.js");
-var _lineStringJsDefault = parcelHelpers.interopDefault(_lineStringJs);
-var _multiLineStringJs = require("./geom/MultiLineString.js");
-var _multiLineStringJsDefault = parcelHelpers.interopDefault(_multiLineStringJs);
-var _multiPointJs = require("./geom/MultiPoint.js");
-var _multiPointJsDefault = parcelHelpers.interopDefault(_multiPointJs);
-var _multiPolygonJs = require("./geom/MultiPolygon.js");
-var _multiPolygonJsDefault = parcelHelpers.interopDefault(_multiPolygonJs);
-var _pointJs = require("./geom/Point.js");
-var _pointJsDefault = parcelHelpers.interopDefault(_pointJs);
-var _polygonJs = require("./geom/Polygon.js");
-var _polygonJsDefault = parcelHelpers.interopDefault(_polygonJs);
-var _simpleGeometryJs = require("./geom/SimpleGeometry.js");
-var _simpleGeometryJsDefault = parcelHelpers.interopDefault(_simpleGeometryJs);
-
-},{"./geom/Circle.js":false,"./geom/Geometry.js":false,"./geom/GeometryCollection.js":false,"./geom/LinearRing.js":false,"./geom/LineString.js":"jLUiq","./geom/MultiLineString.js":false,"./geom/MultiPoint.js":false,"./geom/MultiPolygon.js":false,"./geom/Point.js":"hx2Ar","./geom/Polygon.js":false,"./geom/SimpleGeometry.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6TlJ1":[function(require,module,exports) {
+},{"ol/coordinate":"85Vu7","ol/format/GeoJSON":"1bsdX","ol/Feature":"liabO","ol/geom":"8Nc7o","@geoblocks/proj/src/EPSG_21781":"6TlJ1","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6TlJ1":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "code", ()=>code);
@@ -1910,6 +1794,6 @@ const extent = [
 const proj = (0, _utilsJs.create)(code, def, extent);
 exports.default = code;
 
-},{"./somerc.js":"6Pnfv","./utils.js":"eP837","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["g2M0B","8GBxa"], "8GBxa", "parcelRequireed82")
+},{"./somerc.js":"6Pnfv","./utils.js":"eP837","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["i6XE1","8GBxa"], "8GBxa", "parcelRequireed82")
 
 //# sourceMappingURL=schm.90888e37.js.map

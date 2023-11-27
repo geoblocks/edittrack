@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"M6Z7R":[function(require,module,exports) {
+})({"ijkuy":[function(require,module,exports) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -227,9 +227,15 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
     var hostname = getHostname();
     var port = getPort();
     var protocol = HMR_SECURE || location.protocol == "https:" && !/localhost|127.0.0.1|0.0.0.0/.test(hostname) ? "wss" : "ws";
-    var ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    var ws;
+    try {
+        ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    } catch (err) {
+        if (err.message) console.error(err.message);
+        ws = {};
+    }
     // Web extension context
-    var extCtx = typeof chrome === "undefined" ? typeof browser === "undefined" ? null : browser : chrome;
+    var extCtx = typeof browser === "undefined" ? typeof chrome === "undefined" ? null : chrome : browser;
     // Safari doesn't support sourceURL in error stacks.
     // eval may also be disabled via CSP, so do a quick check.
     var supportsSourceURL = false;
@@ -293,7 +299,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
         }
     };
     ws.onerror = function(e) {
-        console.error(e.message);
+        if (e.message) console.error(e.message);
     };
     ws.onclose = function() {
         console.warn("[parcel] \uD83D\uDEA8 Connection to the HMR server was lost");
@@ -303,7 +309,7 @@ function removeErrorOverlay() {
     var overlay = document.getElementById(OVERLAY_ID);
     if (overlay) {
         overlay.remove();
-        console.log("[parcel] ✨ Error resolved");
+        console.log("[parcel] \u2728 Error resolved");
     }
 }
 function createErrorOverlay(diagnostics) {
@@ -319,13 +325,13 @@ ${frame.code}`;
         errorHTML += `
       <div>
         <div style="font-size: 18px; font-weight: bold; margin-top: 20px;">
-          🚨 ${diagnostic.message}
+          \u{1F6A8} ${diagnostic.message}
         </div>
         <pre>${stack}</pre>
         <div>
           ${diagnostic.hints.map((hint)=>"<div>\uD83D\uDCA1 " + hint + "</div>").join("")}
         </div>
-        ${diagnostic.documentation ? `<div>📝 <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
+        ${diagnostic.documentation ? `<div>\u{1F4DD} <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
       </div>
     `;
     }
@@ -421,15 +427,10 @@ async function hmrApplyUpdates(assets) {
             let promises = assets.map((asset)=>{
                 var _hmrDownload;
                 return (_hmrDownload = hmrDownload(asset)) === null || _hmrDownload === void 0 ? void 0 : _hmrDownload.catch((err)=>{
-                    // Web extension bugfix for Chromium
-                    // https://bugs.chromium.org/p/chromium/issues/detail?id=1255412#c12
-                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3) {
-                        if (typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
-                            extCtx.runtime.reload();
-                            return;
-                        }
-                        asset.url = extCtx.runtime.getURL("/__parcel_hmr_proxy__?url=" + encodeURIComponent(asset.url + "?t=" + Date.now()));
-                        return hmrDownload(asset);
+                    // Web extension fix
+                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3 && typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
+                        extCtx.runtime.reload();
+                        return;
                     }
                     throw err;
                 });
@@ -577,18 +578,19 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 var _trackManager = require("../../src/interaction/TrackManager");
 var _trackManagerDefault = parcelHelpers.interopDefault(_trackManager);
-var _graphHopper = require("../../src/router/GraphHopper");
-var _graphHopperDefault = parcelHelpers.interopDefault(_graphHopper);
+var _graphHopperTs = require("../../src/router/GraphHopper.ts");
+var _graphHopperTsDefault = parcelHelpers.interopDefault(_graphHopperTs);
 var _index = require("../../src/profiler/index");
 var _profileTs = require("../../src/Profile.ts");
 var _profileTsDefault = parcelHelpers.interopDefault(_profileTs);
 var _style = require("./style");
 var _style1 = require("ol/style");
 var _osm = require("./osm");
+var _ol = require("ol");
 const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true";
 function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _osm.createMap)("map");
-    const router = new (0, _graphHopperDefault.default)({
+    const router = new (0, _graphHopperTsDefault.default)({
         map: map,
         url: ROUTING_URL,
         mapProjection: map.getView().getProjection()
@@ -618,7 +620,7 @@ function main() {
         profiler: profiler,
         trackLayer: trackLayer,
         shadowTrackLayer: shadowTrackLayer,
-        style: (0, _style.styleFunction),
+        style: (0, _style.styleRules),
         deleteCondition: deleteCondition,
         hitTolerance: 10
     });
@@ -652,7 +654,6 @@ function main() {
     document.querySelector("#undo").addEventListener("click", ()=>trackManager.undo());
     document.querySelector("#redo").addEventListener("click", ()=>trackManager.redo());
     document.querySelector("#getTrackData").addEventListener("click", ()=>{
-        trackManager.getTrackFeature();
         const features = [
             ...trackManager.getControlPoints(),
             ...trackManager.getSegments(),
@@ -662,6 +663,37 @@ function main() {
     });
     document.querySelector("#reverse").addEventListener("click", ()=>{
         trackManager.reverse();
+    });
+    document.querySelector("#addPoi").addEventListener("click", ()=>{
+        const elem = document.createElement("div");
+        elem.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" id="i_location" width="24" height="24" viewBox="0 0 24 24">\n        <rect id="Rechteck_3117" data-name="Rechteck 3117" width="24" height="24" fill="none"/>\n        <path id="icons8-location" d="M12,2.01A7,7,0,0,0,5.008,9c0,4.483,5.967,11.765,6.221,12.072l.771.936.771-.936c.254-.308,6.221-7.589,6.221-12.072A7,7,0,0,0,12,2.01Zm0,2A5,5,0,0,1,16.992,9c0,2.7-3.114,7.357-4.992,9.822C10.122,16.363,7.008,11.713,7.008,9A5,5,0,0,1,12,4.01ZM12,6.5A2.5,2.5,0,1,0,14.5,9,2.5,2.5,0,0,0,12,6.5Z" transform="translate(0.992 -1.01)"/>\n      </svg>';
+        const poiOverlay = new (0, _ol.Overlay)({
+            positioning: "center-center",
+            offset: [
+                0,
+                -16
+            ],
+            position: null,
+            element: elem
+        });
+        const onAddListener = ()=>{
+            document.querySelector("#poiForm").style.display = "block";
+            const save = ()=>{
+                trackManager.finishPOIDrawing({
+                    name: document.querySelector("#poiNameInput").value
+                });
+                document.querySelector("#poiSave").removeEventListener("click", save);
+                document.querySelector("#poiForm").style.display = "none";
+            };
+            const cancel = ()=>{
+                trackManager.cancelPOIDrawing();
+                document.querySelector("#poiCancel").removeEventListener("click", cancel);
+                document.querySelector("#poiForm").style.display = "none";
+            };
+            document.querySelector("#poiSave").addEventListener("click", save);
+            document.querySelector("#poiCancel").addEventListener("click", cancel);
+        };
+        trackManager.addPOI(poiOverlay, onAddListener);
     });
     d3Profile.setTrackHoverStyle(new (0, _style1.Style)({
         image: new (0, _style1.Circle)({
@@ -674,7 +706,7 @@ function main() {
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper":"g55Xa","../../src/profiler/index":"d5CmD","../../src/Profile.ts":"i4hMD","./style":"bV6WG","ol/style":"hEQxF","./osm":"2SIll","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"i4hMD":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper.ts":"fak2b","../../src/profiler/index":"d5CmD","../../src/Profile.ts":"i4hMD","./style":"bV6WG","ol/style":"hEQxF","./osm":"2SIll","ol":"3a1E4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"i4hMD":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _featureJs = require("ol/Feature.js");
@@ -1322,18 +1354,7 @@ var _window = require("./window");
 var _windowDefault = parcelHelpers.interopDefault(_window);
 var _on = require("./selection/on");
 
-},{"./create":"e1dzW","./creator":"a6062","./local":"hcwa6","./matcher":"hovSo","./mouse":"chEM9","./namespace":"a23xG","./namespaces":"dDfgS","./point":"4SPKm","./select":"4pqgd","./selectAll":"eAYBy","./selection/index":"fK3Dl","./selector":"7VF9r","./selectorAll":"2SKTE","./selection/style":"GUHZ1","./touch":"fA5Ht","./touches":"acUc0","./window":"6di7h","./selection/on":"ktlxw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"e1dzW":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name) {
-        return (0, _selectDefault.default)((0, _creatorDefault.default)(name).call(document.documentElement));
-    });
-var _creator = require("./creator");
-var _creatorDefault = parcelHelpers.interopDefault(_creator);
-var _select = require("./select");
-var _selectDefault = parcelHelpers.interopDefault(_select);
-
-},{"./creator":"a6062","./select":"4pqgd","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a6062":[function(require,module,exports) {
+},{"./create":false,"./creator":false,"./local":false,"./matcher":"hovSo","./mouse":"chEM9","./namespace":"a23xG","./namespaces":false,"./point":false,"./select":"4pqgd","./selectAll":"eAYBy","./selection/index":"fK3Dl","./selector":"7VF9r","./selectorAll":"2SKTE","./selection/style":"GUHZ1","./touch":false,"./touches":false,"./window":false,"./selection/on":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a6062":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(name) {
@@ -1381,6 +1402,162 @@ exports.default = {
     xml: "http://www.w3.org/XML/1998/namespace",
     xmlns: "http://www.w3.org/2000/xmlns/"
 };
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hovSo":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(selector) {
+        return function() {
+            return this.matches(selector);
+        };
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"chEM9":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(node) {
+        var event = (0, _sourceEventDefault.default)();
+        if (event.changedTouches) event = event.changedTouches[0];
+        return (0, _pointDefault.default)(node, event);
+    });
+var _sourceEvent = require("./sourceEvent");
+var _sourceEventDefault = parcelHelpers.interopDefault(_sourceEvent);
+var _point = require("./point");
+var _pointDefault = parcelHelpers.interopDefault(_point);
+
+},{"./sourceEvent":"cDi5d","./point":"4SPKm","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cDi5d":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        var current = (0, _on.event), source;
+        while(source = current.sourceEvent)current = source;
+        return current;
+    });
+var _on = require("./selection/on");
+
+},{"./selection/on":"ktlxw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ktlxw":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "event", ()=>event);
+parcelHelpers.export(exports, "default", ()=>function(typename, value, capture) {
+        var typenames = parseTypenames(typename + ""), i, n = typenames.length, t;
+        if (arguments.length < 2) {
+            var on = this.node().__on;
+            if (on) for(var j = 0, m = on.length, o; j < m; ++j)for(i = 0, o = on[j]; i < n; ++i){
+                if ((t = typenames[i]).type === o.type && t.name === o.name) return o.value;
+            }
+            return;
+        }
+        on = value ? onAdd : onRemove;
+        if (capture == null) capture = false;
+        for(i = 0; i < n; ++i)this.each(on(typenames[i], value, capture));
+        return this;
+    });
+parcelHelpers.export(exports, "customEvent", ()=>customEvent);
+var filterEvents = {};
+var event = null;
+if (typeof document !== "undefined") {
+    var element = document.documentElement;
+    if (!("onmouseenter" in element)) filterEvents = {
+        mouseenter: "mouseover",
+        mouseleave: "mouseout"
+    };
+}
+function filterContextListener(listener, index, group) {
+    listener = contextListener(listener, index, group);
+    return function(event) {
+        var related = event.relatedTarget;
+        if (!related || related !== this && !(related.compareDocumentPosition(this) & 8)) listener.call(this, event);
+    };
+}
+function contextListener(listener, index, group) {
+    return function(event1) {
+        var event0 = event; // Events can be reentrant (e.g., focus).
+        event = event1;
+        try {
+            listener.call(this, this.__data__, index, group);
+        } finally{
+            event = event0;
+        }
+    };
+}
+function parseTypenames(typenames) {
+    return typenames.trim().split(/^|\s+/).map(function(t) {
+        var name = "", i = t.indexOf(".");
+        if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+        return {
+            type: t,
+            name: name
+        };
+    });
+}
+function onRemove(typename) {
+    return function() {
+        var on = this.__on;
+        if (!on) return;
+        for(var j = 0, i = -1, m = on.length, o; j < m; ++j)if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) this.removeEventListener(o.type, o.listener, o.capture);
+        else on[++i] = o;
+        if (++i) on.length = i;
+        else delete this.__on;
+    };
+}
+function onAdd(typename, value, capture) {
+    var wrap = filterEvents.hasOwnProperty(typename.type) ? filterContextListener : contextListener;
+    return function(d, i, group) {
+        var on = this.__on, o, listener = wrap(value, i, group);
+        if (on) {
+            for(var j = 0, m = on.length; j < m; ++j)if ((o = on[j]).type === typename.type && o.name === typename.name) {
+                this.removeEventListener(o.type, o.listener, o.capture);
+                this.addEventListener(o.type, o.listener = listener, o.capture = capture);
+                o.value = value;
+                return;
+            }
+        }
+        this.addEventListener(typename.type, listener, capture);
+        o = {
+            type: typename.type,
+            name: typename.name,
+            value: value,
+            listener: listener,
+            capture: capture
+        };
+        if (!on) this.__on = [
+            o
+        ];
+        else on.push(o);
+    };
+}
+function customEvent(event1, listener, that, args) {
+    var event0 = event;
+    event1.sourceEvent = event;
+    event = event1;
+    try {
+        return listener.apply(that, args);
+    } finally{
+        event = event0;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4SPKm":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(node, event) {
+        var svg = node.ownerSVGElement || node;
+        if (svg.createSVGPoint) {
+            var point = svg.createSVGPoint();
+            point.x = event.clientX, point.y = event.clientY;
+            point = point.matrixTransform(node.getScreenCTM().inverse());
+            return [
+                point.x,
+                point.y
+            ];
+        }
+        var rect = node.getBoundingClientRect();
+        return [
+            event.clientX - rect.left - node.clientLeft,
+            event.clientY - rect.top - node.clientTop
+        ];
+    });
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4pqgd":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -1587,16 +1764,7 @@ var _index = require("./index");
 var _matcher = require("../matcher");
 var _matcherDefault = parcelHelpers.interopDefault(_matcher);
 
-},{"./index":"fK3Dl","../matcher":"hovSo","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hovSo":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selector) {
-        return function() {
-            return this.matches(selector);
-        };
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jIP7J":[function(require,module,exports) {
+},{"./index":"fK3Dl","../matcher":"hovSo","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jIP7J":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(value, key) {
@@ -2142,109 +2310,6 @@ parcelHelpers.export(exports, "default", ()=>function(value) {
         return arguments.length ? this.property("__data__", value) : this.node().__data__;
     });
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ktlxw":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "event", ()=>event);
-parcelHelpers.export(exports, "default", ()=>function(typename, value, capture) {
-        var typenames = parseTypenames(typename + ""), i, n = typenames.length, t;
-        if (arguments.length < 2) {
-            var on = this.node().__on;
-            if (on) for(var j = 0, m = on.length, o; j < m; ++j)for(i = 0, o = on[j]; i < n; ++i){
-                if ((t = typenames[i]).type === o.type && t.name === o.name) return o.value;
-            }
-            return;
-        }
-        on = value ? onAdd : onRemove;
-        if (capture == null) capture = false;
-        for(i = 0; i < n; ++i)this.each(on(typenames[i], value, capture));
-        return this;
-    });
-parcelHelpers.export(exports, "customEvent", ()=>customEvent);
-var filterEvents = {};
-var event = null;
-if (typeof document !== "undefined") {
-    var element = document.documentElement;
-    if (!("onmouseenter" in element)) filterEvents = {
-        mouseenter: "mouseover",
-        mouseleave: "mouseout"
-    };
-}
-function filterContextListener(listener, index, group) {
-    listener = contextListener(listener, index, group);
-    return function(event) {
-        var related = event.relatedTarget;
-        if (!related || related !== this && !(related.compareDocumentPosition(this) & 8)) listener.call(this, event);
-    };
-}
-function contextListener(listener, index, group) {
-    return function(event1) {
-        var event0 = event; // Events can be reentrant (e.g., focus).
-        event = event1;
-        try {
-            listener.call(this, this.__data__, index, group);
-        } finally{
-            event = event0;
-        }
-    };
-}
-function parseTypenames(typenames) {
-    return typenames.trim().split(/^|\s+/).map(function(t) {
-        var name = "", i = t.indexOf(".");
-        if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-        return {
-            type: t,
-            name: name
-        };
-    });
-}
-function onRemove(typename) {
-    return function() {
-        var on = this.__on;
-        if (!on) return;
-        for(var j = 0, i = -1, m = on.length, o; j < m; ++j)if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) this.removeEventListener(o.type, o.listener, o.capture);
-        else on[++i] = o;
-        if (++i) on.length = i;
-        else delete this.__on;
-    };
-}
-function onAdd(typename, value, capture) {
-    var wrap = filterEvents.hasOwnProperty(typename.type) ? filterContextListener : contextListener;
-    return function(d, i, group) {
-        var on = this.__on, o, listener = wrap(value, i, group);
-        if (on) {
-            for(var j = 0, m = on.length; j < m; ++j)if ((o = on[j]).type === typename.type && o.name === typename.name) {
-                this.removeEventListener(o.type, o.listener, o.capture);
-                this.addEventListener(o.type, o.listener = listener, o.capture = capture);
-                o.value = value;
-                return;
-            }
-        }
-        this.addEventListener(typename.type, listener, capture);
-        o = {
-            type: typename.type,
-            name: typename.name,
-            value: value,
-            listener: listener,
-            capture: capture
-        };
-        if (!on) this.__on = [
-            o
-        ];
-        else on.push(o);
-    };
-}
-function customEvent(event1, listener, that, args) {
-    var event0 = event;
-    event1.sourceEvent = event;
-    event = event1;
-    try {
-        return listener.apply(that, args);
-    } finally{
-        event = event0;
-    }
-}
-
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eZMTj":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
@@ -2274,80 +2339,7 @@ function dispatchFunction(type, params) {
     };
 }
 
-},{"../window":"6di7h","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hcwa6":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>local);
-var nextId = 0;
-function local() {
-    return new Local;
-}
-function Local() {
-    this._ = "@" + (++nextId).toString(36);
-}
-Local.prototype = local.prototype = {
-    constructor: Local,
-    get: function(node) {
-        var id = this._;
-        while(!(id in node))if (!(node = node.parentNode)) return;
-        return node[id];
-    },
-    set: function(node, value) {
-        return node[this._] = value;
-    },
-    remove: function(node) {
-        return this._ in node && delete node[this._];
-    },
-    toString: function() {
-        return this._;
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"chEM9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node) {
-        var event = (0, _sourceEventDefault.default)();
-        if (event.changedTouches) event = event.changedTouches[0];
-        return (0, _pointDefault.default)(node, event);
-    });
-var _sourceEvent = require("./sourceEvent");
-var _sourceEventDefault = parcelHelpers.interopDefault(_sourceEvent);
-var _point = require("./point");
-var _pointDefault = parcelHelpers.interopDefault(_point);
-
-},{"./sourceEvent":"cDi5d","./point":"4SPKm","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cDi5d":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var current = (0, _on.event), source;
-        while(source = current.sourceEvent)current = source;
-        return current;
-    });
-var _on = require("./selection/on");
-
-},{"./selection/on":"ktlxw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4SPKm":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node, event) {
-        var svg = node.ownerSVGElement || node;
-        if (svg.createSVGPoint) {
-            var point = svg.createSVGPoint();
-            point.x = event.clientX, point.y = event.clientY;
-            point = point.matrixTransform(node.getScreenCTM().inverse());
-            return [
-                point.x,
-                point.y
-            ];
-        }
-        var rect = node.getBoundingClientRect();
-        return [
-            event.clientX - rect.left - node.clientLeft,
-            event.clientY - rect.top - node.clientTop
-        ];
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eAYBy":[function(require,module,exports) {
+},{"../window":"6di7h","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eAYBy":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(selector) {
@@ -2361,35 +2353,7 @@ parcelHelpers.export(exports, "default", ()=>function(selector) {
     });
 var _index = require("./selection/index");
 
-},{"./selection/index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fA5Ht":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node, touches, identifier) {
-        if (arguments.length < 3) identifier = touches, touches = (0, _sourceEventDefault.default)().changedTouches;
-        for(var i = 0, n = touches ? touches.length : 0, touch; i < n; ++i){
-            if ((touch = touches[i]).identifier === identifier) return (0, _pointDefault.default)(node, touch);
-        }
-        return null;
-    });
-var _sourceEvent = require("./sourceEvent");
-var _sourceEventDefault = parcelHelpers.interopDefault(_sourceEvent);
-var _point = require("./point");
-var _pointDefault = parcelHelpers.interopDefault(_point);
-
-},{"./sourceEvent":"cDi5d","./point":"4SPKm","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"acUc0":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node, touches) {
-        if (touches == null) touches = (0, _sourceEventDefault.default)().touches;
-        for(var i = 0, n = touches ? touches.length : 0, points = new Array(n); i < n; ++i)points[i] = (0, _pointDefault.default)(node, touches[i]);
-        return points;
-    });
-var _sourceEvent = require("./sourceEvent");
-var _sourceEventDefault = parcelHelpers.interopDefault(_sourceEvent);
-var _point = require("./point");
-var _pointDefault = parcelHelpers.interopDefault(_point);
-
-},{"./sourceEvent":"cDi5d","./point":"4SPKm","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ecsW0":[function(require,module,exports) {
+},{"./selection/index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ecsW0":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(name) {
@@ -3012,7 +2976,7 @@ var _piecewiseJsDefault = parcelHelpers.interopDefault(_piecewiseJs);
 var _quantizeJs = require("./quantize.js");
 var _quantizeJsDefault = parcelHelpers.interopDefault(_quantizeJs);
 
-},{"./value.js":"2GpMq","./array.js":false,"./basis.js":false,"./basisClosed.js":false,"./date.js":false,"./discrete.js":false,"./hue.js":false,"./number.js":"fZAq5","./numberArray.js":false,"./object.js":false,"./round.js":"8lHW7","./string.js":"Qre8m","./transform/index.js":"jDBQO","./zoom.js":false,"./rgb.js":"gHrgo","./hsl.js":false,"./lab.js":false,"./hcl.js":false,"./cubehelix.js":false,"./piecewise.js":"1W7eI","./quantize.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2GpMq":[function(require,module,exports) {
+},{"./value.js":"2GpMq","./array.js":false,"./basis.js":false,"./basisClosed.js":false,"./date.js":false,"./discrete.js":false,"./hue.js":false,"./number.js":"fZAq5","./numberArray.js":false,"./object.js":false,"./round.js":"8lHW7","./string.js":"Qre8m","./transform/index.js":"jDBQO","./zoom.js":false,"./rgb.js":"gHrgo","./hsl.js":false,"./lab.js":false,"./hcl.js":false,"./cubehelix.js":false,"./piecewise.js":false,"./quantize.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2GpMq":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(a, b) {
@@ -3794,19 +3758,6 @@ var identity = {
     scaleY: 1
 };
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1W7eI":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>piecewise);
-function piecewise(interpolate, values) {
-    var i = 0, n = values.length - 1, v = values[0], I = new Array(n < 0 ? 0 : n);
-    while(i < n)I[i] = interpolate(v, v = values[++i]);
-    return function(t) {
-        var i = Math.max(0, Math.min(n - 1, Math.floor(t *= n)));
-        return I[i](t - i);
-    };
-}
-
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1Kbbg":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
@@ -4544,7 +4495,7 @@ var _unionJs = require("./union.js");
 var _unionJsDefault = parcelHelpers.interopDefault(_unionJs);
 var _internmap = require("internmap");
 
-},{"./bisect.js":"2jqf4","./ascending.js":"2iZSL","./bisector.js":"1BY0F","./count.js":"fdcqm","./cross.js":"7sblS","./cumsum.js":"2kpSh","./descending.js":"dpgkj","./deviation.js":"2qowT","./extent.js":"bpNTV","./fsum.js":"7NEFi","./group.js":"dY8VH","./groupSort.js":"7Ogmv","./bin.js":"18IDv","./threshold/freedmanDiaconis.js":"YzWbd","./threshold/scott.js":"84IpX","./threshold/sturges.js":"aAePr","./max.js":"6b1uv","./maxIndex.js":"1pqy7","./mean.js":"diWJS","./median.js":"3NuqZ","./merge.js":"hviMC","./min.js":"1KKa7","./minIndex.js":"g6uuQ","./nice.js":"hx3lC","./pairs.js":"krmK9","./permute.js":"72FE4","./quantile.js":"etiLw","./quickselect.js":"4sTUl","./range.js":"kH8Ba","./least.js":"69Q1F","./leastIndex.js":"9vype","./greatest.js":"4LoCm","./greatestIndex.js":"lg7Xr","./scan.js":"cKBNL","./shuffle.js":"iaAC9","./sum.js":"47K1s","./ticks.js":"iDfKX","./transpose.js":"jO6XX","./variance.js":"go0M5","./zip.js":"8wbOt","./every.js":"87TIV","./some.js":"1GQIB","./filter.js":"lrcfK","./map.js":"x1FBS","./reduce.js":"3Dobh","./reverse.js":"hee4j","./sort.js":"ApqXa","./difference.js":"l43vv","./disjoint.js":"jrbsK","./intersection.js":"cBy6r","./subset.js":"32tt1","./superset.js":"l8AhK","./union.js":"80KgN","internmap":"a6b0X","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2jqf4":[function(require,module,exports) {
+},{"./bisect.js":"2jqf4","./ascending.js":false,"./bisector.js":"1BY0F","./count.js":false,"./cross.js":false,"./cumsum.js":false,"./descending.js":false,"./deviation.js":false,"./extent.js":"bpNTV","./fsum.js":false,"./group.js":false,"./groupSort.js":false,"./bin.js":false,"./threshold/freedmanDiaconis.js":false,"./threshold/scott.js":false,"./threshold/sturges.js":false,"./max.js":false,"./maxIndex.js":false,"./mean.js":false,"./median.js":false,"./merge.js":false,"./min.js":false,"./minIndex.js":false,"./nice.js":false,"./pairs.js":false,"./permute.js":false,"./quantile.js":false,"./quickselect.js":false,"./range.js":false,"./least.js":false,"./leastIndex.js":false,"./greatest.js":false,"./greatestIndex.js":false,"./scan.js":false,"./shuffle.js":false,"./sum.js":false,"./ticks.js":"iDfKX","./transpose.js":false,"./variance.js":false,"./zip.js":false,"./every.js":false,"./some.js":false,"./filter.js":false,"./map.js":false,"./reduce.js":false,"./reverse.js":false,"./sort.js":false,"./difference.js":false,"./disjoint.js":false,"./intersection.js":false,"./subset.js":false,"./superset.js":false,"./union.js":false,"internmap":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2jqf4":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "bisectRight", ()=>bisectRight);
@@ -4633,108 +4584,6 @@ function* numbers(values, valueof) {
     }
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fdcqm":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>count);
-function count(values, valueof) {
-    let count = 0;
-    if (valueof === undefined) {
-        for (let value of values)if (value != null && (value = +value) >= value) ++count;
-    } else {
-        let index = -1;
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) ++count;
-    }
-    return count;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7sblS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>cross);
-function length(array) {
-    return array.length | 0;
-}
-function empty(length) {
-    return !(length > 0);
-}
-function arrayify(values) {
-    return typeof values !== "object" || "length" in values ? values : Array.from(values);
-}
-function reducer(reduce) {
-    return (values)=>reduce(...values);
-}
-function cross(...values) {
-    const reduce = typeof values[values.length - 1] === "function" && reducer(values.pop());
-    values = values.map(arrayify);
-    const lengths = values.map(length);
-    const j = values.length - 1;
-    const index = new Array(j + 1).fill(0);
-    const product = [];
-    if (j < 0 || lengths.some(empty)) return product;
-    while(true){
-        product.push(index.map((j, i)=>values[i][j]));
-        let i = j;
-        while(++index[i] === lengths[i]){
-            if (i === 0) return reduce ? product.map(reduce) : product;
-            index[i--] = 0;
-        }
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2kpSh":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>cumsum);
-function cumsum(values, valueof) {
-    var sum = 0, index = 0;
-    return Float64Array.from(values, valueof === undefined ? (v)=>sum += +v || 0 : (v)=>sum += +valueof(v, index++, values) || 0);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dpgkj":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(a, b) {
-        return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2qowT":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>deviation);
-var _varianceJs = require("./variance.js");
-var _varianceJsDefault = parcelHelpers.interopDefault(_varianceJs);
-function deviation(values, valueof) {
-    const v = (0, _varianceJsDefault.default)(values, valueof);
-    return v ? Math.sqrt(v) : v;
-}
-
-},{"./variance.js":"go0M5","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"go0M5":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>variance);
-function variance(values, valueof) {
-    let count = 0;
-    let delta;
-    let mean = 0;
-    let sum = 0;
-    if (valueof === undefined) {
-        for (let value of values)if (value != null && (value = +value) >= value) {
-            delta = value - mean;
-            mean += delta / ++count;
-            sum += delta * (value - mean);
-        }
-    } else {
-        let index = -1;
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) {
-            delta = value - mean;
-            mean += delta / ++count;
-            sum += delta * (value - mean);
-        }
-    }
-    if (count > 1) return sum / (count - 1);
-}
-
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bpNTV":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
@@ -4767,379 +4616,7 @@ parcelHelpers.export(exports, "default", ()=>function(values, valueof) {
         ];
     });
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7NEFi":[function(require,module,exports) {
-// https://github.com/python/cpython/blob/a74eea238f5baba15797e2e8b570d153bc8690a7/Modules/mathmodule.c#L1423
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "Adder", ()=>Adder);
-parcelHelpers.export(exports, "fsum", ()=>fsum);
-parcelHelpers.export(exports, "fcumsum", ()=>fcumsum);
-class Adder {
-    constructor(){
-        this._partials = new Float64Array(32);
-        this._n = 0;
-    }
-    add(x) {
-        const p = this._partials;
-        let i = 0;
-        for(let j = 0; j < this._n && j < 32; j++){
-            const y = p[j], hi = x + y, lo = Math.abs(x) < Math.abs(y) ? x - (hi - y) : y - (hi - x);
-            if (lo) p[i++] = lo;
-            x = hi;
-        }
-        p[i] = x;
-        this._n = i + 1;
-        return this;
-    }
-    valueOf() {
-        const p = this._partials;
-        let n = this._n, x, y, lo, hi = 0;
-        if (n > 0) {
-            hi = p[--n];
-            while(n > 0){
-                x = hi;
-                y = p[--n];
-                hi = x + y;
-                lo = y - (hi - x);
-                if (lo) break;
-            }
-            if (n > 0 && (lo < 0 && p[n - 1] < 0 || lo > 0 && p[n - 1] > 0)) {
-                y = lo * 2;
-                x = hi + y;
-                if (y == x - hi) hi = x;
-            }
-        }
-        return hi;
-    }
-}
-function fsum(values, valueof) {
-    const adder = new Adder();
-    if (valueof === undefined) {
-        for (let value of values)if (value = +value) adder.add(value);
-    } else {
-        let index = -1;
-        for (let value of values)if (value = +valueof(value, ++index, values)) adder.add(value);
-    }
-    return +adder;
-}
-function fcumsum(values, valueof) {
-    const adder = new Adder();
-    let index = -1;
-    return Float64Array.from(values, valueof === undefined ? (v)=>adder.add(+v || 0) : (v)=>adder.add(+valueof(v, ++index, values) || 0));
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dY8VH":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>group);
-parcelHelpers.export(exports, "groups", ()=>groups);
-parcelHelpers.export(exports, "rollup", ()=>rollup);
-parcelHelpers.export(exports, "rollups", ()=>rollups);
-parcelHelpers.export(exports, "index", ()=>index);
-parcelHelpers.export(exports, "indexes", ()=>indexes);
-var _internmap = require("internmap");
-var _identityJs = require("./identity.js");
-var _identityJsDefault = parcelHelpers.interopDefault(_identityJs);
-function group(values, ...keys) {
-    return nest(values, (0, _identityJsDefault.default), (0, _identityJsDefault.default), keys);
-}
-function groups(values, ...keys) {
-    return nest(values, Array.from, (0, _identityJsDefault.default), keys);
-}
-function rollup(values, reduce, ...keys) {
-    return nest(values, (0, _identityJsDefault.default), reduce, keys);
-}
-function rollups(values, reduce, ...keys) {
-    return nest(values, Array.from, reduce, keys);
-}
-function index(values, ...keys) {
-    return nest(values, (0, _identityJsDefault.default), unique, keys);
-}
-function indexes(values, ...keys) {
-    return nest(values, Array.from, unique, keys);
-}
-function unique(values) {
-    if (values.length !== 1) throw new Error("duplicate key");
-    return values[0];
-}
-function nest(values, map, reduce, keys) {
-    return function regroup(values, i) {
-        if (i >= keys.length) return reduce(values);
-        const groups = new (0, _internmap.InternMap)();
-        const keyof = keys[i++];
-        let index = -1;
-        for (const value of values){
-            const key = keyof(value, ++index, values);
-            const group = groups.get(key);
-            if (group) group.push(value);
-            else groups.set(key, [
-                value
-            ]);
-        }
-        for (const [key, values] of groups)groups.set(key, regroup(values, i));
-        return map(groups);
-    }(values, 0);
-}
-
-},{"internmap":"a6b0X","./identity.js":"gZYoG","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a6b0X":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "InternMap", ()=>InternMap);
-parcelHelpers.export(exports, "InternSet", ()=>InternSet);
-class InternMap extends Map {
-    constructor(entries, key = keyof){
-        super();
-        Object.defineProperties(this, {
-            _intern: {
-                value: new Map()
-            },
-            _key: {
-                value: key
-            }
-        });
-        if (entries != null) for (const [key, value] of entries)this.set(key, value);
-    }
-    get(key) {
-        return super.get(intern_get(this, key));
-    }
-    has(key) {
-        return super.has(intern_get(this, key));
-    }
-    set(key, value) {
-        return super.set(intern_set(this, key), value);
-    }
-    delete(key) {
-        return super.delete(intern_delete(this, key));
-    }
-}
-class InternSet extends Set {
-    constructor(values, key = keyof){
-        super();
-        Object.defineProperties(this, {
-            _intern: {
-                value: new Map()
-            },
-            _key: {
-                value: key
-            }
-        });
-        if (values != null) for (const value of values)this.add(value);
-    }
-    has(value) {
-        return super.has(intern_get(this, value));
-    }
-    add(value) {
-        return super.add(intern_set(this, value));
-    }
-    delete(value) {
-        return super.delete(intern_delete(this, value));
-    }
-}
-function intern_get({ _intern, _key }, value) {
-    const key = _key(value);
-    return _intern.has(key) ? _intern.get(key) : value;
-}
-function intern_set({ _intern, _key }, value) {
-    const key = _key(value);
-    if (_intern.has(key)) return _intern.get(key);
-    _intern.set(key, value);
-    return value;
-}
-function intern_delete({ _intern, _key }, value) {
-    const key = _key(value);
-    if (_intern.has(key)) {
-        value = _intern.get(value);
-        _intern.delete(key);
-    }
-    return value;
-}
-function keyof(value) {
-    return value !== null && typeof value === "object" ? value.valueOf() : value;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gZYoG":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(x) {
-        return x;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7Ogmv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>groupSort);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-var _groupJs = require("./group.js");
-var _groupJsDefault = parcelHelpers.interopDefault(_groupJs);
-var _sortJs = require("./sort.js");
-var _sortJsDefault = parcelHelpers.interopDefault(_sortJs);
-function groupSort(values, reduce, key) {
-    return (reduce.length === 1 ? (0, _sortJsDefault.default)((0, _groupJs.rollup)(values, reduce, key), ([ak, av], [bk, bv])=>(0, _ascendingJsDefault.default)(av, bv) || (0, _ascendingJsDefault.default)(ak, bk)) : (0, _sortJsDefault.default)((0, _groupJsDefault.default)(values, key), ([ak, av], [bk, bv])=>reduce(av, bv) || (0, _ascendingJsDefault.default)(ak, bk))).map(([key])=>key);
-}
-
-},{"./ascending.js":"2iZSL","./group.js":"dY8VH","./sort.js":"ApqXa","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ApqXa":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>sort);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-var _permuteJs = require("./permute.js");
-var _permuteJsDefault = parcelHelpers.interopDefault(_permuteJs);
-function sort(values, ...F) {
-    if (typeof values[Symbol.iterator] !== "function") throw new TypeError("values is not iterable");
-    values = Array.from(values);
-    let [f = (0, _ascendingJsDefault.default)] = F;
-    if (f.length === 1 || F.length > 1) {
-        const index = Uint32Array.from(values, (d, i)=>i);
-        if (F.length > 1) {
-            F = F.map((f)=>values.map(f));
-            index.sort((i, j)=>{
-                for (const f of F){
-                    const c = (0, _ascendingJsDefault.default)(f[i], f[j]);
-                    if (c) return c;
-                }
-            });
-        } else {
-            f = values.map(f);
-            index.sort((i, j)=>(0, _ascendingJsDefault.default)(f[i], f[j]));
-        }
-        return (0, _permuteJsDefault.default)(values, index);
-    }
-    return values.sort(f);
-}
-
-},{"./ascending.js":"2iZSL","./permute.js":"72FE4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"72FE4":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(source, keys) {
-        return Array.from(keys, (key)=>source[key]);
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"18IDv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var value = (0, _identityJsDefault.default), domain = (0, _extentJsDefault.default), threshold = (0, _sturgesJsDefault.default);
-        function histogram(data) {
-            if (!Array.isArray(data)) data = Array.from(data);
-            var i, n = data.length, x, values = new Array(n);
-            for(i = 0; i < n; ++i)values[i] = value(data[i], i, data);
-            var xz = domain(values), x0 = xz[0], x1 = xz[1], tz = threshold(values, x0, x1);
-            // Convert number of thresholds into uniform thresholds, and nice the
-            // default domain accordingly.
-            if (!Array.isArray(tz)) {
-                const max = x1, tn = +tz;
-                if (domain === (0, _extentJsDefault.default)) [x0, x1] = (0, _niceJsDefault.default)(x0, x1, tn);
-                tz = (0, _ticksJsDefault.default)(x0, x1, tn);
-                // If the last threshold is coincident with the domain’s upper bound, the
-                // last bin will be zero-width. If the default domain is used, and this
-                // last threshold is coincident with the maximum input value, we can
-                // extend the niced upper bound by one tick to ensure uniform bin widths;
-                // otherwise, we simply remove the last threshold. Note that we don’t
-                // coerce values or the domain to numbers, and thus must be careful to
-                // compare order (>=) rather than strict equality (===)!
-                if (tz[tz.length - 1] >= x1) {
-                    if (max >= x1 && domain === (0, _extentJsDefault.default)) {
-                        const step = (0, _ticksJs.tickIncrement)(x0, x1, tn);
-                        if (isFinite(step)) {
-                            if (step > 0) x1 = (Math.floor(x1 / step) + 1) * step;
-                            else if (step < 0) x1 = (Math.ceil(x1 * -step) + 1) / -step;
-                        }
-                    } else tz.pop();
-                }
-            }
-            // Remove any thresholds outside the domain.
-            var m = tz.length;
-            while(tz[0] <= x0)tz.shift(), --m;
-            while(tz[m - 1] > x1)tz.pop(), --m;
-            var bins = new Array(m + 1), bin;
-            // Initialize bins.
-            for(i = 0; i <= m; ++i){
-                bin = bins[i] = [];
-                bin.x0 = i > 0 ? tz[i - 1] : x0;
-                bin.x1 = i < m ? tz[i] : x1;
-            }
-            // Assign data to bins by value, ignoring any outside the domain.
-            for(i = 0; i < n; ++i){
-                x = values[i];
-                if (x0 <= x && x <= x1) bins[(0, _bisectJsDefault.default)(tz, x, 0, m)].push(data[i]);
-            }
-            return bins;
-        }
-        histogram.value = function(_) {
-            return arguments.length ? (value = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(_), histogram) : value;
-        };
-        histogram.domain = function(_) {
-            return arguments.length ? (domain = typeof _ === "function" ? _ : (0, _constantJsDefault.default)([
-                _[0],
-                _[1]
-            ]), histogram) : domain;
-        };
-        histogram.thresholds = function(_) {
-            return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? (0, _constantJsDefault.default)((0, _arrayJs.slice).call(_)) : (0, _constantJsDefault.default)(_), histogram) : threshold;
-        };
-        return histogram;
-    });
-var _arrayJs = require("./array.js");
-var _bisectJs = require("./bisect.js");
-var _bisectJsDefault = parcelHelpers.interopDefault(_bisectJs);
-var _constantJs = require("./constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _extentJs = require("./extent.js");
-var _extentJsDefault = parcelHelpers.interopDefault(_extentJs);
-var _identityJs = require("./identity.js");
-var _identityJsDefault = parcelHelpers.interopDefault(_identityJs);
-var _niceJs = require("./nice.js");
-var _niceJsDefault = parcelHelpers.interopDefault(_niceJs);
-var _ticksJs = require("./ticks.js");
-var _ticksJsDefault = parcelHelpers.interopDefault(_ticksJs);
-var _sturgesJs = require("./threshold/sturges.js");
-var _sturgesJsDefault = parcelHelpers.interopDefault(_sturgesJs);
-
-},{"./array.js":"9A0pE","./bisect.js":"2jqf4","./constant.js":"1EOU8","./extent.js":"bpNTV","./identity.js":"gZYoG","./nice.js":"hx3lC","./ticks.js":"iDfKX","./threshold/sturges.js":"aAePr","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9A0pE":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "slice", ()=>slice);
-parcelHelpers.export(exports, "map", ()=>map);
-var array = Array.prototype;
-var slice = array.slice;
-var map = array.map;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1EOU8":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(x) {
-        return function() {
-            return x;
-        };
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hx3lC":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>nice);
-var _ticksJs = require("./ticks.js");
-function nice(start, stop, count) {
-    let prestep;
-    while(true){
-        const step = (0, _ticksJs.tickIncrement)(start, stop, count);
-        if (step === prestep || step === 0 || !isFinite(step)) return [
-            start,
-            stop
-        ];
-        else if (step > 0) {
-            start = Math.floor(start / step) * step;
-            stop = Math.ceil(stop / step) * step;
-        } else if (step < 0) {
-            start = Math.ceil(start * step) / step;
-            stop = Math.floor(stop * step) / step;
-        }
-        prestep = step;
-    }
-}
-
-},{"./ticks.js":"iDfKX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iDfKX":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iDfKX":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(start, stop, count) {
@@ -5180,576 +4657,6 @@ function tickStep(start, stop, count) {
     else if (error >= e5) step1 *= 5;
     else if (error >= e2) step1 *= 2;
     return stop < start ? -step1 : step1;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aAePr":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(values) {
-        return Math.ceil(Math.log((0, _countJsDefault.default)(values)) / Math.LN2) + 1;
-    });
-var _countJs = require("../count.js");
-var _countJsDefault = parcelHelpers.interopDefault(_countJs);
-
-},{"../count.js":"fdcqm","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"YzWbd":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(values, min, max) {
-        return Math.ceil((max - min) / (2 * ((0, _quantileJsDefault.default)(values, 0.75) - (0, _quantileJsDefault.default)(values, 0.25)) * Math.pow((0, _countJsDefault.default)(values), -1 / 3)));
-    });
-var _countJs = require("../count.js");
-var _countJsDefault = parcelHelpers.interopDefault(_countJs);
-var _quantileJs = require("../quantile.js");
-var _quantileJsDefault = parcelHelpers.interopDefault(_quantileJs);
-
-},{"../count.js":"fdcqm","../quantile.js":"etiLw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"etiLw":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>quantile);
-parcelHelpers.export(exports, "quantileSorted", ()=>quantileSorted);
-var _maxJs = require("./max.js");
-var _maxJsDefault = parcelHelpers.interopDefault(_maxJs);
-var _minJs = require("./min.js");
-var _minJsDefault = parcelHelpers.interopDefault(_minJs);
-var _quickselectJs = require("./quickselect.js");
-var _quickselectJsDefault = parcelHelpers.interopDefault(_quickselectJs);
-var _numberJs = require("./number.js");
-var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
-function quantile(values, p, valueof) {
-    values = Float64Array.from((0, _numberJs.numbers)(values, valueof));
-    if (!(n = values.length)) return;
-    if ((p = +p) <= 0 || n < 2) return (0, _minJsDefault.default)(values);
-    if (p >= 1) return (0, _maxJsDefault.default)(values);
-    var n, i = (n - 1) * p, i0 = Math.floor(i), value0 = (0, _maxJsDefault.default)((0, _quickselectJsDefault.default)(values, i0).subarray(0, i0 + 1)), value1 = (0, _minJsDefault.default)(values.subarray(i0 + 1));
-    return value0 + (value1 - value0) * (i - i0);
-}
-function quantileSorted(values, p, valueof = (0, _numberJsDefault.default)) {
-    if (!(n = values.length)) return;
-    if ((p = +p) <= 0 || n < 2) return +valueof(values[0], 0, values);
-    if (p >= 1) return +valueof(values[n - 1], n - 1, values);
-    var n, i = (n - 1) * p, i0 = Math.floor(i), value0 = +valueof(values[i0], i0, values), value1 = +valueof(values[i0 + 1], i0 + 1, values);
-    return value0 + (value1 - value0) * (i - i0);
-}
-
-},{"./max.js":"6b1uv","./min.js":"1KKa7","./quickselect.js":"4sTUl","./number.js":"imr9T","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6b1uv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>max);
-function max(values, valueof) {
-    let max;
-    if (valueof === undefined) {
-        for (const value of values)if (value != null && (max < value || max === undefined && value >= value)) max = value;
-    } else {
-        let index = -1;
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (max < value || max === undefined && value >= value)) max = value;
-    }
-    return max;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1KKa7":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>min);
-function min(values, valueof) {
-    let min;
-    if (valueof === undefined) {
-        for (const value of values)if (value != null && (min > value || min === undefined && value >= value)) min = value;
-    } else {
-        let index = -1;
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (min > value || min === undefined && value >= value)) min = value;
-    }
-    return min;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4sTUl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>quickselect);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-function quickselect(array, k, left = 0, right = array.length - 1, compare = (0, _ascendingJsDefault.default)) {
-    while(right > left){
-        if (right - left > 600) {
-            const n = right - left + 1;
-            const m = k - left + 1;
-            const z = Math.log(n);
-            const s = 0.5 * Math.exp(2 * z / 3);
-            const sd = 0.5 * Math.sqrt(z * s * (n - s) / n) * (m - n / 2 < 0 ? -1 : 1);
-            const newLeft = Math.max(left, Math.floor(k - m * s / n + sd));
-            const newRight = Math.min(right, Math.floor(k + (n - m) * s / n + sd));
-            quickselect(array, k, newLeft, newRight, compare);
-        }
-        const t = array[k];
-        let i = left;
-        let j = right;
-        swap(array, left, k);
-        if (compare(array[right], t) > 0) swap(array, left, right);
-        while(i < j){
-            swap(array, i, j), ++i, --j;
-            while(compare(array[i], t) < 0)++i;
-            while(compare(array[j], t) > 0)--j;
-        }
-        if (compare(array[left], t) === 0) swap(array, left, j);
-        else ++j, swap(array, j, right);
-        if (j <= k) left = j + 1;
-        if (k <= j) right = j - 1;
-    }
-    return array;
-}
-function swap(array, i, j) {
-    const t = array[i];
-    array[i] = array[j];
-    array[j] = t;
-}
-
-},{"./ascending.js":"2iZSL","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"84IpX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(values, min, max) {
-        return Math.ceil((max - min) / (3.5 * (0, _deviationJsDefault.default)(values) * Math.pow((0, _countJsDefault.default)(values), -1 / 3)));
-    });
-var _countJs = require("../count.js");
-var _countJsDefault = parcelHelpers.interopDefault(_countJs);
-var _deviationJs = require("../deviation.js");
-var _deviationJsDefault = parcelHelpers.interopDefault(_deviationJs);
-
-},{"../count.js":"fdcqm","../deviation.js":"2qowT","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1pqy7":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>maxIndex);
-function maxIndex(values, valueof) {
-    let max;
-    let maxIndex = -1;
-    let index = -1;
-    if (valueof === undefined) for (const value of values){
-        ++index;
-        if (value != null && (max < value || max === undefined && value >= value)) max = value, maxIndex = index;
-    }
-    else {
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (max < value || max === undefined && value >= value)) max = value, maxIndex = index;
-    }
-    return maxIndex;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"diWJS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>mean);
-function mean(values, valueof) {
-    let count = 0;
-    let sum = 0;
-    if (valueof === undefined) {
-        for (let value of values)if (value != null && (value = +value) >= value) ++count, sum += value;
-    } else {
-        let index = -1;
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) ++count, sum += value;
-    }
-    if (count) return sum / count;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3NuqZ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(values, valueof) {
-        return (0, _quantileJsDefault.default)(values, 0.5, valueof);
-    });
-var _quantileJs = require("./quantile.js");
-var _quantileJsDefault = parcelHelpers.interopDefault(_quantileJs);
-
-},{"./quantile.js":"etiLw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hviMC":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>merge);
-function* flatten(arrays) {
-    for (const array of arrays)yield* array;
-}
-function merge(arrays) {
-    return Array.from(flatten(arrays));
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"g6uuQ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>minIndex);
-function minIndex(values, valueof) {
-    let min;
-    let minIndex = -1;
-    let index = -1;
-    if (valueof === undefined) for (const value of values){
-        ++index;
-        if (value != null && (min > value || min === undefined && value >= value)) min = value, minIndex = index;
-    }
-    else {
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (min > value || min === undefined && value >= value)) min = value, minIndex = index;
-    }
-    return minIndex;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"krmK9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>pairs);
-parcelHelpers.export(exports, "pair", ()=>pair);
-function pairs(values, pairof = pair) {
-    const pairs = [];
-    let previous;
-    let first = false;
-    for (const value of values){
-        if (first) pairs.push(pairof(previous, value));
-        previous = value;
-        first = true;
-    }
-    return pairs;
-}
-function pair(a, b) {
-    return [
-        a,
-        b
-    ];
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kH8Ba":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(start, stop, step) {
-        start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
-        var i = -1, n = Math.max(0, Math.ceil((stop - start) / step)) | 0, range = new Array(n);
-        while(++i < n)range[i] = start + i * step;
-        return range;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"69Q1F":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>least);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-function least(values, compare = (0, _ascendingJsDefault.default)) {
-    let min;
-    let defined = false;
-    if (compare.length === 1) {
-        let minValue;
-        for (const element of values){
-            const value = compare(element);
-            if (defined ? (0, _ascendingJsDefault.default)(value, minValue) < 0 : (0, _ascendingJsDefault.default)(value, value) === 0) {
-                min = element;
-                minValue = value;
-                defined = true;
-            }
-        }
-    } else {
-        for (const value of values)if (defined ? compare(value, min) < 0 : compare(value, value) === 0) {
-            min = value;
-            defined = true;
-        }
-    }
-    return min;
-}
-
-},{"./ascending.js":"2iZSL","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9vype":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>leastIndex);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-var _minIndexJs = require("./minIndex.js");
-var _minIndexJsDefault = parcelHelpers.interopDefault(_minIndexJs);
-function leastIndex(values, compare = (0, _ascendingJsDefault.default)) {
-    if (compare.length === 1) return (0, _minIndexJsDefault.default)(values, compare);
-    let minValue;
-    let min = -1;
-    let index = -1;
-    for (const value of values){
-        ++index;
-        if (min < 0 ? compare(value, value) === 0 : compare(value, minValue) < 0) {
-            minValue = value;
-            min = index;
-        }
-    }
-    return min;
-}
-
-},{"./ascending.js":"2iZSL","./minIndex.js":"g6uuQ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4LoCm":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>greatest);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-function greatest(values, compare = (0, _ascendingJsDefault.default)) {
-    let max;
-    let defined = false;
-    if (compare.length === 1) {
-        let maxValue;
-        for (const element of values){
-            const value = compare(element);
-            if (defined ? (0, _ascendingJsDefault.default)(value, maxValue) > 0 : (0, _ascendingJsDefault.default)(value, value) === 0) {
-                max = element;
-                maxValue = value;
-                defined = true;
-            }
-        }
-    } else {
-        for (const value of values)if (defined ? compare(value, max) > 0 : compare(value, value) === 0) {
-            max = value;
-            defined = true;
-        }
-    }
-    return max;
-}
-
-},{"./ascending.js":"2iZSL","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lg7Xr":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>greatestIndex);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-var _maxIndexJs = require("./maxIndex.js");
-var _maxIndexJsDefault = parcelHelpers.interopDefault(_maxIndexJs);
-function greatestIndex(values, compare = (0, _ascendingJsDefault.default)) {
-    if (compare.length === 1) return (0, _maxIndexJsDefault.default)(values, compare);
-    let maxValue;
-    let max = -1;
-    let index = -1;
-    for (const value of values){
-        ++index;
-        if (max < 0 ? compare(value, value) === 0 : compare(value, maxValue) > 0) {
-            maxValue = value;
-            max = index;
-        }
-    }
-    return max;
-}
-
-},{"./ascending.js":"2iZSL","./maxIndex.js":"1pqy7","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cKBNL":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>scan);
-var _leastIndexJs = require("./leastIndex.js");
-var _leastIndexJsDefault = parcelHelpers.interopDefault(_leastIndexJs);
-function scan(values, compare) {
-    const index = (0, _leastIndexJsDefault.default)(values, compare);
-    return index < 0 ? undefined : index;
-}
-
-},{"./leastIndex.js":"9vype","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iaAC9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "shuffler", ()=>shuffler);
-exports.default = shuffler(Math.random);
-function shuffler(random) {
-    return function shuffle(array, i0 = 0, i1 = array.length) {
-        let m = i1 - (i0 = +i0);
-        while(m){
-            const i = random() * m-- | 0, t = array[m + i0];
-            array[m + i0] = array[i + i0];
-            array[i + i0] = t;
-        }
-        return array;
-    };
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"47K1s":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>sum);
-function sum(values, valueof) {
-    let sum = 0;
-    if (valueof === undefined) {
-        for (let value of values)if (value = +value) sum += value;
-    } else {
-        let index = -1;
-        for (let value of values)if (value = +valueof(value, ++index, values)) sum += value;
-    }
-    return sum;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jO6XX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(matrix) {
-        if (!(n = matrix.length)) return [];
-        for(var i = -1, m = (0, _minJsDefault.default)(matrix, length), transpose = new Array(m); ++i < m;)for(var j = -1, n, row = transpose[i] = new Array(n); ++j < n;)row[j] = matrix[j][i];
-        return transpose;
-    });
-var _minJs = require("./min.js");
-var _minJsDefault = parcelHelpers.interopDefault(_minJs);
-function length(d) {
-    return d.length;
-}
-
-},{"./min.js":"1KKa7","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8wbOt":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return (0, _transposeJsDefault.default)(arguments);
-    });
-var _transposeJs = require("./transpose.js");
-var _transposeJsDefault = parcelHelpers.interopDefault(_transposeJs);
-
-},{"./transpose.js":"jO6XX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"87TIV":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>every);
-function every(values, test) {
-    if (typeof test !== "function") throw new TypeError("test is not a function");
-    let index = -1;
-    for (const value of values){
-        if (!test(value, ++index, values)) return false;
-    }
-    return true;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1GQIB":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>some);
-function some(values, test) {
-    if (typeof test !== "function") throw new TypeError("test is not a function");
-    let index = -1;
-    for (const value of values){
-        if (test(value, ++index, values)) return true;
-    }
-    return false;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lrcfK":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>filter);
-function filter(values, test) {
-    if (typeof test !== "function") throw new TypeError("test is not a function");
-    const array = [];
-    let index = -1;
-    for (const value of values)if (test(value, ++index, values)) array.push(value);
-    return array;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"x1FBS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>map);
-function map(values, mapper) {
-    if (typeof values[Symbol.iterator] !== "function") throw new TypeError("values is not iterable");
-    if (typeof mapper !== "function") throw new TypeError("mapper is not a function");
-    return Array.from(values, (value, index)=>mapper(value, index, values));
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3Dobh":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>reduce);
-function reduce(values, reducer, value) {
-    if (typeof reducer !== "function") throw new TypeError("reducer is not a function");
-    const iterator = values[Symbol.iterator]();
-    let done, next, index = -1;
-    if (arguments.length < 3) {
-        ({ done, value } = iterator.next());
-        if (done) return;
-        ++index;
-    }
-    while({ done, value: next } = iterator.next(), !done)value = reducer(value, next, ++index, values);
-    return value;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hee4j":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>reverse);
-function reverse(values) {
-    if (typeof values[Symbol.iterator] !== "function") throw new TypeError("values is not iterable");
-    return Array.from(values).reverse();
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l43vv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>difference);
-function difference(values, ...others) {
-    values = new Set(values);
-    for (const other of others)for (const value of other)values.delete(value);
-    return values;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jrbsK":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>disjoint);
-function disjoint(values, other) {
-    const iterator = other[Symbol.iterator](), set = new Set();
-    for (const v of values){
-        if (set.has(v)) return false;
-        let value, done;
-        while({ value, done } = iterator.next()){
-            if (done) break;
-            if (Object.is(v, value)) return false;
-            set.add(value);
-        }
-    }
-    return true;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cBy6r":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>intersection);
-var _setJs = require("./set.js");
-var _setJsDefault = parcelHelpers.interopDefault(_setJs);
-function intersection(values, ...others) {
-    values = new Set(values);
-    others = others.map((0, _setJsDefault.default));
-    out: for (const value of values){
-        for (const other of others)if (!other.has(value)) {
-            values.delete(value);
-            continue out;
-        }
-    }
-    return values;
-}
-
-},{"./set.js":"iZtsC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iZtsC":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>set);
-function set(values) {
-    return values instanceof Set ? values : new Set(values);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"32tt1":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>subset);
-var _supersetJs = require("./superset.js");
-var _supersetJsDefault = parcelHelpers.interopDefault(_supersetJs);
-function subset(values, other) {
-    return (0, _supersetJsDefault.default)(other, values);
-}
-
-},{"./superset.js":"l8AhK","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l8AhK":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>superset);
-function superset(values, other) {
-    const iterator = values[Symbol.iterator](), set = new Set();
-    for (const o of other){
-        if (set.has(o)) continue;
-        let value, done;
-        while({ value, done } = iterator.next()){
-            if (done) return false;
-            set.add(value);
-            if (Object.is(o, value)) break;
-        }
-    }
-    return true;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"80KgN":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>union);
-function union(...others) {
-    const set = new Set();
-    for (const other of others)for (const o of other)set.add(o);
-    return set;
 }
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2g6gM":[function(require,module,exports) {
@@ -5949,190 +4856,7 @@ var _divergingJsDefault = parcelHelpers.interopDefault(_divergingJs);
 var _tickFormatJs = require("./tickFormat.js");
 var _tickFormatJsDefault = parcelHelpers.interopDefault(_tickFormatJs);
 
-},{"./band.js":"4oI5T","./identity.js":"4MvzB","./linear.js":"lob4K","./log.js":"z4t8s","./symlog.js":"4KiG8","./ordinal.js":"hNjKg","./pow.js":"jVG8A","./radial.js":"8e44u","./quantile.js":"cZUY5","./quantize.js":"6tbld","./threshold.js":"f8NNx","./time.js":"7UVid","./utcTime.js":"6ufv7","./sequential.js":"aMNy9","./sequentialQuantile.js":"esKgz","./diverging.js":"3BN2V","./tickFormat.js":"ahQef","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4oI5T":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>band);
-parcelHelpers.export(exports, "point", ()=>point);
-var _d3Array = require("d3-array");
-var _initJs = require("./init.js");
-var _ordinalJs = require("./ordinal.js");
-var _ordinalJsDefault = parcelHelpers.interopDefault(_ordinalJs);
-function band() {
-    var scale = (0, _ordinalJsDefault.default)().unknown(undefined), domain = scale.domain, ordinalRange = scale.range, r0 = 0, r1 = 1, step, bandwidth, round = false, paddingInner = 0, paddingOuter = 0, align = 0.5;
-    delete scale.unknown;
-    function rescale() {
-        var n = domain().length, reverse = r1 < r0, start = reverse ? r1 : r0, stop = reverse ? r0 : r1;
-        step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
-        if (round) step = Math.floor(step);
-        start += (stop - start - step * (n - paddingInner)) * align;
-        bandwidth = step * (1 - paddingInner);
-        if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
-        var values = (0, _d3Array.range)(n).map(function(i) {
-            return start + step * i;
-        });
-        return ordinalRange(reverse ? values.reverse() : values);
-    }
-    scale.domain = function(_) {
-        return arguments.length ? (domain(_), rescale()) : domain();
-    };
-    scale.range = function(_) {
-        return arguments.length ? ([r0, r1] = _, r0 = +r0, r1 = +r1, rescale()) : [
-            r0,
-            r1
-        ];
-    };
-    scale.rangeRound = function(_) {
-        return [r0, r1] = _, r0 = +r0, r1 = +r1, round = true, rescale();
-    };
-    scale.bandwidth = function() {
-        return bandwidth;
-    };
-    scale.step = function() {
-        return step;
-    };
-    scale.round = function(_) {
-        return arguments.length ? (round = !!_, rescale()) : round;
-    };
-    scale.padding = function(_) {
-        return arguments.length ? (paddingInner = Math.min(1, paddingOuter = +_), rescale()) : paddingInner;
-    };
-    scale.paddingInner = function(_) {
-        return arguments.length ? (paddingInner = Math.min(1, _), rescale()) : paddingInner;
-    };
-    scale.paddingOuter = function(_) {
-        return arguments.length ? (paddingOuter = +_, rescale()) : paddingOuter;
-    };
-    scale.align = function(_) {
-        return arguments.length ? (align = Math.max(0, Math.min(1, _)), rescale()) : align;
-    };
-    scale.copy = function() {
-        return band(domain(), [
-            r0,
-            r1
-        ]).round(round).paddingInner(paddingInner).paddingOuter(paddingOuter).align(align);
-    };
-    return (0, _initJs.initRange).apply(rescale(), arguments);
-}
-function pointish(scale) {
-    var copy = scale.copy;
-    scale.padding = scale.paddingOuter;
-    delete scale.paddingInner;
-    delete scale.paddingOuter;
-    scale.copy = function() {
-        return pointish(copy());
-    };
-    return scale;
-}
-function point() {
-    return pointish(band.apply(null, arguments).paddingInner(1));
-}
-
-},{"d3-array":"1yX2W","./init.js":"kp8lc","./ordinal.js":"hNjKg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kp8lc":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "initRange", ()=>initRange);
-parcelHelpers.export(exports, "initInterpolator", ()=>initInterpolator);
-function initRange(domain, range) {
-    switch(arguments.length){
-        case 0:
-            break;
-        case 1:
-            this.range(domain);
-            break;
-        default:
-            this.range(range).domain(domain);
-            break;
-    }
-    return this;
-}
-function initInterpolator(domain, interpolator) {
-    switch(arguments.length){
-        case 0:
-            break;
-        case 1:
-            if (typeof domain === "function") this.interpolator(domain);
-            else this.range(domain);
-            break;
-        default:
-            this.domain(domain);
-            if (typeof interpolator === "function") this.interpolator(interpolator);
-            else this.range(interpolator);
-            break;
-    }
-    return this;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hNjKg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "implicit", ()=>implicit);
-parcelHelpers.export(exports, "default", ()=>ordinal);
-var _initJs = require("./init.js");
-const implicit = Symbol("implicit");
-function ordinal() {
-    var index = new Map(), domain = [], range = [], unknown = implicit;
-    function scale(d) {
-        var key = d + "", i = index.get(key);
-        if (!i) {
-            if (unknown !== implicit) return unknown;
-            index.set(key, i = domain.push(d));
-        }
-        return range[(i - 1) % range.length];
-    }
-    scale.domain = function(_) {
-        if (!arguments.length) return domain.slice();
-        domain = [], index = new Map();
-        for (const value of _){
-            const key = value + "";
-            if (index.has(key)) continue;
-            index.set(key, domain.push(value));
-        }
-        return scale;
-    };
-    scale.range = function(_) {
-        return arguments.length ? (range = Array.from(_), scale) : range.slice();
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    scale.copy = function() {
-        return ordinal(domain, range).unknown(unknown);
-    };
-    (0, _initJs.initRange).apply(scale, arguments);
-    return scale;
-}
-
-},{"./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4MvzB":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>identity);
-var _linearJs = require("./linear.js");
-var _numberJs = require("./number.js");
-var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
-function identity(domain) {
-    var unknown;
-    function scale(x) {
-        return x == null || isNaN(x = +x) ? unknown : x;
-    }
-    scale.invert = scale;
-    scale.domain = scale.range = function(_) {
-        return arguments.length ? (domain = Array.from(_, (0, _numberJsDefault.default)), scale) : domain.slice();
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    scale.copy = function() {
-        return identity(domain).unknown(unknown);
-    };
-    domain = arguments.length ? Array.from(domain, (0, _numberJsDefault.default)) : [
-        0,
-        1
-    ];
-    return (0, _linearJs.linearish)(scale);
-}
-
-},{"./linear.js":"lob4K","./number.js":"k9Lyx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lob4K":[function(require,module,exports) {
+},{"./band.js":false,"./identity.js":false,"./linear.js":"lob4K","./log.js":false,"./symlog.js":false,"./ordinal.js":false,"./pow.js":false,"./radial.js":false,"./quantile.js":false,"./quantize.js":false,"./threshold.js":false,"./time.js":false,"./utcTime.js":false,"./sequential.js":false,"./sequentialQuantile.js":false,"./diverging.js":false,"./tickFormat.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lob4K":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "linearish", ()=>linearish);
@@ -6314,6 +5038,41 @@ parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>number);
 function number(x) {
     return +x;
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kp8lc":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "initRange", ()=>initRange);
+parcelHelpers.export(exports, "initInterpolator", ()=>initInterpolator);
+function initRange(domain, range) {
+    switch(arguments.length){
+        case 0:
+            break;
+        case 1:
+            this.range(domain);
+            break;
+        default:
+            this.range(range).domain(domain);
+            break;
+    }
+    return this;
+}
+function initInterpolator(domain, interpolator) {
+    switch(arguments.length){
+        case 0:
+            break;
+        case 1:
+            if (typeof domain === "function") this.interpolator(domain);
+            else this.range(domain);
+            break;
+        default:
+            this.domain(domain);
+            if (typeof interpolator === "function") this.interpolator(interpolator);
+            else this.range(interpolator);
+            break;
+    }
+    return this;
 }
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ahQef":[function(require,module,exports) {
@@ -6749,2394 +5508,7 @@ parcelHelpers.export(exports, "default", ()=>function(step, max) {
 var _exponentJs = require("./exponent.js");
 var _exponentJsDefault = parcelHelpers.interopDefault(_exponentJs);
 
-},{"./exponent.js":"7L05r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"z4t8s":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "loggish", ()=>loggish);
-parcelHelpers.export(exports, "default", ()=>log);
-var _d3Array = require("d3-array");
-var _d3Format = require("d3-format");
-var _niceJs = require("./nice.js");
-var _niceJsDefault = parcelHelpers.interopDefault(_niceJs);
-var _continuousJs = require("./continuous.js");
-var _initJs = require("./init.js");
-function transformLog(x) {
-    return Math.log(x);
-}
-function transformExp(x) {
-    return Math.exp(x);
-}
-function transformLogn(x) {
-    return -Math.log(-x);
-}
-function transformExpn(x) {
-    return -Math.exp(-x);
-}
-function pow10(x) {
-    return isFinite(x) ? +("1e" + x) : x < 0 ? 0 : x;
-}
-function powp(base) {
-    return base === 10 ? pow10 : base === Math.E ? Math.exp : function(x) {
-        return Math.pow(base, x);
-    };
-}
-function logp(base) {
-    return base === Math.E ? Math.log : base === 10 && Math.log10 || base === 2 && Math.log2 || (base = Math.log(base), function(x) {
-        return Math.log(x) / base;
-    });
-}
-function reflect(f) {
-    return function(x) {
-        return -f(-x);
-    };
-}
-function loggish(transform) {
-    var scale = transform(transformLog, transformExp), domain = scale.domain, base = 10, logs, pows;
-    function rescale() {
-        logs = logp(base), pows = powp(base);
-        if (domain()[0] < 0) {
-            logs = reflect(logs), pows = reflect(pows);
-            transform(transformLogn, transformExpn);
-        } else transform(transformLog, transformExp);
-        return scale;
-    }
-    scale.base = function(_) {
-        return arguments.length ? (base = +_, rescale()) : base;
-    };
-    scale.domain = function(_) {
-        return arguments.length ? (domain(_), rescale()) : domain();
-    };
-    scale.ticks = function(count) {
-        var d = domain(), u = d[0], v = d[d.length - 1], r;
-        if (r = v < u) i = u, u = v, v = i;
-        var i = logs(u), j = logs(v), p, k, t, n = count == null ? 10 : +count, z = [];
-        if (!(base % 1) && j - i < n) {
-            i = Math.floor(i), j = Math.ceil(j);
-            if (u > 0) for(; i <= j; ++i)for(k = 1, p = pows(i); k < base; ++k){
-                t = p * k;
-                if (t < u) continue;
-                if (t > v) break;
-                z.push(t);
-            }
-            else for(; i <= j; ++i)for(k = base - 1, p = pows(i); k >= 1; --k){
-                t = p * k;
-                if (t < u) continue;
-                if (t > v) break;
-                z.push(t);
-            }
-            if (z.length * 2 < n) z = (0, _d3Array.ticks)(u, v, n);
-        } else z = (0, _d3Array.ticks)(i, j, Math.min(j - i, n)).map(pows);
-        return r ? z.reverse() : z;
-    };
-    scale.tickFormat = function(count, specifier) {
-        if (specifier == null) specifier = base === 10 ? ".0e" : ",";
-        if (typeof specifier !== "function") specifier = (0, _d3Format.format)(specifier);
-        if (count === Infinity) return specifier;
-        if (count == null) count = 10;
-        var k = Math.max(1, base * count / scale.ticks().length); // TODO fast estimate?
-        return function(d) {
-            var i = d / pows(Math.round(logs(d)));
-            if (i * base < base - 0.5) i *= base;
-            return i <= k ? specifier(d) : "";
-        };
-    };
-    scale.nice = function() {
-        return domain((0, _niceJsDefault.default)(domain(), {
-            floor: function(x) {
-                return pows(Math.floor(logs(x)));
-            },
-            ceil: function(x) {
-                return pows(Math.ceil(logs(x)));
-            }
-        }));
-    };
-    return scale;
-}
-function log() {
-    var scale = loggish((0, _continuousJs.transformer)()).domain([
-        1,
-        10
-    ]);
-    scale.copy = function() {
-        return (0, _continuousJs.copy)(scale, log()).base(scale.base());
-    };
-    (0, _initJs.initRange).apply(scale, arguments);
-    return scale;
-}
-
-},{"d3-array":"1yX2W","d3-format":"4XOv2","./nice.js":"kAVeE","./continuous.js":"1LsCM","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kAVeE":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>nice);
-function nice(domain, interval) {
-    domain = domain.slice();
-    var i0 = 0, i1 = domain.length - 1, x0 = domain[i0], x1 = domain[i1], t;
-    if (x1 < x0) {
-        t = i0, i0 = i1, i1 = t;
-        t = x0, x0 = x1, x1 = t;
-    }
-    domain[i0] = interval.floor(x0);
-    domain[i1] = interval.ceil(x1);
-    return domain;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4KiG8":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "symlogish", ()=>symlogish);
-parcelHelpers.export(exports, "default", ()=>symlog);
-var _linearJs = require("./linear.js");
-var _continuousJs = require("./continuous.js");
-var _initJs = require("./init.js");
-function transformSymlog(c) {
-    return function(x) {
-        return Math.sign(x) * Math.log1p(Math.abs(x / c));
-    };
-}
-function transformSymexp(c) {
-    return function(x) {
-        return Math.sign(x) * Math.expm1(Math.abs(x)) * c;
-    };
-}
-function symlogish(transform) {
-    var c = 1, scale = transform(transformSymlog(c), transformSymexp(c));
-    scale.constant = function(_) {
-        return arguments.length ? transform(transformSymlog(c = +_), transformSymexp(c)) : c;
-    };
-    return (0, _linearJs.linearish)(scale);
-}
-function symlog() {
-    var scale = symlogish((0, _continuousJs.transformer)());
-    scale.copy = function() {
-        return (0, _continuousJs.copy)(scale, symlog()).constant(scale.constant());
-    };
-    return (0, _initJs.initRange).apply(scale, arguments);
-}
-
-},{"./linear.js":"lob4K","./continuous.js":"1LsCM","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jVG8A":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "powish", ()=>powish);
-parcelHelpers.export(exports, "default", ()=>pow);
-parcelHelpers.export(exports, "sqrt", ()=>sqrt);
-var _linearJs = require("./linear.js");
-var _continuousJs = require("./continuous.js");
-var _initJs = require("./init.js");
-function transformPow(exponent) {
-    return function(x) {
-        return x < 0 ? -Math.pow(-x, exponent) : Math.pow(x, exponent);
-    };
-}
-function transformSqrt(x) {
-    return x < 0 ? -Math.sqrt(-x) : Math.sqrt(x);
-}
-function transformSquare(x) {
-    return x < 0 ? -x * x : x * x;
-}
-function powish(transform) {
-    var scale = transform((0, _continuousJs.identity), (0, _continuousJs.identity)), exponent = 1;
-    function rescale() {
-        return exponent === 1 ? transform((0, _continuousJs.identity), (0, _continuousJs.identity)) : exponent === 0.5 ? transform(transformSqrt, transformSquare) : transform(transformPow(exponent), transformPow(1 / exponent));
-    }
-    scale.exponent = function(_) {
-        return arguments.length ? (exponent = +_, rescale()) : exponent;
-    };
-    return (0, _linearJs.linearish)(scale);
-}
-function pow() {
-    var scale = powish((0, _continuousJs.transformer)());
-    scale.copy = function() {
-        return (0, _continuousJs.copy)(scale, pow()).exponent(scale.exponent());
-    };
-    (0, _initJs.initRange).apply(scale, arguments);
-    return scale;
-}
-function sqrt() {
-    return pow.apply(null, arguments).exponent(0.5);
-}
-
-},{"./linear.js":"lob4K","./continuous.js":"1LsCM","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8e44u":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>radial);
-var _continuousJs = require("./continuous.js");
-var _continuousJsDefault = parcelHelpers.interopDefault(_continuousJs);
-var _initJs = require("./init.js");
-var _linearJs = require("./linear.js");
-var _numberJs = require("./number.js");
-var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
-function square(x) {
-    return Math.sign(x) * x * x;
-}
-function unsquare(x) {
-    return Math.sign(x) * Math.sqrt(Math.abs(x));
-}
-function radial() {
-    var squared = (0, _continuousJsDefault.default)(), range = [
-        0,
-        1
-    ], round = false, unknown;
-    function scale(x) {
-        var y = unsquare(squared(x));
-        return isNaN(y) ? unknown : round ? Math.round(y) : y;
-    }
-    scale.invert = function(y) {
-        return squared.invert(square(y));
-    };
-    scale.domain = function(_) {
-        return arguments.length ? (squared.domain(_), scale) : squared.domain();
-    };
-    scale.range = function(_) {
-        return arguments.length ? (squared.range((range = Array.from(_, (0, _numberJsDefault.default))).map(square)), scale) : range.slice();
-    };
-    scale.rangeRound = function(_) {
-        return scale.range(_).round(true);
-    };
-    scale.round = function(_) {
-        return arguments.length ? (round = !!_, scale) : round;
-    };
-    scale.clamp = function(_) {
-        return arguments.length ? (squared.clamp(_), scale) : squared.clamp();
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    scale.copy = function() {
-        return radial(squared.domain(), range).round(round).clamp(squared.clamp()).unknown(unknown);
-    };
-    (0, _initJs.initRange).apply(scale, arguments);
-    return (0, _linearJs.linearish)(scale);
-}
-
-},{"./continuous.js":"1LsCM","./init.js":"kp8lc","./linear.js":"lob4K","./number.js":"k9Lyx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cZUY5":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>quantile);
-var _d3Array = require("d3-array");
-var _initJs = require("./init.js");
-function quantile() {
-    var domain = [], range = [], thresholds = [], unknown;
-    function rescale() {
-        var i = 0, n = Math.max(1, range.length);
-        thresholds = new Array(n - 1);
-        while(++i < n)thresholds[i - 1] = (0, _d3Array.quantileSorted)(domain, i / n);
-        return scale;
-    }
-    function scale(x) {
-        return x == null || isNaN(x = +x) ? unknown : range[(0, _d3Array.bisect)(thresholds, x)];
-    }
-    scale.invertExtent = function(y) {
-        var i = range.indexOf(y);
-        return i < 0 ? [
-            NaN,
-            NaN
-        ] : [
-            i > 0 ? thresholds[i - 1] : domain[0],
-            i < thresholds.length ? thresholds[i] : domain[domain.length - 1]
-        ];
-    };
-    scale.domain = function(_) {
-        if (!arguments.length) return domain.slice();
-        domain = [];
-        for (let d of _)if (d != null && !isNaN(d = +d)) domain.push(d);
-        domain.sort((0, _d3Array.ascending));
-        return rescale();
-    };
-    scale.range = function(_) {
-        return arguments.length ? (range = Array.from(_), rescale()) : range.slice();
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    scale.quantiles = function() {
-        return thresholds.slice();
-    };
-    scale.copy = function() {
-        return quantile().domain(domain).range(range).unknown(unknown);
-    };
-    return (0, _initJs.initRange).apply(scale, arguments);
-}
-
-},{"d3-array":"1yX2W","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6tbld":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>quantize);
-var _d3Array = require("d3-array");
-var _linearJs = require("./linear.js");
-var _initJs = require("./init.js");
-function quantize() {
-    var x0 = 0, x1 = 1, n = 1, domain = [
-        0.5
-    ], range = [
-        0,
-        1
-    ], unknown;
-    function scale(x) {
-        return x != null && x <= x ? range[(0, _d3Array.bisect)(domain, x, 0, n)] : unknown;
-    }
-    function rescale() {
-        var i = -1;
-        domain = new Array(n);
-        while(++i < n)domain[i] = ((i + 1) * x1 - (i - n) * x0) / (n + 1);
-        return scale;
-    }
-    scale.domain = function(_) {
-        return arguments.length ? ([x0, x1] = _, x0 = +x0, x1 = +x1, rescale()) : [
-            x0,
-            x1
-        ];
-    };
-    scale.range = function(_) {
-        return arguments.length ? (n = (range = Array.from(_)).length - 1, rescale()) : range.slice();
-    };
-    scale.invertExtent = function(y) {
-        var i = range.indexOf(y);
-        return i < 0 ? [
-            NaN,
-            NaN
-        ] : i < 1 ? [
-            x0,
-            domain[0]
-        ] : i >= n ? [
-            domain[n - 1],
-            x1
-        ] : [
-            domain[i - 1],
-            domain[i]
-        ];
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : scale;
-    };
-    scale.thresholds = function() {
-        return domain.slice();
-    };
-    scale.copy = function() {
-        return quantize().domain([
-            x0,
-            x1
-        ]).range(range).unknown(unknown);
-    };
-    return (0, _initJs.initRange).apply((0, _linearJs.linearish)(scale), arguments);
-}
-
-},{"d3-array":"1yX2W","./linear.js":"lob4K","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"f8NNx":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>threshold);
-var _d3Array = require("d3-array");
-var _initJs = require("./init.js");
-function threshold() {
-    var domain = [
-        0.5
-    ], range = [
-        0,
-        1
-    ], unknown, n = 1;
-    function scale(x) {
-        return x != null && x <= x ? range[(0, _d3Array.bisect)(domain, x, 0, n)] : unknown;
-    }
-    scale.domain = function(_) {
-        return arguments.length ? (domain = Array.from(_), n = Math.min(domain.length, range.length - 1), scale) : domain.slice();
-    };
-    scale.range = function(_) {
-        return arguments.length ? (range = Array.from(_), n = Math.min(domain.length, range.length - 1), scale) : range.slice();
-    };
-    scale.invertExtent = function(y) {
-        var i = range.indexOf(y);
-        return [
-            domain[i - 1],
-            domain[i]
-        ];
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    scale.copy = function() {
-        return threshold().domain(domain).range(range).unknown(unknown);
-    };
-    return (0, _initJs.initRange).apply(scale, arguments);
-}
-
-},{"d3-array":"1yX2W","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7UVid":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "calendar", ()=>calendar);
-parcelHelpers.export(exports, "default", ()=>time);
-var _d3Time = require("d3-time");
-var _d3TimeFormat = require("d3-time-format");
-var _continuousJs = require("./continuous.js");
-var _continuousJsDefault = parcelHelpers.interopDefault(_continuousJs);
-var _initJs = require("./init.js");
-var _niceJs = require("./nice.js");
-var _niceJsDefault = parcelHelpers.interopDefault(_niceJs);
-function date(t) {
-    return new Date(t);
-}
-function number(t) {
-    return t instanceof Date ? +t : +new Date(+t);
-}
-function calendar(ticks, tickInterval, year, month, week, day, hour, minute, second, format) {
-    var scale = (0, _continuousJsDefault.default)(), invert = scale.invert, domain = scale.domain;
-    var formatMillisecond = format(".%L"), formatSecond = format(":%S"), formatMinute = format("%I:%M"), formatHour = format("%I %p"), formatDay = format("%a %d"), formatWeek = format("%b %d"), formatMonth = format("%B"), formatYear = format("%Y");
-    function tickFormat(date) {
-        return (second(date) < date ? formatMillisecond : minute(date) < date ? formatSecond : hour(date) < date ? formatMinute : day(date) < date ? formatHour : month(date) < date ? week(date) < date ? formatDay : formatWeek : year(date) < date ? formatMonth : formatYear)(date);
-    }
-    scale.invert = function(y) {
-        return new Date(invert(y));
-    };
-    scale.domain = function(_) {
-        return arguments.length ? domain(Array.from(_, number)) : domain().map(date);
-    };
-    scale.ticks = function(interval) {
-        var d = domain();
-        return ticks(d[0], d[d.length - 1], interval == null ? 10 : interval);
-    };
-    scale.tickFormat = function(count, specifier) {
-        return specifier == null ? tickFormat : format(specifier);
-    };
-    scale.nice = function(interval) {
-        var d = domain();
-        if (!interval || typeof interval.range !== "function") interval = tickInterval(d[0], d[d.length - 1], interval == null ? 10 : interval);
-        return interval ? domain((0, _niceJsDefault.default)(d, interval)) : scale;
-    };
-    scale.copy = function() {
-        return (0, _continuousJs.copy)(scale, calendar(ticks, tickInterval, year, month, week, day, hour, minute, second, format));
-    };
-    return scale;
-}
-function time() {
-    return (0, _initJs.initRange).apply(calendar((0, _d3Time.timeTicks), (0, _d3Time.timeTickInterval), (0, _d3Time.timeYear), (0, _d3Time.timeMonth), (0, _d3Time.timeWeek), (0, _d3Time.timeDay), (0, _d3Time.timeHour), (0, _d3Time.timeMinute), (0, _d3Time.timeSecond), (0, _d3TimeFormat.timeFormat)).domain([
-        new Date(2000, 0, 1),
-        new Date(2000, 0, 2)
-    ]), arguments);
-}
-
-},{"d3-time":"2Gldv","d3-time-format":"4FtNS","./continuous.js":"1LsCM","./init.js":"kp8lc","./nice.js":"kAVeE","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2Gldv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "timeInterval", ()=>(0, _intervalJsDefault.default));
-parcelHelpers.export(exports, "timeMillisecond", ()=>(0, _millisecondJsDefault.default));
-parcelHelpers.export(exports, "timeMilliseconds", ()=>(0, _millisecondJs.milliseconds));
-parcelHelpers.export(exports, "utcMillisecond", ()=>(0, _millisecondJsDefault.default));
-parcelHelpers.export(exports, "utcMilliseconds", ()=>(0, _millisecondJs.milliseconds));
-parcelHelpers.export(exports, "timeSecond", ()=>(0, _secondJsDefault.default));
-parcelHelpers.export(exports, "timeSeconds", ()=>(0, _secondJs.seconds));
-parcelHelpers.export(exports, "utcSecond", ()=>(0, _secondJsDefault.default));
-parcelHelpers.export(exports, "utcSeconds", ()=>(0, _secondJs.seconds));
-parcelHelpers.export(exports, "timeMinute", ()=>(0, _minuteJsDefault.default));
-parcelHelpers.export(exports, "timeMinutes", ()=>(0, _minuteJs.minutes));
-parcelHelpers.export(exports, "timeHour", ()=>(0, _hourJsDefault.default));
-parcelHelpers.export(exports, "timeHours", ()=>(0, _hourJs.hours));
-parcelHelpers.export(exports, "timeDay", ()=>(0, _dayJsDefault.default));
-parcelHelpers.export(exports, "timeDays", ()=>(0, _dayJs.days));
-parcelHelpers.export(exports, "timeWeek", ()=>(0, _weekJs.sunday));
-parcelHelpers.export(exports, "timeWeeks", ()=>(0, _weekJs.sundays));
-parcelHelpers.export(exports, "timeSunday", ()=>(0, _weekJs.sunday));
-parcelHelpers.export(exports, "timeSundays", ()=>(0, _weekJs.sundays));
-parcelHelpers.export(exports, "timeMonday", ()=>(0, _weekJs.monday));
-parcelHelpers.export(exports, "timeMondays", ()=>(0, _weekJs.mondays));
-parcelHelpers.export(exports, "timeTuesday", ()=>(0, _weekJs.tuesday));
-parcelHelpers.export(exports, "timeTuesdays", ()=>(0, _weekJs.tuesdays));
-parcelHelpers.export(exports, "timeWednesday", ()=>(0, _weekJs.wednesday));
-parcelHelpers.export(exports, "timeWednesdays", ()=>(0, _weekJs.wednesdays));
-parcelHelpers.export(exports, "timeThursday", ()=>(0, _weekJs.thursday));
-parcelHelpers.export(exports, "timeThursdays", ()=>(0, _weekJs.thursdays));
-parcelHelpers.export(exports, "timeFriday", ()=>(0, _weekJs.friday));
-parcelHelpers.export(exports, "timeFridays", ()=>(0, _weekJs.fridays));
-parcelHelpers.export(exports, "timeSaturday", ()=>(0, _weekJs.saturday));
-parcelHelpers.export(exports, "timeSaturdays", ()=>(0, _weekJs.saturdays));
-parcelHelpers.export(exports, "timeMonth", ()=>(0, _monthJsDefault.default));
-parcelHelpers.export(exports, "timeMonths", ()=>(0, _monthJs.months));
-parcelHelpers.export(exports, "timeYear", ()=>(0, _yearJsDefault.default));
-parcelHelpers.export(exports, "timeYears", ()=>(0, _yearJs.years));
-parcelHelpers.export(exports, "utcMinute", ()=>(0, _utcMinuteJsDefault.default));
-parcelHelpers.export(exports, "utcMinutes", ()=>(0, _utcMinuteJs.utcMinutes));
-parcelHelpers.export(exports, "utcHour", ()=>(0, _utcHourJsDefault.default));
-parcelHelpers.export(exports, "utcHours", ()=>(0, _utcHourJs.utcHours));
-parcelHelpers.export(exports, "utcDay", ()=>(0, _utcDayJsDefault.default));
-parcelHelpers.export(exports, "utcDays", ()=>(0, _utcDayJs.utcDays));
-parcelHelpers.export(exports, "utcWeek", ()=>(0, _utcWeekJs.utcSunday));
-parcelHelpers.export(exports, "utcWeeks", ()=>(0, _utcWeekJs.utcSundays));
-parcelHelpers.export(exports, "utcSunday", ()=>(0, _utcWeekJs.utcSunday));
-parcelHelpers.export(exports, "utcSundays", ()=>(0, _utcWeekJs.utcSundays));
-parcelHelpers.export(exports, "utcMonday", ()=>(0, _utcWeekJs.utcMonday));
-parcelHelpers.export(exports, "utcMondays", ()=>(0, _utcWeekJs.utcMondays));
-parcelHelpers.export(exports, "utcTuesday", ()=>(0, _utcWeekJs.utcTuesday));
-parcelHelpers.export(exports, "utcTuesdays", ()=>(0, _utcWeekJs.utcTuesdays));
-parcelHelpers.export(exports, "utcWednesday", ()=>(0, _utcWeekJs.utcWednesday));
-parcelHelpers.export(exports, "utcWednesdays", ()=>(0, _utcWeekJs.utcWednesdays));
-parcelHelpers.export(exports, "utcThursday", ()=>(0, _utcWeekJs.utcThursday));
-parcelHelpers.export(exports, "utcThursdays", ()=>(0, _utcWeekJs.utcThursdays));
-parcelHelpers.export(exports, "utcFriday", ()=>(0, _utcWeekJs.utcFriday));
-parcelHelpers.export(exports, "utcFridays", ()=>(0, _utcWeekJs.utcFridays));
-parcelHelpers.export(exports, "utcSaturday", ()=>(0, _utcWeekJs.utcSaturday));
-parcelHelpers.export(exports, "utcSaturdays", ()=>(0, _utcWeekJs.utcSaturdays));
-parcelHelpers.export(exports, "utcMonth", ()=>(0, _utcMonthJsDefault.default));
-parcelHelpers.export(exports, "utcMonths", ()=>(0, _utcMonthJs.utcMonths));
-parcelHelpers.export(exports, "utcYear", ()=>(0, _utcYearJsDefault.default));
-parcelHelpers.export(exports, "utcYears", ()=>(0, _utcYearJs.utcYears));
-parcelHelpers.export(exports, "utcTicks", ()=>(0, _ticksJs.utcTicks));
-parcelHelpers.export(exports, "utcTickInterval", ()=>(0, _ticksJs.utcTickInterval));
-parcelHelpers.export(exports, "timeTicks", ()=>(0, _ticksJs.timeTicks));
-parcelHelpers.export(exports, "timeTickInterval", ()=>(0, _ticksJs.timeTickInterval));
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _millisecondJs = require("./millisecond.js");
-var _millisecondJsDefault = parcelHelpers.interopDefault(_millisecondJs);
-var _secondJs = require("./second.js");
-var _secondJsDefault = parcelHelpers.interopDefault(_secondJs);
-var _minuteJs = require("./minute.js");
-var _minuteJsDefault = parcelHelpers.interopDefault(_minuteJs);
-var _hourJs = require("./hour.js");
-var _hourJsDefault = parcelHelpers.interopDefault(_hourJs);
-var _dayJs = require("./day.js");
-var _dayJsDefault = parcelHelpers.interopDefault(_dayJs);
-var _weekJs = require("./week.js");
-var _monthJs = require("./month.js");
-var _monthJsDefault = parcelHelpers.interopDefault(_monthJs);
-var _yearJs = require("./year.js");
-var _yearJsDefault = parcelHelpers.interopDefault(_yearJs);
-var _utcMinuteJs = require("./utcMinute.js");
-var _utcMinuteJsDefault = parcelHelpers.interopDefault(_utcMinuteJs);
-var _utcHourJs = require("./utcHour.js");
-var _utcHourJsDefault = parcelHelpers.interopDefault(_utcHourJs);
-var _utcDayJs = require("./utcDay.js");
-var _utcDayJsDefault = parcelHelpers.interopDefault(_utcDayJs);
-var _utcWeekJs = require("./utcWeek.js");
-var _utcMonthJs = require("./utcMonth.js");
-var _utcMonthJsDefault = parcelHelpers.interopDefault(_utcMonthJs);
-var _utcYearJs = require("./utcYear.js");
-var _utcYearJsDefault = parcelHelpers.interopDefault(_utcYearJs);
-var _ticksJs = require("./ticks.js");
-
-},{"./interval.js":false,"./millisecond.js":false,"./second.js":"4687i","./minute.js":"4fSM6","./hour.js":"hlgM0","./day.js":"6lz1o","./week.js":"ln8SQ","./month.js":"5gh3N","./year.js":"9QcRJ","./utcMinute.js":"1LaPd","./utcHour.js":"gjEyE","./utcDay.js":"5jkZB","./utcWeek.js":"1XS0i","./utcMonth.js":"iUSan","./utcYear.js":"jOGPn","./ticks.js":"lEkBt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"awz2q":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>newInterval);
-var t0 = new Date, t1 = new Date;
-function newInterval(floori, offseti, count, field) {
-    function interval(date) {
-        return floori(date = arguments.length === 0 ? new Date : new Date(+date)), date;
-    }
-    interval.floor = function(date) {
-        return floori(date = new Date(+date)), date;
-    };
-    interval.ceil = function(date) {
-        return floori(date = new Date(date - 1)), offseti(date, 1), floori(date), date;
-    };
-    interval.round = function(date) {
-        var d0 = interval(date), d1 = interval.ceil(date);
-        return date - d0 < d1 - date ? d0 : d1;
-    };
-    interval.offset = function(date, step) {
-        return offseti(date = new Date(+date), step == null ? 1 : Math.floor(step)), date;
-    };
-    interval.range = function(start, stop, step) {
-        var range = [], previous;
-        start = interval.ceil(start);
-        step = step == null ? 1 : Math.floor(step);
-        if (!(start < stop) || !(step > 0)) return range; // also handles Invalid Date
-        do range.push(previous = new Date(+start)), offseti(start, step), floori(start);
-        while (previous < start && start < stop);
-        return range;
-    };
-    interval.filter = function(test) {
-        return newInterval(function(date) {
-            if (date >= date) while(floori(date), !test(date))date.setTime(date - 1);
-        }, function(date, step) {
-            if (date >= date) {
-                if (step < 0) while(++step <= 0){
-                    while(offseti(date, -1), !test(date)); // eslint-disable-line no-empty
-                }
-                else while(--step >= 0){
-                    while(offseti(date, 1), !test(date)); // eslint-disable-line no-empty
-                }
-            }
-        });
-    };
-    if (count) {
-        interval.count = function(start, end) {
-            t0.setTime(+start), t1.setTime(+end);
-            floori(t0), floori(t1);
-            return Math.floor(count(t0, t1));
-        };
-        interval.every = function(step) {
-            step = Math.floor(step);
-            return !isFinite(step) || !(step > 0) ? null : !(step > 1) ? interval : interval.filter(field ? function(d) {
-                return field(d) % step === 0;
-            } : function(d) {
-                return interval.count(0, d) % step === 0;
-            });
-        };
-    }
-    return interval;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9kVG9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "milliseconds", ()=>milliseconds);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var millisecond = (0, _intervalJsDefault.default)(function() {
-// noop
-}, function(date, step) {
-    date.setTime(+date + step);
-}, function(start, end) {
-    return end - start;
-});
-// An optimized implementation for this simple case.
-millisecond.every = function(k) {
-    k = Math.floor(k);
-    if (!isFinite(k) || !(k > 0)) return null;
-    if (!(k > 1)) return millisecond;
-    return (0, _intervalJsDefault.default)(function(date) {
-        date.setTime(Math.floor(date / k) * k);
-    }, function(date, step) {
-        date.setTime(+date + step * k);
-    }, function(start, end) {
-        return (end - start) / k;
-    });
-};
-exports.default = millisecond;
-var milliseconds = millisecond.range;
-
-},{"./interval.js":"awz2q","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4687i":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "seconds", ()=>seconds);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var second = (0, _intervalJsDefault.default)(function(date) {
-    date.setTime(date - date.getMilliseconds());
-}, function(date, step) {
-    date.setTime(+date + step * (0, _durationJs.durationSecond));
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationSecond);
-}, function(date) {
-    return date.getUTCSeconds();
-});
-exports.default = second;
-var seconds = second.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7MzvX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "durationSecond", ()=>durationSecond);
-parcelHelpers.export(exports, "durationMinute", ()=>durationMinute);
-parcelHelpers.export(exports, "durationHour", ()=>durationHour);
-parcelHelpers.export(exports, "durationDay", ()=>durationDay);
-parcelHelpers.export(exports, "durationWeek", ()=>durationWeek);
-parcelHelpers.export(exports, "durationMonth", ()=>durationMonth);
-parcelHelpers.export(exports, "durationYear", ()=>durationYear);
-const durationSecond = 1000;
-const durationMinute = durationSecond * 60;
-const durationHour = durationMinute * 60;
-const durationDay = durationHour * 24;
-const durationWeek = durationDay * 7;
-const durationMonth = durationDay * 30;
-const durationYear = durationDay * 365;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4fSM6":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "minutes", ()=>minutes);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var minute = (0, _intervalJsDefault.default)(function(date) {
-    date.setTime(date - date.getMilliseconds() - date.getSeconds() * (0, _durationJs.durationSecond));
-}, function(date, step) {
-    date.setTime(+date + step * (0, _durationJs.durationMinute));
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationMinute);
-}, function(date) {
-    return date.getMinutes();
-});
-exports.default = minute;
-var minutes = minute.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hlgM0":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "hours", ()=>hours);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var hour = (0, _intervalJsDefault.default)(function(date) {
-    date.setTime(date - date.getMilliseconds() - date.getSeconds() * (0, _durationJs.durationSecond) - date.getMinutes() * (0, _durationJs.durationMinute));
-}, function(date, step) {
-    date.setTime(+date + step * (0, _durationJs.durationHour));
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationHour);
-}, function(date) {
-    return date.getHours();
-});
-exports.default = hour;
-var hours = hour.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6lz1o":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "days", ()=>days);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var day = (0, _intervalJsDefault.default)((date)=>date.setHours(0, 0, 0, 0), (date, step)=>date.setDate(date.getDate() + step), (start, end)=>(end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * (0, _durationJs.durationMinute)) / (0, _durationJs.durationDay), (date)=>date.getDate() - 1);
-exports.default = day;
-var days = day.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ln8SQ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "sunday", ()=>sunday);
-parcelHelpers.export(exports, "monday", ()=>monday);
-parcelHelpers.export(exports, "tuesday", ()=>tuesday);
-parcelHelpers.export(exports, "wednesday", ()=>wednesday);
-parcelHelpers.export(exports, "thursday", ()=>thursday);
-parcelHelpers.export(exports, "friday", ()=>friday);
-parcelHelpers.export(exports, "saturday", ()=>saturday);
-parcelHelpers.export(exports, "sundays", ()=>sundays);
-parcelHelpers.export(exports, "mondays", ()=>mondays);
-parcelHelpers.export(exports, "tuesdays", ()=>tuesdays);
-parcelHelpers.export(exports, "wednesdays", ()=>wednesdays);
-parcelHelpers.export(exports, "thursdays", ()=>thursdays);
-parcelHelpers.export(exports, "fridays", ()=>fridays);
-parcelHelpers.export(exports, "saturdays", ()=>saturdays);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-function weekday(i) {
-    return (0, _intervalJsDefault.default)(function(date) {
-        date.setDate(date.getDate() - (date.getDay() + 7 - i) % 7);
-        date.setHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setDate(date.getDate() + step * 7);
-    }, function(start, end) {
-        return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * (0, _durationJs.durationMinute)) / (0, _durationJs.durationWeek);
-    });
-}
-var sunday = weekday(0);
-var monday = weekday(1);
-var tuesday = weekday(2);
-var wednesday = weekday(3);
-var thursday = weekday(4);
-var friday = weekday(5);
-var saturday = weekday(6);
-var sundays = sunday.range;
-var mondays = monday.range;
-var tuesdays = tuesday.range;
-var wednesdays = wednesday.range;
-var thursdays = thursday.range;
-var fridays = friday.range;
-var saturdays = saturday.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5gh3N":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "months", ()=>months);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var month = (0, _intervalJsDefault.default)(function(date) {
-    date.setDate(1);
-    date.setHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setMonth(date.getMonth() + step);
-}, function(start, end) {
-    return end.getMonth() - start.getMonth() + (end.getFullYear() - start.getFullYear()) * 12;
-}, function(date) {
-    return date.getMonth();
-});
-exports.default = month;
-var months = month.range;
-
-},{"./interval.js":"awz2q","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9QcRJ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "years", ()=>years);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var year = (0, _intervalJsDefault.default)(function(date) {
-    date.setMonth(0, 1);
-    date.setHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setFullYear(date.getFullYear() + step);
-}, function(start, end) {
-    return end.getFullYear() - start.getFullYear();
-}, function(date) {
-    return date.getFullYear();
-});
-// An optimized implementation for this simple case.
-year.every = function(k) {
-    return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : (0, _intervalJsDefault.default)(function(date) {
-        date.setFullYear(Math.floor(date.getFullYear() / k) * k);
-        date.setMonth(0, 1);
-        date.setHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setFullYear(date.getFullYear() + step * k);
-    });
-};
-exports.default = year;
-var years = year.range;
-
-},{"./interval.js":"awz2q","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1LaPd":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcMinutes", ()=>utcMinutes);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var utcMinute = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCSeconds(0, 0);
-}, function(date, step) {
-    date.setTime(+date + step * (0, _durationJs.durationMinute));
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationMinute);
-}, function(date) {
-    return date.getUTCMinutes();
-});
-exports.default = utcMinute;
-var utcMinutes = utcMinute.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gjEyE":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcHours", ()=>utcHours);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var utcHour = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCMinutes(0, 0, 0);
-}, function(date, step) {
-    date.setTime(+date + step * (0, _durationJs.durationHour));
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationHour);
-}, function(date) {
-    return date.getUTCHours();
-});
-exports.default = utcHour;
-var utcHours = utcHour.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5jkZB":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcDays", ()=>utcDays);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var utcDay = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setUTCDate(date.getUTCDate() + step);
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationDay);
-}, function(date) {
-    return date.getUTCDate() - 1;
-});
-exports.default = utcDay;
-var utcDays = utcDay.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1XS0i":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcSunday", ()=>utcSunday);
-parcelHelpers.export(exports, "utcMonday", ()=>utcMonday);
-parcelHelpers.export(exports, "utcTuesday", ()=>utcTuesday);
-parcelHelpers.export(exports, "utcWednesday", ()=>utcWednesday);
-parcelHelpers.export(exports, "utcThursday", ()=>utcThursday);
-parcelHelpers.export(exports, "utcFriday", ()=>utcFriday);
-parcelHelpers.export(exports, "utcSaturday", ()=>utcSaturday);
-parcelHelpers.export(exports, "utcSundays", ()=>utcSundays);
-parcelHelpers.export(exports, "utcMondays", ()=>utcMondays);
-parcelHelpers.export(exports, "utcTuesdays", ()=>utcTuesdays);
-parcelHelpers.export(exports, "utcWednesdays", ()=>utcWednesdays);
-parcelHelpers.export(exports, "utcThursdays", ()=>utcThursdays);
-parcelHelpers.export(exports, "utcFridays", ()=>utcFridays);
-parcelHelpers.export(exports, "utcSaturdays", ()=>utcSaturdays);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-function utcWeekday(i) {
-    return (0, _intervalJsDefault.default)(function(date) {
-        date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 7 - i) % 7);
-        date.setUTCHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setUTCDate(date.getUTCDate() + step * 7);
-    }, function(start, end) {
-        return (end - start) / (0, _durationJs.durationWeek);
-    });
-}
-var utcSunday = utcWeekday(0);
-var utcMonday = utcWeekday(1);
-var utcTuesday = utcWeekday(2);
-var utcWednesday = utcWeekday(3);
-var utcThursday = utcWeekday(4);
-var utcFriday = utcWeekday(5);
-var utcSaturday = utcWeekday(6);
-var utcSundays = utcSunday.range;
-var utcMondays = utcMonday.range;
-var utcTuesdays = utcTuesday.range;
-var utcWednesdays = utcWednesday.range;
-var utcThursdays = utcThursday.range;
-var utcFridays = utcFriday.range;
-var utcSaturdays = utcSaturday.range;
-
-},{"./interval.js":"awz2q","./duration.js":"7MzvX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iUSan":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcMonths", ()=>utcMonths);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var utcMonth = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCDate(1);
-    date.setUTCHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setUTCMonth(date.getUTCMonth() + step);
-}, function(start, end) {
-    return end.getUTCMonth() - start.getUTCMonth() + (end.getUTCFullYear() - start.getUTCFullYear()) * 12;
-}, function(date) {
-    return date.getUTCMonth();
-});
-exports.default = utcMonth;
-var utcMonths = utcMonth.range;
-
-},{"./interval.js":"awz2q","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jOGPn":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcYears", ()=>utcYears);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var utcYear = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCMonth(0, 1);
-    date.setUTCHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setUTCFullYear(date.getUTCFullYear() + step);
-}, function(start, end) {
-    return end.getUTCFullYear() - start.getUTCFullYear();
-}, function(date) {
-    return date.getUTCFullYear();
-});
-// An optimized implementation for this simple case.
-utcYear.every = function(k) {
-    return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : (0, _intervalJsDefault.default)(function(date) {
-        date.setUTCFullYear(Math.floor(date.getUTCFullYear() / k) * k);
-        date.setUTCMonth(0, 1);
-        date.setUTCHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setUTCFullYear(date.getUTCFullYear() + step * k);
-    });
-};
-exports.default = utcYear;
-var utcYears = utcYear.range;
-
-},{"./interval.js":"awz2q","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lEkBt":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcTicks", ()=>utcTicks);
-parcelHelpers.export(exports, "utcTickInterval", ()=>utcTickInterval);
-parcelHelpers.export(exports, "timeTicks", ()=>timeTicks);
-parcelHelpers.export(exports, "timeTickInterval", ()=>timeTickInterval);
-var _d3Array = require("d3-array");
-var _durationJs = require("./duration.js");
-var _millisecondJs = require("./millisecond.js");
-var _millisecondJsDefault = parcelHelpers.interopDefault(_millisecondJs);
-var _secondJs = require("./second.js");
-var _secondJsDefault = parcelHelpers.interopDefault(_secondJs);
-var _minuteJs = require("./minute.js");
-var _minuteJsDefault = parcelHelpers.interopDefault(_minuteJs);
-var _hourJs = require("./hour.js");
-var _hourJsDefault = parcelHelpers.interopDefault(_hourJs);
-var _dayJs = require("./day.js");
-var _dayJsDefault = parcelHelpers.interopDefault(_dayJs);
-var _weekJs = require("./week.js");
-var _monthJs = require("./month.js");
-var _monthJsDefault = parcelHelpers.interopDefault(_monthJs);
-var _yearJs = require("./year.js");
-var _yearJsDefault = parcelHelpers.interopDefault(_yearJs);
-var _utcMinuteJs = require("./utcMinute.js");
-var _utcMinuteJsDefault = parcelHelpers.interopDefault(_utcMinuteJs);
-var _utcHourJs = require("./utcHour.js");
-var _utcHourJsDefault = parcelHelpers.interopDefault(_utcHourJs);
-var _utcDayJs = require("./utcDay.js");
-var _utcDayJsDefault = parcelHelpers.interopDefault(_utcDayJs);
-var _utcWeekJs = require("./utcWeek.js");
-var _utcMonthJs = require("./utcMonth.js");
-var _utcMonthJsDefault = parcelHelpers.interopDefault(_utcMonthJs);
-var _utcYearJs = require("./utcYear.js");
-var _utcYearJsDefault = parcelHelpers.interopDefault(_utcYearJs);
-function ticker(year, month, week, day, hour, minute) {
-    const tickIntervals = [
-        [
-            (0, _secondJsDefault.default),
-            1,
-            (0, _durationJs.durationSecond)
-        ],
-        [
-            (0, _secondJsDefault.default),
-            5,
-            5 * (0, _durationJs.durationSecond)
-        ],
-        [
-            (0, _secondJsDefault.default),
-            15,
-            15 * (0, _durationJs.durationSecond)
-        ],
-        [
-            (0, _secondJsDefault.default),
-            30,
-            30 * (0, _durationJs.durationSecond)
-        ],
-        [
-            minute,
-            1,
-            (0, _durationJs.durationMinute)
-        ],
-        [
-            minute,
-            5,
-            5 * (0, _durationJs.durationMinute)
-        ],
-        [
-            minute,
-            15,
-            15 * (0, _durationJs.durationMinute)
-        ],
-        [
-            minute,
-            30,
-            30 * (0, _durationJs.durationMinute)
-        ],
-        [
-            hour,
-            1,
-            (0, _durationJs.durationHour)
-        ],
-        [
-            hour,
-            3,
-            3 * (0, _durationJs.durationHour)
-        ],
-        [
-            hour,
-            6,
-            6 * (0, _durationJs.durationHour)
-        ],
-        [
-            hour,
-            12,
-            12 * (0, _durationJs.durationHour)
-        ],
-        [
-            day,
-            1,
-            (0, _durationJs.durationDay)
-        ],
-        [
-            day,
-            2,
-            2 * (0, _durationJs.durationDay)
-        ],
-        [
-            week,
-            1,
-            (0, _durationJs.durationWeek)
-        ],
-        [
-            month,
-            1,
-            (0, _durationJs.durationMonth)
-        ],
-        [
-            month,
-            3,
-            3 * (0, _durationJs.durationMonth)
-        ],
-        [
-            year,
-            1,
-            (0, _durationJs.durationYear)
-        ]
-    ];
-    function ticks(start, stop, count) {
-        const reverse = stop < start;
-        if (reverse) [start, stop] = [
-            stop,
-            start
-        ];
-        const interval = count && typeof count.range === "function" ? count : tickInterval(start, stop, count);
-        const ticks = interval ? interval.range(start, +stop + 1) : []; // inclusive stop
-        return reverse ? ticks.reverse() : ticks;
-    }
-    function tickInterval(start, stop, count) {
-        const target = Math.abs(stop - start) / count;
-        const i = (0, _d3Array.bisector)(([, , step])=>step).right(tickIntervals, target);
-        if (i === tickIntervals.length) return year.every((0, _d3Array.tickStep)(start / (0, _durationJs.durationYear), stop / (0, _durationJs.durationYear), count));
-        if (i === 0) return (0, _millisecondJsDefault.default).every(Math.max((0, _d3Array.tickStep)(start, stop, count), 1));
-        const [t, step] = tickIntervals[target / tickIntervals[i - 1][2] < tickIntervals[i][2] / target ? i - 1 : i];
-        return t.every(step);
-    }
-    return [
-        ticks,
-        tickInterval
-    ];
-}
-const [utcTicks, utcTickInterval] = ticker((0, _utcYearJsDefault.default), (0, _utcMonthJsDefault.default), (0, _utcWeekJs.utcSunday), (0, _utcDayJsDefault.default), (0, _utcHourJsDefault.default), (0, _utcMinuteJsDefault.default));
-const [timeTicks, timeTickInterval] = ticker((0, _yearJsDefault.default), (0, _monthJsDefault.default), (0, _weekJs.sunday), (0, _dayJsDefault.default), (0, _hourJsDefault.default), (0, _minuteJsDefault.default));
-
-},{"d3-array":"1yX2W","./duration.js":"7MzvX","./millisecond.js":"9kVG9","./second.js":"4687i","./minute.js":"4fSM6","./hour.js":"hlgM0","./day.js":"6lz1o","./week.js":"ln8SQ","./month.js":"5gh3N","./year.js":"9QcRJ","./utcMinute.js":"1LaPd","./utcHour.js":"gjEyE","./utcDay.js":"5jkZB","./utcWeek.js":"1XS0i","./utcMonth.js":"iUSan","./utcYear.js":"jOGPn","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4FtNS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "timeFormatDefaultLocale", ()=>(0, _defaultLocaleJsDefault.default));
-parcelHelpers.export(exports, "timeFormat", ()=>(0, _defaultLocaleJs.timeFormat));
-parcelHelpers.export(exports, "timeParse", ()=>(0, _defaultLocaleJs.timeParse));
-parcelHelpers.export(exports, "utcFormat", ()=>(0, _defaultLocaleJs.utcFormat));
-parcelHelpers.export(exports, "utcParse", ()=>(0, _defaultLocaleJs.utcParse));
-parcelHelpers.export(exports, "timeFormatLocale", ()=>(0, _localeJsDefault.default));
-parcelHelpers.export(exports, "isoFormat", ()=>(0, _isoFormatJsDefault.default));
-parcelHelpers.export(exports, "isoParse", ()=>(0, _isoParseJsDefault.default));
-var _defaultLocaleJs = require("./defaultLocale.js");
-var _defaultLocaleJsDefault = parcelHelpers.interopDefault(_defaultLocaleJs);
-var _localeJs = require("./locale.js");
-var _localeJsDefault = parcelHelpers.interopDefault(_localeJs);
-var _isoFormatJs = require("./isoFormat.js");
-var _isoFormatJsDefault = parcelHelpers.interopDefault(_isoFormatJs);
-var _isoParseJs = require("./isoParse.js");
-var _isoParseJsDefault = parcelHelpers.interopDefault(_isoParseJs);
-
-},{"./defaultLocale.js":"6OjO5","./locale.js":false,"./isoFormat.js":false,"./isoParse.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6OjO5":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "timeFormat", ()=>timeFormat);
-parcelHelpers.export(exports, "timeParse", ()=>timeParse);
-parcelHelpers.export(exports, "utcFormat", ()=>utcFormat);
-parcelHelpers.export(exports, "utcParse", ()=>utcParse);
-parcelHelpers.export(exports, "default", ()=>defaultLocale);
-var _localeJs = require("./locale.js");
-var _localeJsDefault = parcelHelpers.interopDefault(_localeJs);
-var locale;
-var timeFormat;
-var timeParse;
-var utcFormat;
-var utcParse;
-defaultLocale({
-    dateTime: "%x, %X",
-    date: "%-m/%-d/%Y",
-    time: "%-I:%M:%S %p",
-    periods: [
-        "AM",
-        "PM"
-    ],
-    days: [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday"
-    ],
-    shortDays: [
-        "Sun",
-        "Mon",
-        "Tue",
-        "Wed",
-        "Thu",
-        "Fri",
-        "Sat"
-    ],
-    months: [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    ],
-    shortMonths: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec"
-    ]
-});
-function defaultLocale(definition) {
-    locale = (0, _localeJsDefault.default)(definition);
-    timeFormat = locale.format;
-    timeParse = locale.parse;
-    utcFormat = locale.utcFormat;
-    utcParse = locale.utcParse;
-    return locale;
-}
-
-},{"./locale.js":"4m5qt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4m5qt":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>formatLocale);
-var _d3Time = require("d3-time");
-function localDate(d) {
-    if (0 <= d.y && d.y < 100) {
-        var date = new Date(-1, d.m, d.d, d.H, d.M, d.S, d.L);
-        date.setFullYear(d.y);
-        return date;
-    }
-    return new Date(d.y, d.m, d.d, d.H, d.M, d.S, d.L);
-}
-function utcDate(d) {
-    if (0 <= d.y && d.y < 100) {
-        var date = new Date(Date.UTC(-1, d.m, d.d, d.H, d.M, d.S, d.L));
-        date.setUTCFullYear(d.y);
-        return date;
-    }
-    return new Date(Date.UTC(d.y, d.m, d.d, d.H, d.M, d.S, d.L));
-}
-function newDate(y, m, d) {
-    return {
-        y: y,
-        m: m,
-        d: d,
-        H: 0,
-        M: 0,
-        S: 0,
-        L: 0
-    };
-}
-function formatLocale(locale) {
-    var locale_dateTime = locale.dateTime, locale_date = locale.date, locale_time = locale.time, locale_periods = locale.periods, locale_weekdays = locale.days, locale_shortWeekdays = locale.shortDays, locale_months = locale.months, locale_shortMonths = locale.shortMonths;
-    var periodRe = formatRe(locale_periods), periodLookup = formatLookup(locale_periods), weekdayRe = formatRe(locale_weekdays), weekdayLookup = formatLookup(locale_weekdays), shortWeekdayRe = formatRe(locale_shortWeekdays), shortWeekdayLookup = formatLookup(locale_shortWeekdays), monthRe = formatRe(locale_months), monthLookup = formatLookup(locale_months), shortMonthRe = formatRe(locale_shortMonths), shortMonthLookup = formatLookup(locale_shortMonths);
-    var formats = {
-        "a": formatShortWeekday,
-        "A": formatWeekday,
-        "b": formatShortMonth,
-        "B": formatMonth,
-        "c": null,
-        "d": formatDayOfMonth,
-        "e": formatDayOfMonth,
-        "f": formatMicroseconds,
-        "g": formatYearISO,
-        "G": formatFullYearISO,
-        "H": formatHour24,
-        "I": formatHour12,
-        "j": formatDayOfYear,
-        "L": formatMilliseconds,
-        "m": formatMonthNumber,
-        "M": formatMinutes,
-        "p": formatPeriod,
-        "q": formatQuarter,
-        "Q": formatUnixTimestamp,
-        "s": formatUnixTimestampSeconds,
-        "S": formatSeconds,
-        "u": formatWeekdayNumberMonday,
-        "U": formatWeekNumberSunday,
-        "V": formatWeekNumberISO,
-        "w": formatWeekdayNumberSunday,
-        "W": formatWeekNumberMonday,
-        "x": null,
-        "X": null,
-        "y": formatYear,
-        "Y": formatFullYear,
-        "Z": formatZone,
-        "%": formatLiteralPercent
-    };
-    var utcFormats = {
-        "a": formatUTCShortWeekday,
-        "A": formatUTCWeekday,
-        "b": formatUTCShortMonth,
-        "B": formatUTCMonth,
-        "c": null,
-        "d": formatUTCDayOfMonth,
-        "e": formatUTCDayOfMonth,
-        "f": formatUTCMicroseconds,
-        "g": formatUTCYearISO,
-        "G": formatUTCFullYearISO,
-        "H": formatUTCHour24,
-        "I": formatUTCHour12,
-        "j": formatUTCDayOfYear,
-        "L": formatUTCMilliseconds,
-        "m": formatUTCMonthNumber,
-        "M": formatUTCMinutes,
-        "p": formatUTCPeriod,
-        "q": formatUTCQuarter,
-        "Q": formatUnixTimestamp,
-        "s": formatUnixTimestampSeconds,
-        "S": formatUTCSeconds,
-        "u": formatUTCWeekdayNumberMonday,
-        "U": formatUTCWeekNumberSunday,
-        "V": formatUTCWeekNumberISO,
-        "w": formatUTCWeekdayNumberSunday,
-        "W": formatUTCWeekNumberMonday,
-        "x": null,
-        "X": null,
-        "y": formatUTCYear,
-        "Y": formatUTCFullYear,
-        "Z": formatUTCZone,
-        "%": formatLiteralPercent
-    };
-    var parses = {
-        "a": parseShortWeekday,
-        "A": parseWeekday,
-        "b": parseShortMonth,
-        "B": parseMonth,
-        "c": parseLocaleDateTime,
-        "d": parseDayOfMonth,
-        "e": parseDayOfMonth,
-        "f": parseMicroseconds,
-        "g": parseYear,
-        "G": parseFullYear,
-        "H": parseHour24,
-        "I": parseHour24,
-        "j": parseDayOfYear,
-        "L": parseMilliseconds,
-        "m": parseMonthNumber,
-        "M": parseMinutes,
-        "p": parsePeriod,
-        "q": parseQuarter,
-        "Q": parseUnixTimestamp,
-        "s": parseUnixTimestampSeconds,
-        "S": parseSeconds,
-        "u": parseWeekdayNumberMonday,
-        "U": parseWeekNumberSunday,
-        "V": parseWeekNumberISO,
-        "w": parseWeekdayNumberSunday,
-        "W": parseWeekNumberMonday,
-        "x": parseLocaleDate,
-        "X": parseLocaleTime,
-        "y": parseYear,
-        "Y": parseFullYear,
-        "Z": parseZone,
-        "%": parseLiteralPercent
-    };
-    // These recursive directive definitions must be deferred.
-    formats.x = newFormat(locale_date, formats);
-    formats.X = newFormat(locale_time, formats);
-    formats.c = newFormat(locale_dateTime, formats);
-    utcFormats.x = newFormat(locale_date, utcFormats);
-    utcFormats.X = newFormat(locale_time, utcFormats);
-    utcFormats.c = newFormat(locale_dateTime, utcFormats);
-    function newFormat(specifier, formats) {
-        return function(date) {
-            var string = [], i = -1, j = 0, n = specifier.length, c, pad, format;
-            if (!(date instanceof Date)) date = new Date(+date);
-            while(++i < n)if (specifier.charCodeAt(i) === 37) {
-                string.push(specifier.slice(j, i));
-                if ((pad = pads[c = specifier.charAt(++i)]) != null) c = specifier.charAt(++i);
-                else pad = c === "e" ? " " : "0";
-                if (format = formats[c]) c = format(date, pad);
-                string.push(c);
-                j = i + 1;
-            }
-            string.push(specifier.slice(j, i));
-            return string.join("");
-        };
-    }
-    function newParse(specifier, Z) {
-        return function(string) {
-            var d = newDate(1900, undefined, 1), i = parseSpecifier(d, specifier, string += "", 0), week, day;
-            if (i != string.length) return null;
-            // If a UNIX timestamp is specified, return it.
-            if ("Q" in d) return new Date(d.Q);
-            if ("s" in d) return new Date(d.s * 1000 + ("L" in d ? d.L : 0));
-            // If this is utcParse, never use the local timezone.
-            if (Z && !("Z" in d)) d.Z = 0;
-            // The am-pm flag is 0 for AM, and 1 for PM.
-            if ("p" in d) d.H = d.H % 12 + d.p * 12;
-            // If the month was not specified, inherit from the quarter.
-            if (d.m === undefined) d.m = "q" in d ? d.q : 0;
-            // Convert day-of-week and week-of-year to day-of-year.
-            if ("V" in d) {
-                if (d.V < 1 || d.V > 53) return null;
-                if (!("w" in d)) d.w = 1;
-                if ("Z" in d) {
-                    week = utcDate(newDate(d.y, 0, 1)), day = week.getUTCDay();
-                    week = day > 4 || day === 0 ? (0, _d3Time.utcMonday).ceil(week) : (0, _d3Time.utcMonday)(week);
-                    week = (0, _d3Time.utcDay).offset(week, (d.V - 1) * 7);
-                    d.y = week.getUTCFullYear();
-                    d.m = week.getUTCMonth();
-                    d.d = week.getUTCDate() + (d.w + 6) % 7;
-                } else {
-                    week = localDate(newDate(d.y, 0, 1)), day = week.getDay();
-                    week = day > 4 || day === 0 ? (0, _d3Time.timeMonday).ceil(week) : (0, _d3Time.timeMonday)(week);
-                    week = (0, _d3Time.timeDay).offset(week, (d.V - 1) * 7);
-                    d.y = week.getFullYear();
-                    d.m = week.getMonth();
-                    d.d = week.getDate() + (d.w + 6) % 7;
-                }
-            } else if ("W" in d || "U" in d) {
-                if (!("w" in d)) d.w = "u" in d ? d.u % 7 : "W" in d ? 1 : 0;
-                day = "Z" in d ? utcDate(newDate(d.y, 0, 1)).getUTCDay() : localDate(newDate(d.y, 0, 1)).getDay();
-                d.m = 0;
-                d.d = "W" in d ? (d.w + 6) % 7 + d.W * 7 - (day + 5) % 7 : d.w + d.U * 7 - (day + 6) % 7;
-            }
-            // If a time zone is specified, all fields are interpreted as UTC and then
-            // offset according to the specified time zone.
-            if ("Z" in d) {
-                d.H += d.Z / 100 | 0;
-                d.M += d.Z % 100;
-                return utcDate(d);
-            }
-            // Otherwise, all fields are in local time.
-            return localDate(d);
-        };
-    }
-    function parseSpecifier(d, specifier, string, j) {
-        var i = 0, n = specifier.length, m = string.length, c, parse;
-        while(i < n){
-            if (j >= m) return -1;
-            c = specifier.charCodeAt(i++);
-            if (c === 37) {
-                c = specifier.charAt(i++);
-                parse = parses[c in pads ? specifier.charAt(i++) : c];
-                if (!parse || (j = parse(d, string, j)) < 0) return -1;
-            } else if (c != string.charCodeAt(j++)) return -1;
-        }
-        return j;
-    }
-    function parsePeriod(d, string, i) {
-        var n = periodRe.exec(string.slice(i));
-        return n ? (d.p = periodLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-    }
-    function parseShortWeekday(d, string, i) {
-        var n = shortWeekdayRe.exec(string.slice(i));
-        return n ? (d.w = shortWeekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-    }
-    function parseWeekday(d, string, i) {
-        var n = weekdayRe.exec(string.slice(i));
-        return n ? (d.w = weekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-    }
-    function parseShortMonth(d, string, i) {
-        var n = shortMonthRe.exec(string.slice(i));
-        return n ? (d.m = shortMonthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-    }
-    function parseMonth(d, string, i) {
-        var n = monthRe.exec(string.slice(i));
-        return n ? (d.m = monthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
-    }
-    function parseLocaleDateTime(d, string, i) {
-        return parseSpecifier(d, locale_dateTime, string, i);
-    }
-    function parseLocaleDate(d, string, i) {
-        return parseSpecifier(d, locale_date, string, i);
-    }
-    function parseLocaleTime(d, string, i) {
-        return parseSpecifier(d, locale_time, string, i);
-    }
-    function formatShortWeekday(d) {
-        return locale_shortWeekdays[d.getDay()];
-    }
-    function formatWeekday(d) {
-        return locale_weekdays[d.getDay()];
-    }
-    function formatShortMonth(d) {
-        return locale_shortMonths[d.getMonth()];
-    }
-    function formatMonth(d) {
-        return locale_months[d.getMonth()];
-    }
-    function formatPeriod(d) {
-        return locale_periods[+(d.getHours() >= 12)];
-    }
-    function formatQuarter(d) {
-        return 1 + ~~(d.getMonth() / 3);
-    }
-    function formatUTCShortWeekday(d) {
-        return locale_shortWeekdays[d.getUTCDay()];
-    }
-    function formatUTCWeekday(d) {
-        return locale_weekdays[d.getUTCDay()];
-    }
-    function formatUTCShortMonth(d) {
-        return locale_shortMonths[d.getUTCMonth()];
-    }
-    function formatUTCMonth(d) {
-        return locale_months[d.getUTCMonth()];
-    }
-    function formatUTCPeriod(d) {
-        return locale_periods[+(d.getUTCHours() >= 12)];
-    }
-    function formatUTCQuarter(d) {
-        return 1 + ~~(d.getUTCMonth() / 3);
-    }
-    return {
-        format: function(specifier) {
-            var f = newFormat(specifier += "", formats);
-            f.toString = function() {
-                return specifier;
-            };
-            return f;
-        },
-        parse: function(specifier) {
-            var p = newParse(specifier += "", false);
-            p.toString = function() {
-                return specifier;
-            };
-            return p;
-        },
-        utcFormat: function(specifier) {
-            var f = newFormat(specifier += "", utcFormats);
-            f.toString = function() {
-                return specifier;
-            };
-            return f;
-        },
-        utcParse: function(specifier) {
-            var p = newParse(specifier += "", true);
-            p.toString = function() {
-                return specifier;
-            };
-            return p;
-        }
-    };
-}
-var pads = {
-    "-": "",
-    "_": " ",
-    "0": "0"
-}, numberRe = /^\s*\d+/, percentRe = /^%/, requoteRe = /[\\^$*+?|[\]().{}]/g;
-function pad(value, fill, width) {
-    var sign = value < 0 ? "-" : "", string = (sign ? -value : value) + "", length = string.length;
-    return sign + (length < width ? new Array(width - length + 1).join(fill) + string : string);
-}
-function requote(s) {
-    return s.replace(requoteRe, "\\$&");
-}
-function formatRe(names) {
-    return new RegExp("^(?:" + names.map(requote).join("|") + ")", "i");
-}
-function formatLookup(names) {
-    var map = {}, i = -1, n = names.length;
-    while(++i < n)map[names[i].toLowerCase()] = i;
-    return map;
-}
-function parseWeekdayNumberSunday(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 1));
-    return n ? (d.w = +n[0], i + n[0].length) : -1;
-}
-function parseWeekdayNumberMonday(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 1));
-    return n ? (d.u = +n[0], i + n[0].length) : -1;
-}
-function parseWeekNumberSunday(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.U = +n[0], i + n[0].length) : -1;
-}
-function parseWeekNumberISO(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.V = +n[0], i + n[0].length) : -1;
-}
-function parseWeekNumberMonday(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.W = +n[0], i + n[0].length) : -1;
-}
-function parseFullYear(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 4));
-    return n ? (d.y = +n[0], i + n[0].length) : -1;
-}
-function parseYear(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.y = +n[0] + (+n[0] > 68 ? 1900 : 2000), i + n[0].length) : -1;
-}
-function parseZone(d, string, i) {
-    var n = /^(Z)|([+-]\d\d)(?::?(\d\d))?/.exec(string.slice(i, i + 6));
-    return n ? (d.Z = n[1] ? 0 : -(n[2] + (n[3] || "00")), i + n[0].length) : -1;
-}
-function parseQuarter(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 1));
-    return n ? (d.q = n[0] * 3 - 3, i + n[0].length) : -1;
-}
-function parseMonthNumber(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.m = n[0] - 1, i + n[0].length) : -1;
-}
-function parseDayOfMonth(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.d = +n[0], i + n[0].length) : -1;
-}
-function parseDayOfYear(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 3));
-    return n ? (d.m = 0, d.d = +n[0], i + n[0].length) : -1;
-}
-function parseHour24(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.H = +n[0], i + n[0].length) : -1;
-}
-function parseMinutes(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.M = +n[0], i + n[0].length) : -1;
-}
-function parseSeconds(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 2));
-    return n ? (d.S = +n[0], i + n[0].length) : -1;
-}
-function parseMilliseconds(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 3));
-    return n ? (d.L = +n[0], i + n[0].length) : -1;
-}
-function parseMicroseconds(d, string, i) {
-    var n = numberRe.exec(string.slice(i, i + 6));
-    return n ? (d.L = Math.floor(n[0] / 1000), i + n[0].length) : -1;
-}
-function parseLiteralPercent(d, string, i) {
-    var n = percentRe.exec(string.slice(i, i + 1));
-    return n ? i + n[0].length : -1;
-}
-function parseUnixTimestamp(d, string, i) {
-    var n = numberRe.exec(string.slice(i));
-    return n ? (d.Q = +n[0], i + n[0].length) : -1;
-}
-function parseUnixTimestampSeconds(d, string, i) {
-    var n = numberRe.exec(string.slice(i));
-    return n ? (d.s = +n[0], i + n[0].length) : -1;
-}
-function formatDayOfMonth(d, p) {
-    return pad(d.getDate(), p, 2);
-}
-function formatHour24(d, p) {
-    return pad(d.getHours(), p, 2);
-}
-function formatHour12(d, p) {
-    return pad(d.getHours() % 12 || 12, p, 2);
-}
-function formatDayOfYear(d, p) {
-    return pad(1 + (0, _d3Time.timeDay).count((0, _d3Time.timeYear)(d), d), p, 3);
-}
-function formatMilliseconds(d, p) {
-    return pad(d.getMilliseconds(), p, 3);
-}
-function formatMicroseconds(d, p) {
-    return formatMilliseconds(d, p) + "000";
-}
-function formatMonthNumber(d, p) {
-    return pad(d.getMonth() + 1, p, 2);
-}
-function formatMinutes(d, p) {
-    return pad(d.getMinutes(), p, 2);
-}
-function formatSeconds(d, p) {
-    return pad(d.getSeconds(), p, 2);
-}
-function formatWeekdayNumberMonday(d) {
-    var day = d.getDay();
-    return day === 0 ? 7 : day;
-}
-function formatWeekNumberSunday(d, p) {
-    return pad((0, _d3Time.timeSunday).count((0, _d3Time.timeYear)(d) - 1, d), p, 2);
-}
-function dISO(d) {
-    var day = d.getDay();
-    return day >= 4 || day === 0 ? (0, _d3Time.timeThursday)(d) : (0, _d3Time.timeThursday).ceil(d);
-}
-function formatWeekNumberISO(d, p) {
-    d = dISO(d);
-    return pad((0, _d3Time.timeThursday).count((0, _d3Time.timeYear)(d), d) + ((0, _d3Time.timeYear)(d).getDay() === 4), p, 2);
-}
-function formatWeekdayNumberSunday(d) {
-    return d.getDay();
-}
-function formatWeekNumberMonday(d, p) {
-    return pad((0, _d3Time.timeMonday).count((0, _d3Time.timeYear)(d) - 1, d), p, 2);
-}
-function formatYear(d, p) {
-    return pad(d.getFullYear() % 100, p, 2);
-}
-function formatYearISO(d, p) {
-    d = dISO(d);
-    return pad(d.getFullYear() % 100, p, 2);
-}
-function formatFullYear(d, p) {
-    return pad(d.getFullYear() % 10000, p, 4);
-}
-function formatFullYearISO(d, p) {
-    var day = d.getDay();
-    d = day >= 4 || day === 0 ? (0, _d3Time.timeThursday)(d) : (0, _d3Time.timeThursday).ceil(d);
-    return pad(d.getFullYear() % 10000, p, 4);
-}
-function formatZone(d) {
-    var z = d.getTimezoneOffset();
-    return (z > 0 ? "-" : (z *= -1, "+")) + pad(z / 60 | 0, "0", 2) + pad(z % 60, "0", 2);
-}
-function formatUTCDayOfMonth(d, p) {
-    return pad(d.getUTCDate(), p, 2);
-}
-function formatUTCHour24(d, p) {
-    return pad(d.getUTCHours(), p, 2);
-}
-function formatUTCHour12(d, p) {
-    return pad(d.getUTCHours() % 12 || 12, p, 2);
-}
-function formatUTCDayOfYear(d, p) {
-    return pad(1 + (0, _d3Time.utcDay).count((0, _d3Time.utcYear)(d), d), p, 3);
-}
-function formatUTCMilliseconds(d, p) {
-    return pad(d.getUTCMilliseconds(), p, 3);
-}
-function formatUTCMicroseconds(d, p) {
-    return formatUTCMilliseconds(d, p) + "000";
-}
-function formatUTCMonthNumber(d, p) {
-    return pad(d.getUTCMonth() + 1, p, 2);
-}
-function formatUTCMinutes(d, p) {
-    return pad(d.getUTCMinutes(), p, 2);
-}
-function formatUTCSeconds(d, p) {
-    return pad(d.getUTCSeconds(), p, 2);
-}
-function formatUTCWeekdayNumberMonday(d) {
-    var dow = d.getUTCDay();
-    return dow === 0 ? 7 : dow;
-}
-function formatUTCWeekNumberSunday(d, p) {
-    return pad((0, _d3Time.utcSunday).count((0, _d3Time.utcYear)(d) - 1, d), p, 2);
-}
-function UTCdISO(d) {
-    var day = d.getUTCDay();
-    return day >= 4 || day === 0 ? (0, _d3Time.utcThursday)(d) : (0, _d3Time.utcThursday).ceil(d);
-}
-function formatUTCWeekNumberISO(d, p) {
-    d = UTCdISO(d);
-    return pad((0, _d3Time.utcThursday).count((0, _d3Time.utcYear)(d), d) + ((0, _d3Time.utcYear)(d).getUTCDay() === 4), p, 2);
-}
-function formatUTCWeekdayNumberSunday(d) {
-    return d.getUTCDay();
-}
-function formatUTCWeekNumberMonday(d, p) {
-    return pad((0, _d3Time.utcMonday).count((0, _d3Time.utcYear)(d) - 1, d), p, 2);
-}
-function formatUTCYear(d, p) {
-    return pad(d.getUTCFullYear() % 100, p, 2);
-}
-function formatUTCYearISO(d, p) {
-    d = UTCdISO(d);
-    return pad(d.getUTCFullYear() % 100, p, 2);
-}
-function formatUTCFullYear(d, p) {
-    return pad(d.getUTCFullYear() % 10000, p, 4);
-}
-function formatUTCFullYearISO(d, p) {
-    var day = d.getUTCDay();
-    d = day >= 4 || day === 0 ? (0, _d3Time.utcThursday)(d) : (0, _d3Time.utcThursday).ceil(d);
-    return pad(d.getUTCFullYear() % 10000, p, 4);
-}
-function formatUTCZone() {
-    return "+0000";
-}
-function formatLiteralPercent() {
-    return "%";
-}
-function formatUnixTimestamp(d) {
-    return +d;
-}
-function formatUnixTimestampSeconds(d) {
-    return Math.floor(+d / 1000);
-}
-
-},{"d3-time":"1UOEe","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1UOEe":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "timeInterval", ()=>(0, _intervalJsDefault.default));
-parcelHelpers.export(exports, "timeMillisecond", ()=>(0, _millisecondJsDefault.default));
-parcelHelpers.export(exports, "timeMilliseconds", ()=>(0, _millisecondJs.milliseconds));
-parcelHelpers.export(exports, "utcMillisecond", ()=>(0, _millisecondJsDefault.default));
-parcelHelpers.export(exports, "utcMilliseconds", ()=>(0, _millisecondJs.milliseconds));
-parcelHelpers.export(exports, "timeSecond", ()=>(0, _secondJsDefault.default));
-parcelHelpers.export(exports, "timeSeconds", ()=>(0, _secondJs.seconds));
-parcelHelpers.export(exports, "utcSecond", ()=>(0, _secondJsDefault.default));
-parcelHelpers.export(exports, "utcSeconds", ()=>(0, _secondJs.seconds));
-parcelHelpers.export(exports, "timeMinute", ()=>(0, _minuteJsDefault.default));
-parcelHelpers.export(exports, "timeMinutes", ()=>(0, _minuteJs.minutes));
-parcelHelpers.export(exports, "timeHour", ()=>(0, _hourJsDefault.default));
-parcelHelpers.export(exports, "timeHours", ()=>(0, _hourJs.hours));
-parcelHelpers.export(exports, "timeDay", ()=>(0, _dayJsDefault.default));
-parcelHelpers.export(exports, "timeDays", ()=>(0, _dayJs.days));
-parcelHelpers.export(exports, "timeWeek", ()=>(0, _weekJs.sunday));
-parcelHelpers.export(exports, "timeWeeks", ()=>(0, _weekJs.sundays));
-parcelHelpers.export(exports, "timeSunday", ()=>(0, _weekJs.sunday));
-parcelHelpers.export(exports, "timeSundays", ()=>(0, _weekJs.sundays));
-parcelHelpers.export(exports, "timeMonday", ()=>(0, _weekJs.monday));
-parcelHelpers.export(exports, "timeMondays", ()=>(0, _weekJs.mondays));
-parcelHelpers.export(exports, "timeTuesday", ()=>(0, _weekJs.tuesday));
-parcelHelpers.export(exports, "timeTuesdays", ()=>(0, _weekJs.tuesdays));
-parcelHelpers.export(exports, "timeWednesday", ()=>(0, _weekJs.wednesday));
-parcelHelpers.export(exports, "timeWednesdays", ()=>(0, _weekJs.wednesdays));
-parcelHelpers.export(exports, "timeThursday", ()=>(0, _weekJs.thursday));
-parcelHelpers.export(exports, "timeThursdays", ()=>(0, _weekJs.thursdays));
-parcelHelpers.export(exports, "timeFriday", ()=>(0, _weekJs.friday));
-parcelHelpers.export(exports, "timeFridays", ()=>(0, _weekJs.fridays));
-parcelHelpers.export(exports, "timeSaturday", ()=>(0, _weekJs.saturday));
-parcelHelpers.export(exports, "timeSaturdays", ()=>(0, _weekJs.saturdays));
-parcelHelpers.export(exports, "timeMonth", ()=>(0, _monthJsDefault.default));
-parcelHelpers.export(exports, "timeMonths", ()=>(0, _monthJs.months));
-parcelHelpers.export(exports, "timeYear", ()=>(0, _yearJsDefault.default));
-parcelHelpers.export(exports, "timeYears", ()=>(0, _yearJs.years));
-parcelHelpers.export(exports, "utcMinute", ()=>(0, _utcMinuteJsDefault.default));
-parcelHelpers.export(exports, "utcMinutes", ()=>(0, _utcMinuteJs.utcMinutes));
-parcelHelpers.export(exports, "utcHour", ()=>(0, _utcHourJsDefault.default));
-parcelHelpers.export(exports, "utcHours", ()=>(0, _utcHourJs.utcHours));
-parcelHelpers.export(exports, "utcDay", ()=>(0, _utcDayJsDefault.default));
-parcelHelpers.export(exports, "utcDays", ()=>(0, _utcDayJs.utcDays));
-parcelHelpers.export(exports, "utcWeek", ()=>(0, _utcWeekJs.utcSunday));
-parcelHelpers.export(exports, "utcWeeks", ()=>(0, _utcWeekJs.utcSundays));
-parcelHelpers.export(exports, "utcSunday", ()=>(0, _utcWeekJs.utcSunday));
-parcelHelpers.export(exports, "utcSundays", ()=>(0, _utcWeekJs.utcSundays));
-parcelHelpers.export(exports, "utcMonday", ()=>(0, _utcWeekJs.utcMonday));
-parcelHelpers.export(exports, "utcMondays", ()=>(0, _utcWeekJs.utcMondays));
-parcelHelpers.export(exports, "utcTuesday", ()=>(0, _utcWeekJs.utcTuesday));
-parcelHelpers.export(exports, "utcTuesdays", ()=>(0, _utcWeekJs.utcTuesdays));
-parcelHelpers.export(exports, "utcWednesday", ()=>(0, _utcWeekJs.utcWednesday));
-parcelHelpers.export(exports, "utcWednesdays", ()=>(0, _utcWeekJs.utcWednesdays));
-parcelHelpers.export(exports, "utcThursday", ()=>(0, _utcWeekJs.utcThursday));
-parcelHelpers.export(exports, "utcThursdays", ()=>(0, _utcWeekJs.utcThursdays));
-parcelHelpers.export(exports, "utcFriday", ()=>(0, _utcWeekJs.utcFriday));
-parcelHelpers.export(exports, "utcFridays", ()=>(0, _utcWeekJs.utcFridays));
-parcelHelpers.export(exports, "utcSaturday", ()=>(0, _utcWeekJs.utcSaturday));
-parcelHelpers.export(exports, "utcSaturdays", ()=>(0, _utcWeekJs.utcSaturdays));
-parcelHelpers.export(exports, "utcMonth", ()=>(0, _utcMonthJsDefault.default));
-parcelHelpers.export(exports, "utcMonths", ()=>(0, _utcMonthJs.utcMonths));
-parcelHelpers.export(exports, "utcYear", ()=>(0, _utcYearJsDefault.default));
-parcelHelpers.export(exports, "utcYears", ()=>(0, _utcYearJs.utcYears));
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _millisecondJs = require("./millisecond.js");
-var _millisecondJsDefault = parcelHelpers.interopDefault(_millisecondJs);
-var _secondJs = require("./second.js");
-var _secondJsDefault = parcelHelpers.interopDefault(_secondJs);
-var _minuteJs = require("./minute.js");
-var _minuteJsDefault = parcelHelpers.interopDefault(_minuteJs);
-var _hourJs = require("./hour.js");
-var _hourJsDefault = parcelHelpers.interopDefault(_hourJs);
-var _dayJs = require("./day.js");
-var _dayJsDefault = parcelHelpers.interopDefault(_dayJs);
-var _weekJs = require("./week.js");
-var _monthJs = require("./month.js");
-var _monthJsDefault = parcelHelpers.interopDefault(_monthJs);
-var _yearJs = require("./year.js");
-var _yearJsDefault = parcelHelpers.interopDefault(_yearJs);
-var _utcMinuteJs = require("./utcMinute.js");
-var _utcMinuteJsDefault = parcelHelpers.interopDefault(_utcMinuteJs);
-var _utcHourJs = require("./utcHour.js");
-var _utcHourJsDefault = parcelHelpers.interopDefault(_utcHourJs);
-var _utcDayJs = require("./utcDay.js");
-var _utcDayJsDefault = parcelHelpers.interopDefault(_utcDayJs);
-var _utcWeekJs = require("./utcWeek.js");
-var _utcMonthJs = require("./utcMonth.js");
-var _utcMonthJsDefault = parcelHelpers.interopDefault(_utcMonthJs);
-var _utcYearJs = require("./utcYear.js");
-var _utcYearJsDefault = parcelHelpers.interopDefault(_utcYearJs);
-
-},{"./interval.js":false,"./millisecond.js":false,"./second.js":false,"./minute.js":false,"./hour.js":false,"./day.js":"1U9Pq","./week.js":"lmrQt","./month.js":false,"./year.js":"d9SS9","./utcMinute.js":false,"./utcHour.js":false,"./utcDay.js":"liE20","./utcWeek.js":"gAbkz","./utcMonth.js":false,"./utcYear.js":"9p6NU","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jfgl3":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>newInterval);
-var t0 = new Date, t1 = new Date;
-function newInterval(floori, offseti, count, field) {
-    function interval(date) {
-        return floori(date = arguments.length === 0 ? new Date : new Date(+date)), date;
-    }
-    interval.floor = function(date) {
-        return floori(date = new Date(+date)), date;
-    };
-    interval.ceil = function(date) {
-        return floori(date = new Date(date - 1)), offseti(date, 1), floori(date), date;
-    };
-    interval.round = function(date) {
-        var d0 = interval(date), d1 = interval.ceil(date);
-        return date - d0 < d1 - date ? d0 : d1;
-    };
-    interval.offset = function(date, step) {
-        return offseti(date = new Date(+date), step == null ? 1 : Math.floor(step)), date;
-    };
-    interval.range = function(start, stop, step) {
-        var range = [], previous;
-        start = interval.ceil(start);
-        step = step == null ? 1 : Math.floor(step);
-        if (!(start < stop) || !(step > 0)) return range; // also handles Invalid Date
-        do range.push(previous = new Date(+start)), offseti(start, step), floori(start);
-        while (previous < start && start < stop);
-        return range;
-    };
-    interval.filter = function(test) {
-        return newInterval(function(date) {
-            if (date >= date) while(floori(date), !test(date))date.setTime(date - 1);
-        }, function(date, step) {
-            if (date >= date) {
-                if (step < 0) while(++step <= 0){
-                    while(offseti(date, -1), !test(date)); // eslint-disable-line no-empty
-                }
-                else while(--step >= 0){
-                    while(offseti(date, 1), !test(date)); // eslint-disable-line no-empty
-                }
-            }
-        });
-    };
-    if (count) {
-        interval.count = function(start, end) {
-            t0.setTime(+start), t1.setTime(+end);
-            floori(t0), floori(t1);
-            return Math.floor(count(t0, t1));
-        };
-        interval.every = function(step) {
-            step = Math.floor(step);
-            return !isFinite(step) || !(step > 0) ? null : !(step > 1) ? interval : interval.filter(field ? function(d) {
-                return field(d) % step === 0;
-            } : function(d) {
-                return interval.count(0, d) % step === 0;
-            });
-        };
-    }
-    return interval;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1U9Pq":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "days", ()=>days);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var day = (0, _intervalJsDefault.default)(function(date) {
-    date.setHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setDate(date.getDate() + step);
-}, function(start, end) {
-    return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * (0, _durationJs.durationMinute)) / (0, _durationJs.durationDay);
-}, function(date) {
-    return date.getDate() - 1;
-});
-exports.default = day;
-var days = day.range;
-
-},{"./interval.js":"jfgl3","./duration.js":"iEiGQ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iEiGQ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "durationSecond", ()=>durationSecond);
-parcelHelpers.export(exports, "durationMinute", ()=>durationMinute);
-parcelHelpers.export(exports, "durationHour", ()=>durationHour);
-parcelHelpers.export(exports, "durationDay", ()=>durationDay);
-parcelHelpers.export(exports, "durationWeek", ()=>durationWeek);
-var durationSecond = 1e3;
-var durationMinute = 6e4;
-var durationHour = 36e5;
-var durationDay = 864e5;
-var durationWeek = 6048e5;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lmrQt":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "sunday", ()=>sunday);
-parcelHelpers.export(exports, "monday", ()=>monday);
-parcelHelpers.export(exports, "tuesday", ()=>tuesday);
-parcelHelpers.export(exports, "wednesday", ()=>wednesday);
-parcelHelpers.export(exports, "thursday", ()=>thursday);
-parcelHelpers.export(exports, "friday", ()=>friday);
-parcelHelpers.export(exports, "saturday", ()=>saturday);
-parcelHelpers.export(exports, "sundays", ()=>sundays);
-parcelHelpers.export(exports, "mondays", ()=>mondays);
-parcelHelpers.export(exports, "tuesdays", ()=>tuesdays);
-parcelHelpers.export(exports, "wednesdays", ()=>wednesdays);
-parcelHelpers.export(exports, "thursdays", ()=>thursdays);
-parcelHelpers.export(exports, "fridays", ()=>fridays);
-parcelHelpers.export(exports, "saturdays", ()=>saturdays);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-function weekday(i) {
-    return (0, _intervalJsDefault.default)(function(date) {
-        date.setDate(date.getDate() - (date.getDay() + 7 - i) % 7);
-        date.setHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setDate(date.getDate() + step * 7);
-    }, function(start, end) {
-        return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * (0, _durationJs.durationMinute)) / (0, _durationJs.durationWeek);
-    });
-}
-var sunday = weekday(0);
-var monday = weekday(1);
-var tuesday = weekday(2);
-var wednesday = weekday(3);
-var thursday = weekday(4);
-var friday = weekday(5);
-var saturday = weekday(6);
-var sundays = sunday.range;
-var mondays = monday.range;
-var tuesdays = tuesday.range;
-var wednesdays = wednesday.range;
-var thursdays = thursday.range;
-var fridays = friday.range;
-var saturdays = saturday.range;
-
-},{"./interval.js":"jfgl3","./duration.js":"iEiGQ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"d9SS9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "years", ()=>years);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var year = (0, _intervalJsDefault.default)(function(date) {
-    date.setMonth(0, 1);
-    date.setHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setFullYear(date.getFullYear() + step);
-}, function(start, end) {
-    return end.getFullYear() - start.getFullYear();
-}, function(date) {
-    return date.getFullYear();
-});
-// An optimized implementation for this simple case.
-year.every = function(k) {
-    return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : (0, _intervalJsDefault.default)(function(date) {
-        date.setFullYear(Math.floor(date.getFullYear() / k) * k);
-        date.setMonth(0, 1);
-        date.setHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setFullYear(date.getFullYear() + step * k);
-    });
-};
-exports.default = year;
-var years = year.range;
-
-},{"./interval.js":"jfgl3","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"liE20":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcDays", ()=>utcDays);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-var utcDay = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setUTCDate(date.getUTCDate() + step);
-}, function(start, end) {
-    return (end - start) / (0, _durationJs.durationDay);
-}, function(date) {
-    return date.getUTCDate() - 1;
-});
-exports.default = utcDay;
-var utcDays = utcDay.range;
-
-},{"./interval.js":"jfgl3","./duration.js":"iEiGQ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gAbkz":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcSunday", ()=>utcSunday);
-parcelHelpers.export(exports, "utcMonday", ()=>utcMonday);
-parcelHelpers.export(exports, "utcTuesday", ()=>utcTuesday);
-parcelHelpers.export(exports, "utcWednesday", ()=>utcWednesday);
-parcelHelpers.export(exports, "utcThursday", ()=>utcThursday);
-parcelHelpers.export(exports, "utcFriday", ()=>utcFriday);
-parcelHelpers.export(exports, "utcSaturday", ()=>utcSaturday);
-parcelHelpers.export(exports, "utcSundays", ()=>utcSundays);
-parcelHelpers.export(exports, "utcMondays", ()=>utcMondays);
-parcelHelpers.export(exports, "utcTuesdays", ()=>utcTuesdays);
-parcelHelpers.export(exports, "utcWednesdays", ()=>utcWednesdays);
-parcelHelpers.export(exports, "utcThursdays", ()=>utcThursdays);
-parcelHelpers.export(exports, "utcFridays", ()=>utcFridays);
-parcelHelpers.export(exports, "utcSaturdays", ()=>utcSaturdays);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var _durationJs = require("./duration.js");
-function utcWeekday(i) {
-    return (0, _intervalJsDefault.default)(function(date) {
-        date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 7 - i) % 7);
-        date.setUTCHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setUTCDate(date.getUTCDate() + step * 7);
-    }, function(start, end) {
-        return (end - start) / (0, _durationJs.durationWeek);
-    });
-}
-var utcSunday = utcWeekday(0);
-var utcMonday = utcWeekday(1);
-var utcTuesday = utcWeekday(2);
-var utcWednesday = utcWeekday(3);
-var utcThursday = utcWeekday(4);
-var utcFriday = utcWeekday(5);
-var utcSaturday = utcWeekday(6);
-var utcSundays = utcSunday.range;
-var utcMondays = utcMonday.range;
-var utcTuesdays = utcTuesday.range;
-var utcWednesdays = utcWednesday.range;
-var utcThursdays = utcThursday.range;
-var utcFridays = utcFriday.range;
-var utcSaturdays = utcSaturday.range;
-
-},{"./interval.js":"jfgl3","./duration.js":"iEiGQ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9p6NU":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "utcYears", ()=>utcYears);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-var utcYear = (0, _intervalJsDefault.default)(function(date) {
-    date.setUTCMonth(0, 1);
-    date.setUTCHours(0, 0, 0, 0);
-}, function(date, step) {
-    date.setUTCFullYear(date.getUTCFullYear() + step);
-}, function(start, end) {
-    return end.getUTCFullYear() - start.getUTCFullYear();
-}, function(date) {
-    return date.getUTCFullYear();
-});
-// An optimized implementation for this simple case.
-utcYear.every = function(k) {
-    return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : (0, _intervalJsDefault.default)(function(date) {
-        date.setUTCFullYear(Math.floor(date.getUTCFullYear() / k) * k);
-        date.setUTCMonth(0, 1);
-        date.setUTCHours(0, 0, 0, 0);
-    }, function(date, step) {
-        date.setUTCFullYear(date.getUTCFullYear() + step * k);
-    });
-};
-exports.default = utcYear;
-var utcYears = utcYear.range;
-
-},{"./interval.js":"jfgl3","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6ufv7":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>utcTime);
-var _d3Time = require("d3-time");
-var _d3TimeFormat = require("d3-time-format");
-var _timeJs = require("./time.js");
-var _initJs = require("./init.js");
-function utcTime() {
-    return (0, _initJs.initRange).apply((0, _timeJs.calendar)((0, _d3Time.utcTicks), (0, _d3Time.utcTickInterval), (0, _d3Time.utcYear), (0, _d3Time.utcMonth), (0, _d3Time.utcWeek), (0, _d3Time.utcDay), (0, _d3Time.utcHour), (0, _d3Time.utcMinute), (0, _d3Time.utcSecond), (0, _d3TimeFormat.utcFormat)).domain([
-        Date.UTC(2000, 0, 1),
-        Date.UTC(2000, 0, 2)
-    ]), arguments);
-}
-
-},{"d3-time":"2Gldv","d3-time-format":"4FtNS","./time.js":"7UVid","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aMNy9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "copy", ()=>copy);
-parcelHelpers.export(exports, "default", ()=>sequential);
-parcelHelpers.export(exports, "sequentialLog", ()=>sequentialLog);
-parcelHelpers.export(exports, "sequentialSymlog", ()=>sequentialSymlog);
-parcelHelpers.export(exports, "sequentialPow", ()=>sequentialPow);
-parcelHelpers.export(exports, "sequentialSqrt", ()=>sequentialSqrt);
-var _d3Interpolate = require("d3-interpolate");
-var _continuousJs = require("./continuous.js");
-var _initJs = require("./init.js");
-var _linearJs = require("./linear.js");
-var _logJs = require("./log.js");
-var _symlogJs = require("./symlog.js");
-var _powJs = require("./pow.js");
-function transformer() {
-    var x0 = 0, x1 = 1, t0, t1, k10, transform, interpolator = (0, _continuousJs.identity), clamp = false, unknown;
-    function scale(x) {
-        return x == null || isNaN(x = +x) ? unknown : interpolator(k10 === 0 ? 0.5 : (x = (transform(x) - t0) * k10, clamp ? Math.max(0, Math.min(1, x)) : x));
-    }
-    scale.domain = function(_) {
-        return arguments.length ? ([x0, x1] = _, t0 = transform(x0 = +x0), t1 = transform(x1 = +x1), k10 = t0 === t1 ? 0 : 1 / (t1 - t0), scale) : [
-            x0,
-            x1
-        ];
-    };
-    scale.clamp = function(_) {
-        return arguments.length ? (clamp = !!_, scale) : clamp;
-    };
-    scale.interpolator = function(_) {
-        return arguments.length ? (interpolator = _, scale) : interpolator;
-    };
-    function range(interpolate) {
-        return function(_) {
-            var r0, r1;
-            return arguments.length ? ([r0, r1] = _, interpolator = interpolate(r0, r1), scale) : [
-                interpolator(0),
-                interpolator(1)
-            ];
-        };
-    }
-    scale.range = range((0, _d3Interpolate.interpolate));
-    scale.rangeRound = range((0, _d3Interpolate.interpolateRound));
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    return function(t) {
-        transform = t, t0 = t(x0), t1 = t(x1), k10 = t0 === t1 ? 0 : 1 / (t1 - t0);
-        return scale;
-    };
-}
-function copy(source, target) {
-    return target.domain(source.domain()).interpolator(source.interpolator()).clamp(source.clamp()).unknown(source.unknown());
-}
-function sequential() {
-    var scale = (0, _linearJs.linearish)(transformer()((0, _continuousJs.identity)));
-    scale.copy = function() {
-        return copy(scale, sequential());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function sequentialLog() {
-    var scale = (0, _logJs.loggish)(transformer()).domain([
-        1,
-        10
-    ]);
-    scale.copy = function() {
-        return copy(scale, sequentialLog()).base(scale.base());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function sequentialSymlog() {
-    var scale = (0, _symlogJs.symlogish)(transformer());
-    scale.copy = function() {
-        return copy(scale, sequentialSymlog()).constant(scale.constant());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function sequentialPow() {
-    var scale = (0, _powJs.powish)(transformer());
-    scale.copy = function() {
-        return copy(scale, sequentialPow()).exponent(scale.exponent());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function sequentialSqrt() {
-    return sequentialPow.apply(null, arguments).exponent(0.5);
-}
-
-},{"d3-interpolate":"6jJyi","./continuous.js":"1LsCM","./init.js":"kp8lc","./linear.js":"lob4K","./log.js":"z4t8s","./symlog.js":"4KiG8","./pow.js":"jVG8A","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"esKgz":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>sequentialQuantile);
-var _d3Array = require("d3-array");
-var _continuousJs = require("./continuous.js");
-var _initJs = require("./init.js");
-function sequentialQuantile() {
-    var domain = [], interpolator = (0, _continuousJs.identity);
-    function scale(x) {
-        if (x != null && !isNaN(x = +x)) return interpolator(((0, _d3Array.bisect)(domain, x, 1) - 1) / (domain.length - 1));
-    }
-    scale.domain = function(_) {
-        if (!arguments.length) return domain.slice();
-        domain = [];
-        for (let d of _)if (d != null && !isNaN(d = +d)) domain.push(d);
-        domain.sort((0, _d3Array.ascending));
-        return scale;
-    };
-    scale.interpolator = function(_) {
-        return arguments.length ? (interpolator = _, scale) : interpolator;
-    };
-    scale.range = function() {
-        return domain.map((d, i)=>interpolator(i / (domain.length - 1)));
-    };
-    scale.quantiles = function(n) {
-        return Array.from({
-            length: n + 1
-        }, (_, i)=>(0, _d3Array.quantile)(domain, i / n));
-    };
-    scale.copy = function() {
-        return sequentialQuantile(interpolator).domain(domain);
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-
-},{"d3-array":"1yX2W","./continuous.js":"1LsCM","./init.js":"kp8lc","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3BN2V":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>diverging);
-parcelHelpers.export(exports, "divergingLog", ()=>divergingLog);
-parcelHelpers.export(exports, "divergingSymlog", ()=>divergingSymlog);
-parcelHelpers.export(exports, "divergingPow", ()=>divergingPow);
-parcelHelpers.export(exports, "divergingSqrt", ()=>divergingSqrt);
-var _d3Interpolate = require("d3-interpolate");
-var _continuousJs = require("./continuous.js");
-var _initJs = require("./init.js");
-var _linearJs = require("./linear.js");
-var _logJs = require("./log.js");
-var _sequentialJs = require("./sequential.js");
-var _symlogJs = require("./symlog.js");
-var _powJs = require("./pow.js");
-function transformer() {
-    var x0 = 0, x1 = 0.5, x2 = 1, s = 1, t0, t1, t2, k10, k21, interpolator = (0, _continuousJs.identity), transform, clamp = false, unknown;
-    function scale(x) {
-        return isNaN(x = +x) ? unknown : (x = 0.5 + ((x = +transform(x)) - t1) * (s * x < s * t1 ? k10 : k21), interpolator(clamp ? Math.max(0, Math.min(1, x)) : x));
-    }
-    scale.domain = function(_) {
-        return arguments.length ? ([x0, x1, x2] = _, t0 = transform(x0 = +x0), t1 = transform(x1 = +x1), t2 = transform(x2 = +x2), k10 = t0 === t1 ? 0 : 0.5 / (t1 - t0), k21 = t1 === t2 ? 0 : 0.5 / (t2 - t1), s = t1 < t0 ? -1 : 1, scale) : [
-            x0,
-            x1,
-            x2
-        ];
-    };
-    scale.clamp = function(_) {
-        return arguments.length ? (clamp = !!_, scale) : clamp;
-    };
-    scale.interpolator = function(_) {
-        return arguments.length ? (interpolator = _, scale) : interpolator;
-    };
-    function range(interpolate) {
-        return function(_) {
-            var r0, r1, r2;
-            return arguments.length ? ([r0, r1, r2] = _, interpolator = (0, _d3Interpolate.piecewise)(interpolate, [
-                r0,
-                r1,
-                r2
-            ]), scale) : [
-                interpolator(0),
-                interpolator(0.5),
-                interpolator(1)
-            ];
-        };
-    }
-    scale.range = range((0, _d3Interpolate.interpolate));
-    scale.rangeRound = range((0, _d3Interpolate.interpolateRound));
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    return function(t) {
-        transform = t, t0 = t(x0), t1 = t(x1), t2 = t(x2), k10 = t0 === t1 ? 0 : 0.5 / (t1 - t0), k21 = t1 === t2 ? 0 : 0.5 / (t2 - t1), s = t1 < t0 ? -1 : 1;
-        return scale;
-    };
-}
-function diverging() {
-    var scale = (0, _linearJs.linearish)(transformer()((0, _continuousJs.identity)));
-    scale.copy = function() {
-        return (0, _sequentialJs.copy)(scale, diverging());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function divergingLog() {
-    var scale = (0, _logJs.loggish)(transformer()).domain([
-        0.1,
-        1,
-        10
-    ]);
-    scale.copy = function() {
-        return (0, _sequentialJs.copy)(scale, divergingLog()).base(scale.base());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function divergingSymlog() {
-    var scale = (0, _symlogJs.symlogish)(transformer());
-    scale.copy = function() {
-        return (0, _sequentialJs.copy)(scale, divergingSymlog()).constant(scale.constant());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function divergingPow() {
-    var scale = (0, _powJs.powish)(transformer());
-    scale.copy = function() {
-        return (0, _sequentialJs.copy)(scale, divergingPow()).exponent(scale.exponent());
-    };
-    return (0, _initJs.initInterpolator).apply(scale, arguments);
-}
-function divergingSqrt() {
-    return divergingPow.apply(null, arguments).exponent(0.5);
-}
-
-},{"d3-interpolate":"6jJyi","./continuous.js":"1LsCM","./init.js":"kp8lc","./linear.js":"lob4K","./log.js":"z4t8s","./sequential.js":"aMNy9","./symlog.js":"4KiG8","./pow.js":"jVG8A","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"SqrXv":[function(require,module,exports) {
+},{"./exponent.js":"7L05r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"SqrXv":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "arc", ()=>(0, _arcJsDefault.default));
@@ -9277,158 +5649,86 @@ var _noneJsDefault1 = parcelHelpers.interopDefault(_noneJs1);
 var _reverseJs = require("./order/reverse.js");
 var _reverseJsDefault = parcelHelpers.interopDefault(_reverseJs);
 
-},{"./arc.js":"8EL3d","./area.js":"87W2h","./line.js":"hTFAN","./pie.js":"blNzn","./areaRadial.js":"aKyw6","./lineRadial.js":"4aSXI","./pointRadial.js":"gH3Nl","./link/index.js":"9OVls","./symbol.js":"12bBv","./symbol/circle.js":"jQjPb","./symbol/cross.js":"2CCQJ","./symbol/diamond.js":"afDKe","./symbol/square.js":"3Rovu","./symbol/star.js":"fqvh2","./symbol/triangle.js":"l2B6P","./symbol/wye.js":"6dhtz","./curve/basisClosed.js":"jK8tZ","./curve/basisOpen.js":"9nzjm","./curve/basis.js":"lmIyE","./curve/bundle.js":"9NCmN","./curve/cardinalClosed.js":"8btb4","./curve/cardinalOpen.js":"avKmC","./curve/cardinal.js":"brZ6e","./curve/catmullRomClosed.js":"3mnrZ","./curve/catmullRomOpen.js":"4v2qz","./curve/catmullRom.js":"j2hDs","./curve/linearClosed.js":"bZkPo","./curve/linear.js":"ajwdK","./curve/monotone.js":"akQ7S","./curve/natural.js":"ejsSN","./curve/step.js":"cenwN","./stack.js":"04Lp5","./offset/expand.js":"bE3nk","./offset/diverging.js":"7vGu2","./offset/none.js":"h0h85","./offset/silhouette.js":"ez0ZX","./offset/wiggle.js":"hJZrV","./order/appearance.js":"fDXA7","./order/ascending.js":"17HfK","./order/descending.js":"fTuOf","./order/insideOut.js":"4CNKk","./order/none.js":"30Qqt","./order/reverse.js":"4K6jR","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8EL3d":[function(require,module,exports) {
+},{"./arc.js":false,"./area.js":"87W2h","./line.js":"hTFAN","./pie.js":false,"./areaRadial.js":false,"./lineRadial.js":false,"./pointRadial.js":false,"./link/index.js":false,"./symbol.js":false,"./symbol/circle.js":false,"./symbol/cross.js":false,"./symbol/diamond.js":false,"./symbol/square.js":false,"./symbol/star.js":false,"./symbol/triangle.js":false,"./symbol/wye.js":false,"./curve/basisClosed.js":false,"./curve/basisOpen.js":false,"./curve/basis.js":false,"./curve/bundle.js":false,"./curve/cardinalClosed.js":false,"./curve/cardinalOpen.js":false,"./curve/cardinal.js":false,"./curve/catmullRomClosed.js":false,"./curve/catmullRomOpen.js":false,"./curve/catmullRom.js":false,"./curve/linearClosed.js":false,"./curve/linear.js":false,"./curve/monotone.js":false,"./curve/natural.js":false,"./curve/step.js":false,"./stack.js":false,"./offset/expand.js":false,"./offset/diverging.js":false,"./offset/none.js":false,"./offset/silhouette.js":false,"./offset/wiggle.js":false,"./order/appearance.js":false,"./order/ascending.js":false,"./order/descending.js":false,"./order/insideOut.js":false,"./order/none.js":false,"./order/reverse.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"87W2h":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function() {
-        var innerRadius = arcInnerRadius, outerRadius = arcOuterRadius, cornerRadius = (0, _constantJsDefault.default)(0), padRadius = null, startAngle = arcStartAngle, endAngle = arcEndAngle, padAngle = arcPadAngle, context = null;
-        function arc() {
-            var buffer, r, r0 = +innerRadius.apply(this, arguments), r1 = +outerRadius.apply(this, arguments), a0 = startAngle.apply(this, arguments) - (0, _mathJs.halfPi), a1 = endAngle.apply(this, arguments) - (0, _mathJs.halfPi), da = (0, _mathJs.abs)(a1 - a0), cw = a1 > a0;
-            if (!context) context = buffer = (0, _d3Path.path)();
-            // Ensure that the outer radius is always larger than the inner radius.
-            if (r1 < r0) r = r1, r1 = r0, r0 = r;
-            // Is it a point?
-            if (!(r1 > (0, _mathJs.epsilon))) context.moveTo(0, 0);
-            else if (da > (0, _mathJs.tau) - (0, _mathJs.epsilon)) {
-                context.moveTo(r1 * (0, _mathJs.cos)(a0), r1 * (0, _mathJs.sin)(a0));
-                context.arc(0, 0, r1, a0, a1, !cw);
-                if (r0 > (0, _mathJs.epsilon)) {
-                    context.moveTo(r0 * (0, _mathJs.cos)(a1), r0 * (0, _mathJs.sin)(a1));
-                    context.arc(0, 0, r0, a1, a0, cw);
-                }
-            } else {
-                var a01 = a0, a11 = a1, a00 = a0, a10 = a1, da0 = da, da1 = da, ap = padAngle.apply(this, arguments) / 2, rp = ap > (0, _mathJs.epsilon) && (padRadius ? +padRadius.apply(this, arguments) : (0, _mathJs.sqrt)(r0 * r0 + r1 * r1)), rc = (0, _mathJs.min)((0, _mathJs.abs)(r1 - r0) / 2, +cornerRadius.apply(this, arguments)), rc0 = rc, rc1 = rc, t0, t1;
-                // Apply padding? Note that since r1 ≥ r0, da1 ≥ da0.
-                if (rp > (0, _mathJs.epsilon)) {
-                    var p0 = (0, _mathJs.asin)(rp / r0 * (0, _mathJs.sin)(ap)), p1 = (0, _mathJs.asin)(rp / r1 * (0, _mathJs.sin)(ap));
-                    if ((da0 -= p0 * 2) > (0, _mathJs.epsilon)) p0 *= cw ? 1 : -1, a00 += p0, a10 -= p0;
-                    else da0 = 0, a00 = a10 = (a0 + a1) / 2;
-                    if ((da1 -= p1 * 2) > (0, _mathJs.epsilon)) p1 *= cw ? 1 : -1, a01 += p1, a11 -= p1;
-                    else da1 = 0, a01 = a11 = (a0 + a1) / 2;
-                }
-                var x01 = r1 * (0, _mathJs.cos)(a01), y01 = r1 * (0, _mathJs.sin)(a01), x10 = r0 * (0, _mathJs.cos)(a10), y10 = r0 * (0, _mathJs.sin)(a10);
-                // Apply rounded corners?
-                if (rc > (0, _mathJs.epsilon)) {
-                    var x11 = r1 * (0, _mathJs.cos)(a11), y11 = r1 * (0, _mathJs.sin)(a11), x00 = r0 * (0, _mathJs.cos)(a00), y00 = r0 * (0, _mathJs.sin)(a00), oc;
-                    // Restrict the corner radius according to the sector angle.
-                    if (da < (0, _mathJs.pi) && (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10))) {
-                        var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / (0, _mathJs.sin)((0, _mathJs.acos)((ax * bx + ay * by) / ((0, _mathJs.sqrt)(ax * ax + ay * ay) * (0, _mathJs.sqrt)(bx * bx + by * by))) / 2), lc = (0, _mathJs.sqrt)(oc[0] * oc[0] + oc[1] * oc[1]);
-                        rc0 = (0, _mathJs.min)(rc, (r0 - lc) / (kc - 1));
-                        rc1 = (0, _mathJs.min)(rc, (r1 - lc) / (kc + 1));
+        var x0 = (0, _pointJs.x), x1 = null, y0 = (0, _constantJsDefault.default)(0), y1 = (0, _pointJs.y), defined = (0, _constantJsDefault.default)(true), context = null, curve = (0, _linearJsDefault.default), output = null;
+        function area(data) {
+            var i, j, k, n = data.length, d, defined0 = false, buffer, x0z = new Array(n), y0z = new Array(n);
+            if (context == null) output = curve(buffer = (0, _d3Path.path)());
+            for(i = 0; i <= n; ++i){
+                if (!(i < n && defined(d = data[i], i, data)) === defined0) {
+                    if (defined0 = !defined0) {
+                        j = i;
+                        output.areaStart();
+                        output.lineStart();
+                    } else {
+                        output.lineEnd();
+                        output.lineStart();
+                        for(k = i - 1; k >= j; --k)output.point(x0z[k], y0z[k]);
+                        output.lineEnd();
+                        output.areaEnd();
                     }
                 }
-                // Is the sector collapsed to a line?
-                if (!(da1 > (0, _mathJs.epsilon))) context.moveTo(x01, y01);
-                else if (rc1 > (0, _mathJs.epsilon)) {
-                    t0 = cornerTangents(x00, y00, x01, y01, r1, rc1, cw);
-                    t1 = cornerTangents(x11, y11, x10, y10, r1, rc1, cw);
-                    context.moveTo(t0.cx + t0.x01, t0.cy + t0.y01);
-                    // Have the corners merged?
-                    if (rc1 < rc) context.arc(t0.cx, t0.cy, rc1, (0, _mathJs.atan2)(t0.y01, t0.x01), (0, _mathJs.atan2)(t1.y01, t1.x01), !cw);
-                    else {
-                        context.arc(t0.cx, t0.cy, rc1, (0, _mathJs.atan2)(t0.y01, t0.x01), (0, _mathJs.atan2)(t0.y11, t0.x11), !cw);
-                        context.arc(0, 0, r1, (0, _mathJs.atan2)(t0.cy + t0.y11, t0.cx + t0.x11), (0, _mathJs.atan2)(t1.cy + t1.y11, t1.cx + t1.x11), !cw);
-                        context.arc(t1.cx, t1.cy, rc1, (0, _mathJs.atan2)(t1.y11, t1.x11), (0, _mathJs.atan2)(t1.y01, t1.x01), !cw);
-                    }
-                } else context.moveTo(x01, y01), context.arc(0, 0, r1, a01, a11, !cw);
-                // Is there no inner ring, and it’s a circular sector?
-                // Or perhaps it’s an annular sector collapsed due to padding?
-                if (!(r0 > (0, _mathJs.epsilon)) || !(da0 > (0, _mathJs.epsilon))) context.lineTo(x10, y10);
-                else if (rc0 > (0, _mathJs.epsilon)) {
-                    t0 = cornerTangents(x10, y10, x11, y11, r0, -rc0, cw);
-                    t1 = cornerTangents(x01, y01, x00, y00, r0, -rc0, cw);
-                    context.lineTo(t0.cx + t0.x01, t0.cy + t0.y01);
-                    // Have the corners merged?
-                    if (rc0 < rc) context.arc(t0.cx, t0.cy, rc0, (0, _mathJs.atan2)(t0.y01, t0.x01), (0, _mathJs.atan2)(t1.y01, t1.x01), !cw);
-                    else {
-                        context.arc(t0.cx, t0.cy, rc0, (0, _mathJs.atan2)(t0.y01, t0.x01), (0, _mathJs.atan2)(t0.y11, t0.x11), !cw);
-                        context.arc(0, 0, r0, (0, _mathJs.atan2)(t0.cy + t0.y11, t0.cx + t0.x11), (0, _mathJs.atan2)(t1.cy + t1.y11, t1.cx + t1.x11), cw);
-                        context.arc(t1.cx, t1.cy, rc0, (0, _mathJs.atan2)(t1.y11, t1.x11), (0, _mathJs.atan2)(t1.y01, t1.x01), !cw);
-                    }
-                } else context.arc(0, 0, r0, a10, a00, cw);
+                if (defined0) {
+                    x0z[i] = +x0(d, i, data), y0z[i] = +y0(d, i, data);
+                    output.point(x1 ? +x1(d, i, data) : x0z[i], y1 ? +y1(d, i, data) : y0z[i]);
+                }
             }
-            context.closePath();
-            if (buffer) return context = null, buffer + "" || null;
+            if (buffer) return output = null, buffer + "" || null;
         }
-        arc.centroid = function() {
-            var r = (+innerRadius.apply(this, arguments) + +outerRadius.apply(this, arguments)) / 2, a = (+startAngle.apply(this, arguments) + +endAngle.apply(this, arguments)) / 2 - (0, _mathJs.pi) / 2;
-            return [
-                (0, _mathJs.cos)(a) * r,
-                (0, _mathJs.sin)(a) * r
-            ];
+        function arealine() {
+            return (0, _lineJsDefault.default)().defined(defined).curve(curve).context(context);
+        }
+        area.x = function(_) {
+            return arguments.length ? (x0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), x1 = null, area) : x0;
         };
-        arc.innerRadius = function(_) {
-            return arguments.length ? (innerRadius = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : innerRadius;
+        area.x0 = function(_) {
+            return arguments.length ? (x0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : x0;
         };
-        arc.outerRadius = function(_) {
-            return arguments.length ? (outerRadius = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : outerRadius;
+        area.x1 = function(_) {
+            return arguments.length ? (x1 = _ == null ? null : typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : x1;
         };
-        arc.cornerRadius = function(_) {
-            return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : cornerRadius;
+        area.y = function(_) {
+            return arguments.length ? (y0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), y1 = null, area) : y0;
         };
-        arc.padRadius = function(_) {
-            return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : padRadius;
+        area.y0 = function(_) {
+            return arguments.length ? (y0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : y0;
         };
-        arc.startAngle = function(_) {
-            return arguments.length ? (startAngle = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : startAngle;
+        area.y1 = function(_) {
+            return arguments.length ? (y1 = _ == null ? null : typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : y1;
         };
-        arc.endAngle = function(_) {
-            return arguments.length ? (endAngle = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : endAngle;
+        area.lineX0 = area.lineY0 = function() {
+            return arealine().x(x0).y(y0);
         };
-        arc.padAngle = function(_) {
-            return arguments.length ? (padAngle = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), arc) : padAngle;
+        area.lineY1 = function() {
+            return arealine().x(x0).y(y1);
         };
-        arc.context = function(_) {
-            return arguments.length ? (context = _ == null ? null : _, arc) : context;
+        area.lineX1 = function() {
+            return arealine().x(x1).y(y0);
         };
-        return arc;
+        area.defined = function(_) {
+            return arguments.length ? (defined = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(!!_), area) : defined;
+        };
+        area.curve = function(_) {
+            return arguments.length ? (curve = _, context != null && (output = curve(context)), area) : curve;
+        };
+        area.context = function(_) {
+            return arguments.length ? (_ == null ? context = output = null : output = curve(context = _), area) : context;
+        };
+        return area;
     });
 var _d3Path = require("d3-path");
 var _constantJs = require("./constant.js");
 var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _mathJs = require("./math.js");
-function arcInnerRadius(d) {
-    return d.innerRadius;
-}
-function arcOuterRadius(d) {
-    return d.outerRadius;
-}
-function arcStartAngle(d) {
-    return d.startAngle;
-}
-function arcEndAngle(d) {
-    return d.endAngle;
-}
-function arcPadAngle(d) {
-    return d && d.padAngle; // Note: optional!
-}
-function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
-    var x10 = x1 - x0, y10 = y1 - y0, x32 = x3 - x2, y32 = y3 - y2, t = y32 * x10 - x32 * y10;
-    if (t * t < (0, _mathJs.epsilon)) return;
-    t = (x32 * (y0 - y2) - y32 * (x0 - x2)) / t;
-    return [
-        x0 + t * x10,
-        y0 + t * y10
-    ];
-}
-// Compute perpendicular offset line of length rc.
-// http://mathworld.wolfram.com/Circle-LineIntersection.html
-function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
-    var x01 = x0 - x1, y01 = y0 - y1, lo = (cw ? rc : -rc) / (0, _mathJs.sqrt)(x01 * x01 + y01 * y01), ox = lo * y01, oy = -lo * x01, x11 = x0 + ox, y11 = y0 + oy, x10 = x1 + ox, y10 = y1 + oy, x00 = (x11 + x10) / 2, y00 = (y11 + y10) / 2, dx = x10 - x11, dy = y10 - y11, d2 = dx * dx + dy * dy, r = r1 - rc, D = x11 * y10 - x10 * y11, d = (dy < 0 ? -1 : 1) * (0, _mathJs.sqrt)((0, _mathJs.max)(0, r * r * d2 - D * D)), cx0 = (D * dy - dx * d) / d2, cy0 = (-D * dx - dy * d) / d2, cx1 = (D * dy + dx * d) / d2, cy1 = (-D * dx + dy * d) / d2, dx0 = cx0 - x00, dy0 = cy0 - y00, dx1 = cx1 - x00, dy1 = cy1 - y00;
-    // Pick the closer of the two intersection points.
-    // TODO Is there a faster way to determine which intersection to use?
-    if (dx0 * dx0 + dy0 * dy0 > dx1 * dx1 + dy1 * dy1) cx0 = cx1, cy0 = cy1;
-    return {
-        cx: cx0,
-        cy: cy0,
-        x01: -ox,
-        y01: -oy,
-        x11: cx0 * (r1 / r - 1),
-        y11: cy0 * (r1 / r - 1)
-    };
-}
+var _linearJs = require("./curve/linear.js");
+var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
+var _lineJs = require("./line.js");
+var _lineJsDefault = parcelHelpers.interopDefault(_lineJs);
+var _pointJs = require("./point.js");
 
-},{"d3-path":"eY3pl","./constant.js":"dFe8v","./math.js":"4VX7v","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eY3pl":[function(require,module,exports) {
+},{"d3-path":"eY3pl","./constant.js":"dFe8v","./curve/linear.js":"ajwdK","./line.js":"hTFAN","./point.js":"5bQ0r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eY3pl":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "path", ()=>(0, _pathJsDefault.default));
@@ -9516,120 +5816,7 @@ parcelHelpers.export(exports, "default", ()=>function(x) {
         };
     });
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4VX7v":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "abs", ()=>abs);
-parcelHelpers.export(exports, "atan2", ()=>atan2);
-parcelHelpers.export(exports, "cos", ()=>cos);
-parcelHelpers.export(exports, "max", ()=>max);
-parcelHelpers.export(exports, "min", ()=>min);
-parcelHelpers.export(exports, "sin", ()=>sin);
-parcelHelpers.export(exports, "sqrt", ()=>sqrt);
-parcelHelpers.export(exports, "epsilon", ()=>epsilon);
-parcelHelpers.export(exports, "pi", ()=>pi);
-parcelHelpers.export(exports, "halfPi", ()=>halfPi);
-parcelHelpers.export(exports, "tau", ()=>tau);
-parcelHelpers.export(exports, "acos", ()=>acos);
-parcelHelpers.export(exports, "asin", ()=>asin);
-var abs = Math.abs;
-var atan2 = Math.atan2;
-var cos = Math.cos;
-var max = Math.max;
-var min = Math.min;
-var sin = Math.sin;
-var sqrt = Math.sqrt;
-var epsilon = 1e-12;
-var pi = Math.PI;
-var halfPi = pi / 2;
-var tau = 2 * pi;
-function acos(x) {
-    return x > 1 ? 0 : x < -1 ? pi : Math.acos(x);
-}
-function asin(x) {
-    return x >= 1 ? halfPi : x <= -1 ? -halfPi : Math.asin(x);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"87W2h":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var x0 = (0, _pointJs.x), x1 = null, y0 = (0, _constantJsDefault.default)(0), y1 = (0, _pointJs.y), defined = (0, _constantJsDefault.default)(true), context = null, curve = (0, _linearJsDefault.default), output = null;
-        function area(data) {
-            var i, j, k, n = data.length, d, defined0 = false, buffer, x0z = new Array(n), y0z = new Array(n);
-            if (context == null) output = curve(buffer = (0, _d3Path.path)());
-            for(i = 0; i <= n; ++i){
-                if (!(i < n && defined(d = data[i], i, data)) === defined0) {
-                    if (defined0 = !defined0) {
-                        j = i;
-                        output.areaStart();
-                        output.lineStart();
-                    } else {
-                        output.lineEnd();
-                        output.lineStart();
-                        for(k = i - 1; k >= j; --k)output.point(x0z[k], y0z[k]);
-                        output.lineEnd();
-                        output.areaEnd();
-                    }
-                }
-                if (defined0) {
-                    x0z[i] = +x0(d, i, data), y0z[i] = +y0(d, i, data);
-                    output.point(x1 ? +x1(d, i, data) : x0z[i], y1 ? +y1(d, i, data) : y0z[i]);
-                }
-            }
-            if (buffer) return output = null, buffer + "" || null;
-        }
-        function arealine() {
-            return (0, _lineJsDefault.default)().defined(defined).curve(curve).context(context);
-        }
-        area.x = function(_) {
-            return arguments.length ? (x0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), x1 = null, area) : x0;
-        };
-        area.x0 = function(_) {
-            return arguments.length ? (x0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : x0;
-        };
-        area.x1 = function(_) {
-            return arguments.length ? (x1 = _ == null ? null : typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : x1;
-        };
-        area.y = function(_) {
-            return arguments.length ? (y0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), y1 = null, area) : y0;
-        };
-        area.y0 = function(_) {
-            return arguments.length ? (y0 = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : y0;
-        };
-        area.y1 = function(_) {
-            return arguments.length ? (y1 = _ == null ? null : typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), area) : y1;
-        };
-        area.lineX0 = area.lineY0 = function() {
-            return arealine().x(x0).y(y0);
-        };
-        area.lineY1 = function() {
-            return arealine().x(x0).y(y1);
-        };
-        area.lineX1 = function() {
-            return arealine().x(x1).y(y0);
-        };
-        area.defined = function(_) {
-            return arguments.length ? (defined = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(!!_), area) : defined;
-        };
-        area.curve = function(_) {
-            return arguments.length ? (curve = _, context != null && (output = curve(context)), area) : curve;
-        };
-        area.context = function(_) {
-            return arguments.length ? (_ == null ? context = output = null : output = curve(context = _), area) : context;
-        };
-        return area;
-    });
-var _d3Path = require("d3-path");
-var _constantJs = require("./constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _linearJs = require("./curve/linear.js");
-var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
-var _lineJs = require("./line.js");
-var _lineJsDefault = parcelHelpers.interopDefault(_lineJs);
-var _pointJs = require("./point.js");
-
-},{"d3-path":"eY3pl","./constant.js":"dFe8v","./curve/linear.js":"ajwdK","./line.js":"hTFAN","./point.js":"5bQ0r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ajwdK":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ajwdK":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(context) {
@@ -9721,1683 +5908,310 @@ function y(p) {
     return p[1];
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"blNzn":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var value = (0, _identityJsDefault.default), sortValues = (0, _descendingJsDefault.default), sort = null, startAngle = (0, _constantJsDefault.default)(0), endAngle = (0, _constantJsDefault.default)((0, _mathJs.tau)), padAngle = (0, _constantJsDefault.default)(0);
-        function pie(data) {
-            var i, n = data.length, j, k, sum = 0, index = new Array(n), arcs = new Array(n), a0 = +startAngle.apply(this, arguments), da = Math.min((0, _mathJs.tau), Math.max(-(0, _mathJs.tau), endAngle.apply(this, arguments) - a0)), a1, p = Math.min(Math.abs(da) / n, padAngle.apply(this, arguments)), pa = p * (da < 0 ? -1 : 1), v;
-            for(i = 0; i < n; ++i)if ((v = arcs[index[i] = i] = +value(data[i], i, data)) > 0) sum += v;
-            // Optionally sort the arcs by previously-computed values or by data.
-            if (sortValues != null) index.sort(function(i, j) {
-                return sortValues(arcs[i], arcs[j]);
-            });
-            else if (sort != null) index.sort(function(i, j) {
-                return sort(data[i], data[j]);
-            });
-            // Compute the arcs! They are stored in the original data's order.
-            for(i = 0, k = sum ? (da - n * pa) / sum : 0; i < n; ++i, a0 = a1)j = index[i], v = arcs[j], a1 = a0 + (v > 0 ? v * k : 0) + pa, arcs[j] = {
-                data: data[j],
-                index: i,
-                value: v,
-                startAngle: a0,
-                endAngle: a1,
-                padAngle: p
-            };
-            return arcs;
-        }
-        pie.value = function(_) {
-            return arguments.length ? (value = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), pie) : value;
-        };
-        pie.sortValues = function(_) {
-            return arguments.length ? (sortValues = _, sort = null, pie) : sortValues;
-        };
-        pie.sort = function(_) {
-            return arguments.length ? (sort = _, sortValues = null, pie) : sort;
-        };
-        pie.startAngle = function(_) {
-            return arguments.length ? (startAngle = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), pie) : startAngle;
-        };
-        pie.endAngle = function(_) {
-            return arguments.length ? (endAngle = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), pie) : endAngle;
-        };
-        pie.padAngle = function(_) {
-            return arguments.length ? (padAngle = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), pie) : padAngle;
-        };
-        return pie;
-    });
-var _constantJs = require("./constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _descendingJs = require("./descending.js");
-var _descendingJsDefault = parcelHelpers.interopDefault(_descendingJs);
-var _identityJs = require("./identity.js");
-var _identityJsDefault = parcelHelpers.interopDefault(_identityJs);
-var _mathJs = require("./math.js");
-
-},{"./constant.js":"dFe8v","./descending.js":"1wgeb","./identity.js":"ivc9L","./math.js":"4VX7v","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1wgeb":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(a, b) {
-        return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ivc9L":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(d) {
-        return d;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aKyw6":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var a = (0, _areaJsDefault.default)().curve((0, _radialJs.curveRadialLinear)), c = a.curve, x0 = a.lineX0, x1 = a.lineX1, y0 = a.lineY0, y1 = a.lineY1;
-        a.angle = a.x, delete a.x;
-        a.startAngle = a.x0, delete a.x0;
-        a.endAngle = a.x1, delete a.x1;
-        a.radius = a.y, delete a.y;
-        a.innerRadius = a.y0, delete a.y0;
-        a.outerRadius = a.y1, delete a.y1;
-        a.lineStartAngle = function() {
-            return (0, _lineRadialJs.lineRadial)(x0());
-        }, delete a.lineX0;
-        a.lineEndAngle = function() {
-            return (0, _lineRadialJs.lineRadial)(x1());
-        }, delete a.lineX1;
-        a.lineInnerRadius = function() {
-            return (0, _lineRadialJs.lineRadial)(y0());
-        }, delete a.lineY0;
-        a.lineOuterRadius = function() {
-            return (0, _lineRadialJs.lineRadial)(y1());
-        }, delete a.lineY1;
-        a.curve = function(_) {
-            return arguments.length ? c((0, _radialJsDefault.default)(_)) : c()._curve;
-        };
-        return a;
-    });
-var _radialJs = require("./curve/radial.js");
-var _radialJsDefault = parcelHelpers.interopDefault(_radialJs);
-var _areaJs = require("./area.js");
-var _areaJsDefault = parcelHelpers.interopDefault(_areaJs);
-var _lineRadialJs = require("./lineRadial.js");
-
-},{"./curve/radial.js":"7P2sE","./area.js":"87W2h","./lineRadial.js":"4aSXI","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7P2sE":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "curveRadialLinear", ()=>curveRadialLinear);
-parcelHelpers.export(exports, "default", ()=>curveRadial);
-var _linearJs = require("./linear.js");
-var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
-var curveRadialLinear = curveRadial((0, _linearJsDefault.default));
-function Radial(curve) {
-    this._curve = curve;
-}
-Radial.prototype = {
-    areaStart: function() {
-        this._curve.areaStart();
-    },
-    areaEnd: function() {
-        this._curve.areaEnd();
-    },
-    lineStart: function() {
-        this._curve.lineStart();
-    },
-    lineEnd: function() {
-        this._curve.lineEnd();
-    },
-    point: function(a, r) {
-        this._curve.point(r * Math.sin(a), r * -Math.cos(a));
-    }
-};
-function curveRadial(curve) {
-    function radial(context) {
-        return new Radial(curve(context));
-    }
-    radial._curve = curve;
-    return radial;
-}
-
-},{"./linear.js":"ajwdK","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4aSXI":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "lineRadial", ()=>lineRadial);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return lineRadial((0, _lineJsDefault.default)().curve((0, _radialJs.curveRadialLinear)));
-    });
-var _radialJs = require("./curve/radial.js");
-var _radialJsDefault = parcelHelpers.interopDefault(_radialJs);
-var _lineJs = require("./line.js");
-var _lineJsDefault = parcelHelpers.interopDefault(_lineJs);
-function lineRadial(l) {
-    var c = l.curve;
-    l.angle = l.x, delete l.x;
-    l.radius = l.y, delete l.y;
-    l.curve = function(_) {
-        return arguments.length ? c((0, _radialJsDefault.default)(_)) : c()._curve;
-    };
-    return l;
-}
-
-},{"./curve/radial.js":"7P2sE","./line.js":"hTFAN","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gH3Nl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(x, y) {
-        return [
-            (y = +y) * Math.cos(x -= Math.PI / 2),
-            y * Math.sin(x)
-        ];
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9OVls":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "linkHorizontal", ()=>linkHorizontal);
-parcelHelpers.export(exports, "linkVertical", ()=>linkVertical);
-parcelHelpers.export(exports, "linkRadial", ()=>linkRadial);
-var _d3Path = require("d3-path");
-var _arrayJs = require("../array.js");
-var _constantJs = require("../constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _pointJs = require("../point.js");
-var _pointRadialJs = require("../pointRadial.js");
-var _pointRadialJsDefault = parcelHelpers.interopDefault(_pointRadialJs);
-function linkSource(d) {
-    return d.source;
-}
-function linkTarget(d) {
-    return d.target;
-}
-function link(curve) {
-    var source = linkSource, target = linkTarget, x = (0, _pointJs.x), y = (0, _pointJs.y), context = null;
-    function link() {
-        var buffer, argv = (0, _arrayJs.slice).call(arguments), s = source.apply(this, argv), t = target.apply(this, argv);
-        if (!context) context = buffer = (0, _d3Path.path)();
-        curve(context, +x.apply(this, (argv[0] = s, argv)), +y.apply(this, argv), +x.apply(this, (argv[0] = t, argv)), +y.apply(this, argv));
-        if (buffer) return context = null, buffer + "" || null;
-    }
-    link.source = function(_) {
-        return arguments.length ? (source = _, link) : source;
-    };
-    link.target = function(_) {
-        return arguments.length ? (target = _, link) : target;
-    };
-    link.x = function(_) {
-        return arguments.length ? (x = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), link) : x;
-    };
-    link.y = function(_) {
-        return arguments.length ? (y = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), link) : y;
-    };
-    link.context = function(_) {
-        return arguments.length ? (context = _ == null ? null : _, link) : context;
-    };
-    return link;
-}
-function curveHorizontal(context, x0, y0, x1, y1) {
-    context.moveTo(x0, y0);
-    context.bezierCurveTo(x0 = (x0 + x1) / 2, y0, x0, y1, x1, y1);
-}
-function curveVertical(context, x0, y0, x1, y1) {
-    context.moveTo(x0, y0);
-    context.bezierCurveTo(x0, y0 = (y0 + y1) / 2, x1, y0, x1, y1);
-}
-function curveRadial(context, x0, y0, x1, y1) {
-    var p0 = (0, _pointRadialJsDefault.default)(x0, y0), p1 = (0, _pointRadialJsDefault.default)(x0, y0 = (y0 + y1) / 2), p2 = (0, _pointRadialJsDefault.default)(x1, y0), p3 = (0, _pointRadialJsDefault.default)(x1, y1);
-    context.moveTo(p0[0], p0[1]);
-    context.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]);
-}
-function linkHorizontal() {
-    return link(curveHorizontal);
-}
-function linkVertical() {
-    return link(curveVertical);
-}
-function linkRadial() {
-    var l = link(curveRadial);
-    l.angle = l.x, delete l.x;
-    l.radius = l.y, delete l.y;
-    return l;
-}
-
-},{"d3-path":"eY3pl","../array.js":"6SJ8v","../constant.js":"dFe8v","../point.js":"5bQ0r","../pointRadial.js":"gH3Nl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6SJ8v":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "slice", ()=>slice);
-var slice = Array.prototype.slice;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"12bBv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "symbols", ()=>symbols);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var type = (0, _constantJsDefault.default)((0, _circleJsDefault.default)), size = (0, _constantJsDefault.default)(64), context = null;
-        function symbol() {
-            var buffer;
-            if (!context) context = buffer = (0, _d3Path.path)();
-            type.apply(this, arguments).draw(context, +size.apply(this, arguments));
-            if (buffer) return context = null, buffer + "" || null;
-        }
-        symbol.type = function(_) {
-            return arguments.length ? (type = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(_), symbol) : type;
-        };
-        symbol.size = function(_) {
-            return arguments.length ? (size = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), symbol) : size;
-        };
-        symbol.context = function(_) {
-            return arguments.length ? (context = _ == null ? null : _, symbol) : context;
-        };
-        return symbol;
-    });
-var _d3Path = require("d3-path");
-var _circleJs = require("./symbol/circle.js");
-var _circleJsDefault = parcelHelpers.interopDefault(_circleJs);
-var _crossJs = require("./symbol/cross.js");
-var _crossJsDefault = parcelHelpers.interopDefault(_crossJs);
-var _diamondJs = require("./symbol/diamond.js");
-var _diamondJsDefault = parcelHelpers.interopDefault(_diamondJs);
-var _starJs = require("./symbol/star.js");
-var _starJsDefault = parcelHelpers.interopDefault(_starJs);
-var _squareJs = require("./symbol/square.js");
-var _squareJsDefault = parcelHelpers.interopDefault(_squareJs);
-var _triangleJs = require("./symbol/triangle.js");
-var _triangleJsDefault = parcelHelpers.interopDefault(_triangleJs);
-var _wyeJs = require("./symbol/wye.js");
-var _wyeJsDefault = parcelHelpers.interopDefault(_wyeJs);
-var _constantJs = require("./constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var symbols = [
-    (0, _circleJsDefault.default),
-    (0, _crossJsDefault.default),
-    (0, _diamondJsDefault.default),
-    (0, _squareJsDefault.default),
-    (0, _starJsDefault.default),
-    (0, _triangleJsDefault.default),
-    (0, _wyeJsDefault.default)
-];
-
-},{"d3-path":"eY3pl","./symbol/circle.js":"jQjPb","./symbol/cross.js":"2CCQJ","./symbol/diamond.js":"afDKe","./symbol/star.js":"fqvh2","./symbol/square.js":"3Rovu","./symbol/triangle.js":"l2B6P","./symbol/wye.js":"6dhtz","./constant.js":"dFe8v","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jQjPb":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _mathJs = require("../math.js");
-exports.default = {
-    draw: function(context, size) {
-        var r = Math.sqrt(size / (0, _mathJs.pi));
-        context.moveTo(r, 0);
-        context.arc(0, 0, r, 0, (0, _mathJs.tau));
-    }
-};
-
-},{"../math.js":"4VX7v","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2CCQJ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-exports.default = {
-    draw: function(context, size) {
-        var r = Math.sqrt(size / 5) / 2;
-        context.moveTo(-3 * r, -r);
-        context.lineTo(-r, -r);
-        context.lineTo(-r, -3 * r);
-        context.lineTo(r, -3 * r);
-        context.lineTo(r, -r);
-        context.lineTo(3 * r, -r);
-        context.lineTo(3 * r, r);
-        context.lineTo(r, r);
-        context.lineTo(r, 3 * r);
-        context.lineTo(-r, 3 * r);
-        context.lineTo(-r, r);
-        context.lineTo(-3 * r, r);
-        context.closePath();
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"afDKe":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var tan30 = Math.sqrt(1 / 3), tan30_2 = tan30 * 2;
-exports.default = {
-    draw: function(context, size) {
-        var y = Math.sqrt(size / tan30_2), x = y * tan30;
-        context.moveTo(0, -y);
-        context.lineTo(x, 0);
-        context.lineTo(0, y);
-        context.lineTo(-x, 0);
-        context.closePath();
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fqvh2":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _mathJs = require("../math.js");
-var ka = 0.89081309152928522810, kr = Math.sin((0, _mathJs.pi) / 10) / Math.sin(7 * (0, _mathJs.pi) / 10), kx = Math.sin((0, _mathJs.tau) / 10) * kr, ky = -Math.cos((0, _mathJs.tau) / 10) * kr;
-exports.default = {
-    draw: function(context, size) {
-        var r = Math.sqrt(size * ka), x = kx * r, y = ky * r;
-        context.moveTo(0, -r);
-        context.lineTo(x, y);
-        for(var i = 1; i < 5; ++i){
-            var a = (0, _mathJs.tau) * i / 5, c = Math.cos(a), s = Math.sin(a);
-            context.lineTo(s * r, -c * r);
-            context.lineTo(c * x - s * y, s * x + c * y);
-        }
-        context.closePath();
-    }
-};
-
-},{"../math.js":"4VX7v","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3Rovu":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-exports.default = {
-    draw: function(context, size) {
-        var w = Math.sqrt(size), x = -w / 2;
-        context.rect(x, x, w, w);
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l2B6P":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var sqrt3 = Math.sqrt(3);
-exports.default = {
-    draw: function(context, size) {
-        var y = -Math.sqrt(size / (sqrt3 * 3));
-        context.moveTo(0, y * 2);
-        context.lineTo(-sqrt3 * y, -y);
-        context.lineTo(sqrt3 * y, -y);
-        context.closePath();
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6dhtz":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var c = -0.5, s = Math.sqrt(3) / 2, k = 1 / Math.sqrt(12), a = (k / 2 + 1) * 3;
-exports.default = {
-    draw: function(context, size) {
-        var r = Math.sqrt(size / a), x0 = r / 2, y0 = r * k, x1 = x0, y1 = r * k + r, x2 = -x1, y2 = y1;
-        context.moveTo(x0, y0);
-        context.lineTo(x1, y1);
-        context.lineTo(x2, y2);
-        context.lineTo(c * x0 - s * y0, s * x0 + c * y0);
-        context.lineTo(c * x1 - s * y1, s * x1 + c * y1);
-        context.lineTo(c * x2 - s * y2, s * x2 + c * y2);
-        context.lineTo(c * x0 + s * y0, c * y0 - s * x0);
-        context.lineTo(c * x1 + s * y1, c * y1 - s * x1);
-        context.lineTo(c * x2 + s * y2, c * y2 - s * x2);
-        context.closePath();
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jK8tZ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(context) {
-        return new BasisClosed(context);
-    });
-var _noopJs = require("../noop.js");
-var _noopJsDefault = parcelHelpers.interopDefault(_noopJs);
-var _basisJs = require("./basis.js");
-function BasisClosed(context) {
-    this._context = context;
-}
-BasisClosed.prototype = {
-    areaStart: (0, _noopJsDefault.default),
-    areaEnd: (0, _noopJsDefault.default),
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._x3 = this._x4 = this._y0 = this._y1 = this._y2 = this._y3 = this._y4 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 1:
-                this._context.moveTo(this._x2, this._y2);
-                this._context.closePath();
-                break;
-            case 2:
-                this._context.moveTo((this._x2 + 2 * this._x3) / 3, (this._y2 + 2 * this._y3) / 3);
-                this._context.lineTo((this._x3 + 2 * this._x2) / 3, (this._y3 + 2 * this._y2) / 3);
-                this._context.closePath();
-                break;
-            case 3:
-                this.point(this._x2, this._y2);
-                this.point(this._x3, this._y3);
-                this.point(this._x4, this._y4);
-                break;
-        }
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._x2 = x, this._y2 = y;
-                break;
-            case 1:
-                this._point = 2;
-                this._x3 = x, this._y3 = y;
-                break;
-            case 2:
-                this._point = 3;
-                this._x4 = x, this._y4 = y;
-                this._context.moveTo((this._x0 + 4 * this._x1 + x) / 6, (this._y0 + 4 * this._y1 + y) / 6);
-                break;
-            default:
-                (0, _basisJs.point)(this, x, y);
-                break;
-        }
-        this._x0 = this._x1, this._x1 = x;
-        this._y0 = this._y1, this._y1 = y;
-    }
-};
-
-},{"../noop.js":"f1azw","./basis.js":"lmIyE","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"f1azw":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {});
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lmIyE":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "point", ()=>point);
-parcelHelpers.export(exports, "Basis", ()=>Basis);
-parcelHelpers.export(exports, "default", ()=>function(context) {
-        return new Basis(context);
-    });
-function point(that, x, y) {
-    that._context.bezierCurveTo((2 * that._x0 + that._x1) / 3, (2 * that._y0 + that._y1) / 3, (that._x0 + 2 * that._x1) / 3, (that._y0 + 2 * that._y1) / 3, (that._x0 + 4 * that._x1 + x) / 6, (that._y0 + 4 * that._y1 + y) / 6);
-}
-function Basis(context) {
-    this._context = context;
-}
-Basis.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._y0 = this._y1 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 3:
-                point(this, this._x1, this._y1); // proceed
-            case 2:
-                this._context.lineTo(this._x1, this._y1);
-                break;
-        }
-        if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
-                break;
-            case 1:
-                this._point = 2;
-                break;
-            case 2:
-                this._point = 3;
-                this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6); // proceed
-            default:
-                point(this, x, y);
-                break;
-        }
-        this._x0 = this._x1, this._x1 = x;
-        this._y0 = this._y1, this._y1 = y;
-    }
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9nzjm":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(context) {
-        return new BasisOpen(context);
-    });
-var _basisJs = require("./basis.js");
-function BasisOpen(context) {
-    this._context = context;
-}
-BasisOpen.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._y0 = this._y1 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        if (this._line || this._line !== 0 && this._point === 3) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                break;
-            case 1:
-                this._point = 2;
-                break;
-            case 2:
-                this._point = 3;
-                var x0 = (this._x0 + 4 * this._x1 + x) / 6, y0 = (this._y0 + 4 * this._y1 + y) / 6;
-                this._line ? this._context.lineTo(x0, y0) : this._context.moveTo(x0, y0);
-                break;
-            case 3:
-                this._point = 4; // proceed
-            default:
-                (0, _basisJs.point)(this, x, y);
-                break;
-        }
-        this._x0 = this._x1, this._x1 = x;
-        this._y0 = this._y1, this._y1 = y;
-    }
-};
-
-},{"./basis.js":"lmIyE","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9NCmN":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _basisJs = require("./basis.js");
-function Bundle(context, beta) {
-    this._basis = new (0, _basisJs.Basis)(context);
-    this._beta = beta;
-}
-Bundle.prototype = {
-    lineStart: function() {
-        this._x = [];
-        this._y = [];
-        this._basis.lineStart();
-    },
-    lineEnd: function() {
-        var x = this._x, y = this._y, j = x.length - 1;
-        if (j > 0) {
-            var x0 = x[0], y0 = y[0], dx = x[j] - x0, dy = y[j] - y0, i = -1, t;
-            while(++i <= j){
-                t = i / j;
-                this._basis.point(this._beta * x[i] + (1 - this._beta) * (x0 + t * dx), this._beta * y[i] + (1 - this._beta) * (y0 + t * dy));
-            }
-        }
-        this._x = this._y = null;
-        this._basis.lineEnd();
-    },
-    point: function(x, y) {
-        this._x.push(+x);
-        this._y.push(+y);
-    }
-};
-exports.default = function custom(beta) {
-    function bundle(context) {
-        return beta === 1 ? new (0, _basisJs.Basis)(context) : new Bundle(context, beta);
-    }
-    bundle.beta = function(beta) {
-        return custom(+beta);
-    };
-    return bundle;
-}(0.85);
-
-},{"./basis.js":"lmIyE","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8btb4":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "CardinalClosed", ()=>CardinalClosed);
-var _noopJs = require("../noop.js");
-var _noopJsDefault = parcelHelpers.interopDefault(_noopJs);
-var _cardinalJs = require("./cardinal.js");
-function CardinalClosed(context, tension) {
-    this._context = context;
-    this._k = (1 - tension) / 6;
-}
-CardinalClosed.prototype = {
-    areaStart: (0, _noopJsDefault.default),
-    areaEnd: (0, _noopJsDefault.default),
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._x3 = this._x4 = this._x5 = this._y0 = this._y1 = this._y2 = this._y3 = this._y4 = this._y5 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 1:
-                this._context.moveTo(this._x3, this._y3);
-                this._context.closePath();
-                break;
-            case 2:
-                this._context.lineTo(this._x3, this._y3);
-                this._context.closePath();
-                break;
-            case 3:
-                this.point(this._x3, this._y3);
-                this.point(this._x4, this._y4);
-                this.point(this._x5, this._y5);
-                break;
-        }
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._x3 = x, this._y3 = y;
-                break;
-            case 1:
-                this._point = 2;
-                this._context.moveTo(this._x4 = x, this._y4 = y);
-                break;
-            case 2:
-                this._point = 3;
-                this._x5 = x, this._y5 = y;
-                break;
-            default:
-                (0, _cardinalJs.point)(this, x, y);
-                break;
-        }
-        this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
-        this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
-    }
-};
-exports.default = function custom(tension) {
-    function cardinal(context) {
-        return new CardinalClosed(context, tension);
-    }
-    cardinal.tension = function(tension) {
-        return custom(+tension);
-    };
-    return cardinal;
-}(0);
-
-},{"../noop.js":"f1azw","./cardinal.js":"brZ6e","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"brZ6e":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "point", ()=>point);
-parcelHelpers.export(exports, "Cardinal", ()=>Cardinal);
-function point(that, x, y) {
-    that._context.bezierCurveTo(that._x1 + that._k * (that._x2 - that._x0), that._y1 + that._k * (that._y2 - that._y0), that._x2 + that._k * (that._x1 - x), that._y2 + that._k * (that._y1 - y), that._x2, that._y2);
-}
-function Cardinal(context, tension) {
-    this._context = context;
-    this._k = (1 - tension) / 6;
-}
-Cardinal.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._y0 = this._y1 = this._y2 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 2:
-                this._context.lineTo(this._x2, this._y2);
-                break;
-            case 3:
-                point(this, this._x1, this._y1);
-                break;
-        }
-        if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
-                break;
-            case 1:
-                this._point = 2;
-                this._x1 = x, this._y1 = y;
-                break;
-            case 2:
-                this._point = 3; // proceed
-            default:
-                point(this, x, y);
-                break;
-        }
-        this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
-        this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
-    }
-};
-exports.default = function custom(tension) {
-    function cardinal(context) {
-        return new Cardinal(context, tension);
-    }
-    cardinal.tension = function(tension) {
-        return custom(+tension);
-    };
-    return cardinal;
-}(0);
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"avKmC":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "CardinalOpen", ()=>CardinalOpen);
-var _cardinalJs = require("./cardinal.js");
-function CardinalOpen(context, tension) {
-    this._context = context;
-    this._k = (1 - tension) / 6;
-}
-CardinalOpen.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._y0 = this._y1 = this._y2 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        if (this._line || this._line !== 0 && this._point === 3) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                break;
-            case 1:
-                this._point = 2;
-                break;
-            case 2:
-                this._point = 3;
-                this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
-                break;
-            case 3:
-                this._point = 4; // proceed
-            default:
-                (0, _cardinalJs.point)(this, x, y);
-                break;
-        }
-        this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
-        this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
-    }
-};
-exports.default = function custom(tension) {
-    function cardinal(context) {
-        return new CardinalOpen(context, tension);
-    }
-    cardinal.tension = function(tension) {
-        return custom(+tension);
-    };
-    return cardinal;
-}(0);
-
-},{"./cardinal.js":"brZ6e","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3mnrZ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _cardinalClosedJs = require("./cardinalClosed.js");
-var _noopJs = require("../noop.js");
-var _noopJsDefault = parcelHelpers.interopDefault(_noopJs);
-var _catmullRomJs = require("./catmullRom.js");
-function CatmullRomClosed(context, alpha) {
-    this._context = context;
-    this._alpha = alpha;
-}
-CatmullRomClosed.prototype = {
-    areaStart: (0, _noopJsDefault.default),
-    areaEnd: (0, _noopJsDefault.default),
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._x3 = this._x4 = this._x5 = this._y0 = this._y1 = this._y2 = this._y3 = this._y4 = this._y5 = NaN;
-        this._l01_a = this._l12_a = this._l23_a = this._l01_2a = this._l12_2a = this._l23_2a = this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 1:
-                this._context.moveTo(this._x3, this._y3);
-                this._context.closePath();
-                break;
-            case 2:
-                this._context.lineTo(this._x3, this._y3);
-                this._context.closePath();
-                break;
-            case 3:
-                this.point(this._x3, this._y3);
-                this.point(this._x4, this._y4);
-                this.point(this._x5, this._y5);
-                break;
-        }
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        if (this._point) {
-            var x23 = this._x2 - x, y23 = this._y2 - y;
-            this._l23_a = Math.sqrt(this._l23_2a = Math.pow(x23 * x23 + y23 * y23, this._alpha));
-        }
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._x3 = x, this._y3 = y;
-                break;
-            case 1:
-                this._point = 2;
-                this._context.moveTo(this._x4 = x, this._y4 = y);
-                break;
-            case 2:
-                this._point = 3;
-                this._x5 = x, this._y5 = y;
-                break;
-            default:
-                (0, _catmullRomJs.point)(this, x, y);
-                break;
-        }
-        this._l01_a = this._l12_a, this._l12_a = this._l23_a;
-        this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
-        this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
-        this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
-    }
-};
-exports.default = function custom(alpha) {
-    function catmullRom(context) {
-        return alpha ? new CatmullRomClosed(context, alpha) : new (0, _cardinalClosedJs.CardinalClosed)(context, 0);
-    }
-    catmullRom.alpha = function(alpha) {
-        return custom(+alpha);
-    };
-    return catmullRom;
-}(0.5);
-
-},{"./cardinalClosed.js":"8btb4","../noop.js":"f1azw","./catmullRom.js":"j2hDs","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"j2hDs":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "point", ()=>point);
-var _mathJs = require("../math.js");
-var _cardinalJs = require("./cardinal.js");
-function point(that, x, y) {
-    var x1 = that._x1, y1 = that._y1, x2 = that._x2, y2 = that._y2;
-    if (that._l01_a > (0, _mathJs.epsilon)) {
-        var a = 2 * that._l01_2a + 3 * that._l01_a * that._l12_a + that._l12_2a, n = 3 * that._l01_a * (that._l01_a + that._l12_a);
-        x1 = (x1 * a - that._x0 * that._l12_2a + that._x2 * that._l01_2a) / n;
-        y1 = (y1 * a - that._y0 * that._l12_2a + that._y2 * that._l01_2a) / n;
-    }
-    if (that._l23_a > (0, _mathJs.epsilon)) {
-        var b = 2 * that._l23_2a + 3 * that._l23_a * that._l12_a + that._l12_2a, m = 3 * that._l23_a * (that._l23_a + that._l12_a);
-        x2 = (x2 * b + that._x1 * that._l23_2a - x * that._l12_2a) / m;
-        y2 = (y2 * b + that._y1 * that._l23_2a - y * that._l12_2a) / m;
-    }
-    that._context.bezierCurveTo(x1, y1, x2, y2, that._x2, that._y2);
-}
-function CatmullRom(context, alpha) {
-    this._context = context;
-    this._alpha = alpha;
-}
-CatmullRom.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._y0 = this._y1 = this._y2 = NaN;
-        this._l01_a = this._l12_a = this._l23_a = this._l01_2a = this._l12_2a = this._l23_2a = this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 2:
-                this._context.lineTo(this._x2, this._y2);
-                break;
-            case 3:
-                this.point(this._x2, this._y2);
-                break;
-        }
-        if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        if (this._point) {
-            var x23 = this._x2 - x, y23 = this._y2 - y;
-            this._l23_a = Math.sqrt(this._l23_2a = Math.pow(x23 * x23 + y23 * y23, this._alpha));
-        }
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
-                break;
-            case 1:
-                this._point = 2;
-                break;
-            case 2:
-                this._point = 3; // proceed
-            default:
-                point(this, x, y);
-                break;
-        }
-        this._l01_a = this._l12_a, this._l12_a = this._l23_a;
-        this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
-        this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
-        this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
-    }
-};
-exports.default = function custom(alpha) {
-    function catmullRom(context) {
-        return alpha ? new CatmullRom(context, alpha) : new (0, _cardinalJs.Cardinal)(context, 0);
-    }
-    catmullRom.alpha = function(alpha) {
-        return custom(+alpha);
-    };
-    return catmullRom;
-}(0.5);
-
-},{"../math.js":"4VX7v","./cardinal.js":"brZ6e","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4v2qz":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _cardinalOpenJs = require("./cardinalOpen.js");
-var _catmullRomJs = require("./catmullRom.js");
-function CatmullRomOpen(context, alpha) {
-    this._context = context;
-    this._alpha = alpha;
-}
-CatmullRomOpen.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._x2 = this._y0 = this._y1 = this._y2 = NaN;
-        this._l01_a = this._l12_a = this._l23_a = this._l01_2a = this._l12_2a = this._l23_2a = this._point = 0;
-    },
-    lineEnd: function() {
-        if (this._line || this._line !== 0 && this._point === 3) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        if (this._point) {
-            var x23 = this._x2 - x, y23 = this._y2 - y;
-            this._l23_a = Math.sqrt(this._l23_2a = Math.pow(x23 * x23 + y23 * y23, this._alpha));
-        }
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                break;
-            case 1:
-                this._point = 2;
-                break;
-            case 2:
-                this._point = 3;
-                this._line ? this._context.lineTo(this._x2, this._y2) : this._context.moveTo(this._x2, this._y2);
-                break;
-            case 3:
-                this._point = 4; // proceed
-            default:
-                (0, _catmullRomJs.point)(this, x, y);
-                break;
-        }
-        this._l01_a = this._l12_a, this._l12_a = this._l23_a;
-        this._l01_2a = this._l12_2a, this._l12_2a = this._l23_2a;
-        this._x0 = this._x1, this._x1 = this._x2, this._x2 = x;
-        this._y0 = this._y1, this._y1 = this._y2, this._y2 = y;
-    }
-};
-exports.default = function custom(alpha) {
-    function catmullRom(context) {
-        return alpha ? new CatmullRomOpen(context, alpha) : new (0, _cardinalOpenJs.CardinalOpen)(context, 0);
-    }
-    catmullRom.alpha = function(alpha) {
-        return custom(+alpha);
-    };
-    return catmullRom;
-}(0.5);
-
-},{"./cardinalOpen.js":"avKmC","./catmullRom.js":"j2hDs","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bZkPo":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(context) {
-        return new LinearClosed(context);
-    });
-var _noopJs = require("../noop.js");
-var _noopJsDefault = parcelHelpers.interopDefault(_noopJs);
-function LinearClosed(context) {
-    this._context = context;
-}
-LinearClosed.prototype = {
-    areaStart: (0, _noopJsDefault.default),
-    areaEnd: (0, _noopJsDefault.default),
-    lineStart: function() {
-        this._point = 0;
-    },
-    lineEnd: function() {
-        if (this._point) this._context.closePath();
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        if (this._point) this._context.lineTo(x, y);
-        else this._point = 1, this._context.moveTo(x, y);
-    }
-};
-
-},{"../noop.js":"f1azw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"akQ7S":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "monotoneX", ()=>monotoneX);
-parcelHelpers.export(exports, "monotoneY", ()=>monotoneY);
-function sign(x) {
-    return x < 0 ? -1 : 1;
-}
-// Calculate the slopes of the tangents (Hermite-type interpolation) based on
-// the following paper: Steffen, M. 1990. A Simple Method for Monotonic
-// Interpolation in One Dimension. Astronomy and Astrophysics, Vol. 239, NO.
-// NOV(II), P. 443, 1990.
-function slope3(that, x2, y2) {
-    var h0 = that._x1 - that._x0, h1 = x2 - that._x1, s0 = (that._y1 - that._y0) / (h0 || h1 < 0 && -0), s1 = (y2 - that._y1) / (h1 || h0 < 0 && -0), p = (s0 * h1 + s1 * h0) / (h0 + h1);
-    return (sign(s0) + sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0;
-}
-// Calculate a one-sided slope.
-function slope2(that, t) {
-    var h = that._x1 - that._x0;
-    return h ? (3 * (that._y1 - that._y0) / h - t) / 2 : t;
-}
-// According to https://en.wikipedia.org/wiki/Cubic_Hermite_spline#Representations
-// "you can express cubic Hermite interpolation in terms of cubic Bézier curves
-// with respect to the four values p0, p0 + m0 / 3, p1 - m1 / 3, p1".
-function point(that, t0, t1) {
-    var x0 = that._x0, y0 = that._y0, x1 = that._x1, y1 = that._y1, dx = (x1 - x0) / 3;
-    that._context.bezierCurveTo(x0 + dx, y0 + dx * t0, x1 - dx, y1 - dx * t1, x1, y1);
-}
-function MonotoneX(context) {
-    this._context = context;
-}
-MonotoneX.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x0 = this._x1 = this._y0 = this._y1 = this._t0 = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        switch(this._point){
-            case 2:
-                this._context.lineTo(this._x1, this._y1);
-                break;
-            case 3:
-                point(this, this._t0, slope2(this, this._t0));
-                break;
-        }
-        if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
-        this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        var t1 = NaN;
-        x = +x, y = +y;
-        if (x === this._x1 && y === this._y1) return; // Ignore coincident points.
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
-                break;
-            case 1:
-                this._point = 2;
-                break;
-            case 2:
-                this._point = 3;
-                point(this, slope2(this, t1 = slope3(this, x, y)), t1);
-                break;
-            default:
-                point(this, this._t0, t1 = slope3(this, x, y));
-                break;
-        }
-        this._x0 = this._x1, this._x1 = x;
-        this._y0 = this._y1, this._y1 = y;
-        this._t0 = t1;
-    }
-};
-function MonotoneY(context) {
-    this._context = new ReflectContext(context);
-}
-(MonotoneY.prototype = Object.create(MonotoneX.prototype)).point = function(x, y) {
-    MonotoneX.prototype.point.call(this, y, x);
-};
-function ReflectContext(context) {
-    this._context = context;
-}
-ReflectContext.prototype = {
-    moveTo: function(x, y) {
-        this._context.moveTo(y, x);
-    },
-    closePath: function() {
-        this._context.closePath();
-    },
-    lineTo: function(x, y) {
-        this._context.lineTo(y, x);
-    },
-    bezierCurveTo: function(x1, y1, x2, y2, x, y) {
-        this._context.bezierCurveTo(y1, x1, y2, x2, y, x);
-    }
-};
-function monotoneX(context) {
-    return new MonotoneX(context);
-}
-function monotoneY(context) {
-    return new MonotoneY(context);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ejsSN":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(context) {
-        return new Natural(context);
-    });
-function Natural(context) {
-    this._context = context;
-}
-Natural.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x = [];
-        this._y = [];
-    },
-    lineEnd: function() {
-        var x = this._x, y = this._y, n = x.length;
-        if (n) {
-            this._line ? this._context.lineTo(x[0], y[0]) : this._context.moveTo(x[0], y[0]);
-            if (n === 2) this._context.lineTo(x[1], y[1]);
-            else {
-                var px = controlPoints(x), py = controlPoints(y);
-                for(var i0 = 0, i1 = 1; i1 < n; ++i0, ++i1)this._context.bezierCurveTo(px[0][i0], py[0][i0], px[1][i0], py[1][i0], x[i1], y[i1]);
-            }
-        }
-        if (this._line || this._line !== 0 && n === 1) this._context.closePath();
-        this._line = 1 - this._line;
-        this._x = this._y = null;
-    },
-    point: function(x, y) {
-        this._x.push(+x);
-        this._y.push(+y);
-    }
-};
-// See https://www.particleincell.com/2012/bezier-splines/ for derivation.
-function controlPoints(x) {
-    var i, n = x.length - 1, m, a = new Array(n), b = new Array(n), r = new Array(n);
-    a[0] = 0, b[0] = 2, r[0] = x[0] + 2 * x[1];
-    for(i = 1; i < n - 1; ++i)a[i] = 1, b[i] = 4, r[i] = 4 * x[i] + 2 * x[i + 1];
-    a[n - 1] = 2, b[n - 1] = 7, r[n - 1] = 8 * x[n - 1] + x[n];
-    for(i = 1; i < n; ++i)m = a[i] / b[i - 1], b[i] -= m, r[i] -= m * r[i - 1];
-    a[n - 1] = r[n - 1] / b[n - 1];
-    for(i = n - 2; i >= 0; --i)a[i] = (r[i] - a[i + 1]) / b[i];
-    b[n - 1] = (x[n] + a[n - 1]) / 2;
-    for(i = 0; i < n - 1; ++i)b[i] = 2 * x[i + 1] - a[i + 1];
-    return [
-        a,
-        b
-    ];
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cenwN":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(context) {
-        return new Step(context, 0.5);
-    });
-parcelHelpers.export(exports, "stepBefore", ()=>stepBefore);
-parcelHelpers.export(exports, "stepAfter", ()=>stepAfter);
-function Step(context, t) {
-    this._context = context;
-    this._t = t;
-}
-Step.prototype = {
-    areaStart: function() {
-        this._line = 0;
-    },
-    areaEnd: function() {
-        this._line = NaN;
-    },
-    lineStart: function() {
-        this._x = this._y = NaN;
-        this._point = 0;
-    },
-    lineEnd: function() {
-        if (0 < this._t && this._t < 1 && this._point === 2) this._context.lineTo(this._x, this._y);
-        if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
-        if (this._line >= 0) this._t = 1 - this._t, this._line = 1 - this._line;
-    },
-    point: function(x, y) {
-        x = +x, y = +y;
-        switch(this._point){
-            case 0:
-                this._point = 1;
-                this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
-                break;
-            case 1:
-                this._point = 2; // proceed
-            default:
-                if (this._t <= 0) {
-                    this._context.lineTo(this._x, y);
-                    this._context.lineTo(x, y);
-                } else {
-                    var x1 = this._x * (1 - this._t) + x * this._t;
-                    this._context.lineTo(x1, this._y);
-                    this._context.lineTo(x1, y);
-                }
-                break;
-        }
-        this._x = x, this._y = y;
-    }
-};
-function stepBefore(context) {
-    return new Step(context, 0);
-}
-function stepAfter(context) {
-    return new Step(context, 1);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"04Lp5":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var keys = (0, _constantJsDefault.default)([]), order = (0, _noneJsDefault1.default), offset = (0, _noneJsDefault.default), value = stackValue;
-        function stack(data) {
-            var kz = keys.apply(this, arguments), i, m = data.length, n = kz.length, sz = new Array(n), oz;
-            for(i = 0; i < n; ++i){
-                for(var ki = kz[i], si = sz[i] = new Array(m), j = 0, sij; j < m; ++j){
-                    si[j] = sij = [
-                        0,
-                        +value(data[j], ki, j, data)
-                    ];
-                    sij.data = data[j];
-                }
-                si.key = ki;
-            }
-            for(i = 0, oz = order(sz); i < n; ++i)sz[oz[i]].index = i;
-            offset(sz, oz);
-            return sz;
-        }
-        stack.keys = function(_) {
-            return arguments.length ? (keys = typeof _ === "function" ? _ : (0, _constantJsDefault.default)((0, _arrayJs.slice).call(_)), stack) : keys;
-        };
-        stack.value = function(_) {
-            return arguments.length ? (value = typeof _ === "function" ? _ : (0, _constantJsDefault.default)(+_), stack) : value;
-        };
-        stack.order = function(_) {
-            return arguments.length ? (order = _ == null ? (0, _noneJsDefault1.default) : typeof _ === "function" ? _ : (0, _constantJsDefault.default)((0, _arrayJs.slice).call(_)), stack) : order;
-        };
-        stack.offset = function(_) {
-            return arguments.length ? (offset = _ == null ? (0, _noneJsDefault.default) : _, stack) : offset;
-        };
-        return stack;
-    });
-var _arrayJs = require("./array.js");
-var _constantJs = require("./constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _noneJs = require("./offset/none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-var _noneJs1 = require("./order/none.js");
-var _noneJsDefault1 = parcelHelpers.interopDefault(_noneJs1);
-function stackValue(d, key) {
-    return d[key];
-}
-
-},{"./array.js":"6SJ8v","./constant.js":"dFe8v","./offset/none.js":"h0h85","./order/none.js":"30Qqt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"h0h85":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series, order) {
-        if (!((n = series.length) > 1)) return;
-        for(var i = 1, j, s0, s1 = series[order[0]], n, m = s1.length; i < n; ++i){
-            s0 = s1, s1 = series[order[i]];
-            for(j = 0; j < m; ++j)s1[j][1] += s1[j][0] = isNaN(s0[j][1]) ? s0[j][0] : s0[j][1];
-        }
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"30Qqt":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series) {
-        var n = series.length, o = new Array(n);
-        while(--n >= 0)o[n] = n;
-        return o;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bE3nk":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series, order) {
-        if (!((n = series.length) > 0)) return;
-        for(var i, n, j = 0, m = series[0].length, y; j < m; ++j){
-            for(y = i = 0; i < n; ++i)y += series[i][j][1] || 0;
-            if (y) for(i = 0; i < n; ++i)series[i][j][1] /= y;
-        }
-        (0, _noneJsDefault.default)(series, order);
-    });
-var _noneJs = require("./none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-
-},{"./none.js":"h0h85","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7vGu2":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series, order) {
-        if (!((n = series.length) > 0)) return;
-        for(var i, j = 0, d, dy, yp, yn, n, m = series[order[0]].length; j < m; ++j)for(yp = yn = 0, i = 0; i < n; ++i){
-            if ((dy = (d = series[order[i]][j])[1] - d[0]) > 0) d[0] = yp, d[1] = yp += dy;
-            else if (dy < 0) d[1] = yn, d[0] = yn += dy;
-            else d[0] = 0, d[1] = dy;
-        }
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ez0ZX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series, order) {
-        if (!((n = series.length) > 0)) return;
-        for(var j = 0, s0 = series[order[0]], n, m = s0.length; j < m; ++j){
-            for(var i = 0, y = 0; i < n; ++i)y += series[i][j][1] || 0;
-            s0[j][1] += s0[j][0] = -y / 2;
-        }
-        (0, _noneJsDefault.default)(series, order);
-    });
-var _noneJs = require("./none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-
-},{"./none.js":"h0h85","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hJZrV":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series, order) {
-        if (!((n = series.length) > 0) || !((m = (s0 = series[order[0]]).length) > 0)) return;
-        for(var y = 0, j = 1, s0, m, n; j < m; ++j){
-            for(var i = 0, s1 = 0, s2 = 0; i < n; ++i){
-                var si = series[order[i]], sij0 = si[j][1] || 0, sij1 = si[j - 1][1] || 0, s3 = (sij0 - sij1) / 2;
-                for(var k = 0; k < i; ++k){
-                    var sk = series[order[k]], skj0 = sk[j][1] || 0, skj1 = sk[j - 1][1] || 0;
-                    s3 += skj0 - skj1;
-                }
-                s1 += sij0, s2 += s3 * sij0;
-            }
-            s0[j - 1][1] += s0[j - 1][0] = y;
-            if (s1) y -= s2 / s1;
-        }
-        s0[j - 1][1] += s0[j - 1][0] = y;
-        (0, _noneJsDefault.default)(series, order);
-    });
-var _noneJs = require("./none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-
-},{"./none.js":"h0h85","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fDXA7":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series) {
-        var peaks = series.map(peak);
-        return (0, _noneJsDefault.default)(series).sort(function(a, b) {
-            return peaks[a] - peaks[b];
-        });
-    });
-var _noneJs = require("./none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-function peak(series) {
-    var i = -1, j = 0, n = series.length, vi, vj = -Infinity;
-    while(++i < n)if ((vi = +series[i][1]) > vj) vj = vi, j = i;
-    return j;
-}
-
-},{"./none.js":"30Qqt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"17HfK":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series) {
-        var sums = series.map(sum);
-        return (0, _noneJsDefault.default)(series).sort(function(a, b) {
-            return sums[a] - sums[b];
-        });
-    });
-parcelHelpers.export(exports, "sum", ()=>sum);
-var _noneJs = require("./none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-function sum(series) {
-    var s = 0, i = -1, n = series.length, v;
-    while(++i < n)if (v = +series[i][1]) s += v;
-    return s;
-}
-
-},{"./none.js":"30Qqt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fTuOf":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series) {
-        return (0, _ascendingJsDefault.default)(series).reverse();
-    });
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-
-},{"./ascending.js":"17HfK","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4CNKk":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series) {
-        var n = series.length, i, j, sums = series.map((0, _ascendingJs.sum)), order = (0, _appearanceJsDefault.default)(series), top = 0, bottom = 0, tops = [], bottoms = [];
-        for(i = 0; i < n; ++i){
-            j = order[i];
-            if (top < bottom) {
-                top += sums[j];
-                tops.push(j);
-            } else {
-                bottom += sums[j];
-                bottoms.push(j);
-            }
-        }
-        return bottoms.reverse().concat(tops);
-    });
-var _appearanceJs = require("./appearance.js");
-var _appearanceJsDefault = parcelHelpers.interopDefault(_appearanceJs);
-var _ascendingJs = require("./ascending.js");
-
-},{"./appearance.js":"fDXA7","./ascending.js":"17HfK","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4K6jR":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(series) {
-        return (0, _noneJsDefault.default)(series).reverse();
-    });
-var _noneJs = require("./none.js");
-var _noneJsDefault = parcelHelpers.interopDefault(_noneJs);
-
-},{"./none.js":"30Qqt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
 parcelHelpers.export(exports, "firstControlPoint", ()=>firstControlPoint);
-parcelHelpers.export(exports, "poiPoint", ()=>poiPoint);
 parcelHelpers.export(exports, "lastControlPoint", ()=>lastControlPoint);
-parcelHelpers.export(exports, "numberedControlPoint", ()=>numberedControlPoint);
 parcelHelpers.export(exports, "sketchControlPoint", ()=>sketchControlPoint);
 parcelHelpers.export(exports, "trackLine", ()=>trackLine);
 parcelHelpers.export(exports, "trackLineModifying", ()=>trackLineModifying);
-/**
- * @param {import("ol/Feature").FeatureLike} feature
- * @return {?Style}
- */ parcelHelpers.export(exports, "styleFunction", ()=>styleFunction);
-/**
- * @param {?string} strokeColor
- * @return {Style}
- */ parcelHelpers.export(exports, "externalLayerStyle", ()=>externalLayerStyle);
-/**
- * @typedef {Object} TrackHoverUrlOptions
- * @property {string} src
- * @property {[number, number]} imgSize
- * @property {number} scale
- */ /**
- * @param {TrackHoverUrlOptions} options
- * @return {Style}
- */ parcelHelpers.export(exports, "createProfileHoverStyle", ()=>createProfileHoverStyle);
-var _styleJs = require("ol/style.js");
-const controlPoint = new (0, _styleJs.Style)({
-    zIndex: 10,
-    image: new (0, _styleJs.Circle)({
-        radius: 8,
-        fill: new (0, _styleJs.Fill)({
-            color: "white"
-        })
-    })
-});
-const firstControlPoint = new (0, _styleJs.Style)({
-    zIndex: 10,
-    image: new (0, _styleJs.Circle)({
-        radius: 8,
-        fill: new (0, _styleJs.Fill)({
-            color: "green"
-        })
-    })
-});
-const poiPoint = new (0, _styleJs.Style)({
-    zIndex: 100,
-    image: new (0, _styleJs.Circle)({
-        radius: 8,
-        fill: new (0, _styleJs.Fill)({
-            color: "yellow"
-        })
-    })
-});
-const lastControlPoint = new (0, _styleJs.Style)({
-    zIndex: 10,
-    image: new (0, _styleJs.Circle)({
-        radius: 8,
-        fill: new (0, _styleJs.Fill)({
-            color: "red"
-        })
-    })
-});
-const numberedControlPoint = new (0, _styleJs.Style)({
-    zIndex: 10,
-    image: new (0, _styleJs.Circle)({
-        radius: 8,
-        fill: new (0, _styleJs.Fill)({
-            color: "#ffffffdd"
-        })
-    }),
-    text: new (0, _styleJs.Text)({
-        fill: new (0, _styleJs.Fill)({
-            color: "blue"
-        })
-    })
-});
-const sketchControlPoint = new (0, _styleJs.Style)({
-    image: new (0, _styleJs.Circle)({
-        radius: 5,
-        fill: new (0, _styleJs.Fill)({
-            color: "#ffffffdd"
-        })
-    })
-});
-const sketchLabel = {
-    "POI": new (0, _styleJs.Style)({
-        text: new (0, _styleJs.Text)({
-            font: "20px sans-serif",
-            offsetX: 20,
-            textAlign: "left",
-            backgroundFill: new (0, _styleJs.Fill)({
-                color: "#ffffffaa"
-            }),
-            text: "click to delete\ndrag to move POI"
-        })
-    }),
-    "cp": new (0, _styleJs.Style)({
-        text: new (0, _styleJs.Text)({
-            font: "20px sans-serif",
-            offsetX: 20,
-            textAlign: "left",
-            backgroundFill: new (0, _styleJs.Fill)({
-                color: "#ffffffaa"
-            }),
-            text: "click to delete\ndrag to move point"
-        })
-    }),
-    "segment": new (0, _styleJs.Style)({
-        text: new (0, _styleJs.Text)({
-            backgroundFill: new (0, _styleJs.Fill)({
-                color: "#ffffffaa"
-            }),
-            offsetX: 20,
-            textAlign: "left",
-            font: "20px sans-serif",
-            text: "drag to create point"
-        })
-    })
+parcelHelpers.export(exports, "poiPoint", ()=>poiPoint);
+parcelHelpers.export(exports, "numberedControlPoint", ()=>numberedControlPoint);
+parcelHelpers.export(exports, "sketchLabel", ()=>sketchLabel);
+parcelHelpers.export(exports, "sketchLabelPOI", ()=>sketchLabelPOI);
+parcelHelpers.export(exports, "sketchLabelControlPoint", ()=>sketchLabelControlPoint);
+parcelHelpers.export(exports, "sketchLabelSegment", ()=>sketchLabelSegment);
+parcelHelpers.export(exports, "styleRules", ()=>styleRules);
+const controlPoint = {
+    "z-index": 10,
+    "circle-radius": 8,
+    "circle-fill-color": "white"
 };
-const trackLine = new (0, _styleJs.Style)({
-    stroke: new (0, _styleJs.Stroke)({
-        color: "purple",
-        width: 6
-    })
-});
-const trackLineModifying = new (0, _styleJs.Style)({
-    stroke: new (0, _styleJs.Stroke)({
-        color: "purple",
-        width: 3,
-        lineDash: [
-            5,
-            9
-        ]
-    })
-});
-function styleFunction(feature) {
-    const type = feature.get("type");
-    const subtype = feature.get("subtype");
-    const index = feature.get("index");
-    switch(type){
-        case "sketch":
-            if (subtype) return [
-                sketchControlPoint,
-                sketchLabel[subtype]
-            ];
-            return sketchControlPoint;
-        case "POI":
-            return poiPoint;
-        case "controlPoint":
-            switch(subtype){
-                case "first":
-                    return firstControlPoint;
-                case "last":
-                    return lastControlPoint;
-                default:
-                    if (index !== undefined) {
-                        numberedControlPoint.getText().setText(index.toString());
-                        return numberedControlPoint;
-                    }
-                    return controlPoint;
-            }
-        case "segment":
-            switch(subtype){
-                case "modifying":
-                    return trackLineModifying;
-                default:
-                    return trackLine;
-            }
-        default:
-            return null;
+const firstControlPoint = {
+    ...controlPoint,
+    "circle-fill-color": "green"
+};
+const lastControlPoint = {
+    ...controlPoint,
+    "circle-fill-color": "red"
+};
+const sketchControlPoint = {
+    "circle-radius": 5,
+    "circle-fill-color": "#ffffffdd"
+};
+const trackLine = {
+    "stroke-width": 6,
+    "stroke-color": "purple"
+};
+const trackLineModifying = {
+    ...trackLine,
+    "stroke-width": 3,
+    "stroke-line-dash": [
+        5,
+        9
+    ]
+};
+const poiPoint = {
+    "z-index": 100,
+    "circle-radius": 8,
+    "circle-fill-color": "yellow",
+    "text-font": "bold 11px Inter",
+    "text-fill-color": "#000",
+    // use 'concat' to convert number to string
+    "text-value": [
+        "concat",
+        [
+            "get",
+            "index"
+        ],
+        ""
+    ]
+};
+const numberedControlPoint = {
+    ...controlPoint,
+    "circle-fill-color": "#ffffffdd",
+    "text-color": "blue",
+    // use 'concat' to convert number to string
+    "text-value": [
+        "concat",
+        [
+            "get",
+            "index"
+        ],
+        ""
+    ]
+};
+const sketchLabel = {
+    "text-font": "20px sans-serif",
+    "text-offset-x": 20,
+    "text-align": "left",
+    "text-background-fill-color": "#ffffffaa"
+};
+const sketchLabelPOI = {
+    ...sketchLabel,
+    "text-value": "click to delete\ndrag to move POI"
+};
+const sketchLabelControlPoint = {
+    ...sketchLabel,
+    "text-value": "click to delete\ndrag to move point"
+};
+const sketchLabelSegment = {
+    ...sketchLabel,
+    "text-value": "drag to create point"
+};
+const styleRules = [
+    {
+        filter: [
+            "==",
+            [
+                "get",
+                "type"
+            ],
+            "sketch"
+        ],
+        style: sketchControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "sketch"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "POI"
+            ]
+        ],
+        style: sketchLabelPOI
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "sketch"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "controlPoint"
+            ]
+        ],
+        style: sketchLabelControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "sketch"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "segment"
+            ]
+        ],
+        style: sketchLabelSegment
+    },
+    {
+        filter: [
+            "==",
+            [
+                "get",
+                "type"
+            ],
+            "POI"
+        ],
+        style: poiPoint
+    },
+    {
+        // FIXME: shorter filter?
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "controlPoint"
+            ],
+            [
+                "!=",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "first"
+            ],
+            [
+                "!=",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "last"
+            ]
+        ],
+        style: numberedControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "controlPoint"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "first"
+            ]
+        ],
+        style: firstControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "controlPoint"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "last"
+            ]
+        ],
+        style: lastControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "segment"
+            ],
+            [
+                "!=",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "modifying"
+            ]
+        ],
+        style: trackLine
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "segment"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "modifying"
+            ]
+        ],
+        style: trackLineModifying
     }
-}
-function externalLayerStyle(strokeColor = "#e3ff00") {
-    return new (0, _styleJs.Style)({
-        stroke: new (0, _styleJs.Stroke)({
-            color: strokeColor,
-            width: 3
-        })
-    });
-}
-function createProfileHoverStyle(options) {
-    return new (0, _styleJs.Style)({
-        image: new (0, _styleJs.Icon)(options)
-    });
-}
+];
 
-},{"ol/style.js":"hEQxF","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2SIll":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2SIll":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "createMap", ()=>createMap);
@@ -11419,7 +6233,7 @@ function createMap(target) {
     const trackSource = new (0, _vectorDefault1.default)();
     const trackLayer = new (0, _vectorDefault.default)({
         source: trackSource,
-        style: (0, _style.styleFunction)
+        style: (0, _style.styleRules)
     });
     const extent = (0, _proj.transformExtent)((0, _epsg2056.proj).getExtent(), (0, _epsg2056Default.default), "EPSG:3857");
     const view = new (0, _ol.View)({
@@ -11640,31 +6454,24 @@ exports.default = XYZ;
 },{"./TileImage.js":"2cBKP","../tilegrid.js":"1Yr4i","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gmvf6":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "style", ()=>style);
 /**
  *
  * @return {VectorLayer}
  */ parcelHelpers.export(exports, "createShadowLayer", ()=>createShadowLayer);
-var _style = require("ol/style");
 var _vectorJs = require("ol/source/Vector.js");
 var _vectorJsDefault = parcelHelpers.interopDefault(_vectorJs);
 var _vectorJs1 = require("ol/layer/Vector.js");
 var _vectorJsDefault1 = parcelHelpers.interopDefault(_vectorJs1);
-const style = new (0, _style.Style)({
-    stroke: new (0, _style.Stroke)({
-        color: "#00cc33aa",
-        width: 6
-    })
-});
 function createShadowLayer() {
-    const source = new (0, _vectorJsDefault.default)();
-    const layer = new (0, _vectorJsDefault1.default)({
-        source,
-        style
+    return new (0, _vectorJsDefault1.default)({
+        source: new (0, _vectorJsDefault.default)(),
+        style: {
+            "stroke-color": "#00cc33aa",
+            "stroke-width": 6
+        }
     });
-    return layer;
 }
 
-},{"ol/style":"hEQxF","ol/source/Vector.js":"9w7Fr","ol/layer/Vector.js":"iTrAy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["M6Z7R","f4bRs"], "f4bRs", "parcelRequireed82")
+},{"ol/source/Vector.js":"9w7Fr","ol/layer/Vector.js":"iTrAy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["ijkuy","f4bRs"], "f4bRs", "parcelRequireed82")
 
 //# sourceMappingURL=simple.8341b5a4.js.map
