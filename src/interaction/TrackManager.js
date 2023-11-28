@@ -368,6 +368,7 @@ class TrackManager {
     }
     this.interaction_.setActive(edit);
     this.mode_ = mode || '';
+    this.render();
   }
 
   /**
@@ -619,6 +620,11 @@ class TrackManager {
         this.notifyTrackChangeEventListeners_(false);
       }
     }
+  }
+
+  render() {
+    this.source_.changed();
+    this.shadowTrackLayer_.getSource().changed();
   }
 }
 
