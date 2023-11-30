@@ -9,7 +9,7 @@ export type RouterBaseOptions = {
   maxRoutingTolerance?: number;
 };
 
-export default abstract class RouterBase {
+export default abstract class RouterBase implements geoblocks.Router {
   map: Map;
   maxRoutingTolerance: number;
 
