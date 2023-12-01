@@ -30,4 +30,12 @@
     }
     return undefined;
   }
+
+  size(): number {
+    return this.history.length;
+  }
+
+  position(): number {
+    return this.historyIndex;
+  }
 }
