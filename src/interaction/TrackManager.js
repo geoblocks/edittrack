@@ -551,10 +551,10 @@ class TrackManager {
    * @param {boolean} notifyHistory Whether to notify history manager
    */
   notifyTrackChangeEventListeners_(notifyHistory = true) {
-    this.trackChangeEventListeners_.forEach(handler => handler());
     if (notifyHistory) {
       this.pushNewStateToHistoryManager_();
     }
+    this.trackChangeEventListeners_.forEach(handler => handler());
   }
 
   addManualHistoryEntry() {
