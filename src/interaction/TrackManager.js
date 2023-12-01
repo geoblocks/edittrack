@@ -588,12 +588,12 @@ class TrackManager {
   /**
    * Undo one drawing step
    */
-  undo() {
+  async undo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.undo();
       this.clearInternal_();
       if (features) {
-        this.restoreFeaturesInternal_(features.map(feature => {
+        await this.restoreFeaturesInternal_(features.map(feature => {
           const clone = feature.clone();
           clone.setId(feature.getId());
           return clone;
@@ -607,12 +607,12 @@ class TrackManager {
   /**
    * Redo one drawing step
    */
-  redo() {
+  async redo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.redo();
       this.clearInternal_();
       if (features) {
-        this.restoreFeaturesInternal_(features.map(feature => {
+        await this.restoreFeaturesInternal_(features.map(feature => {
           const clone = feature.clone();
           clone.setId(feature.getId());
           return clone;
