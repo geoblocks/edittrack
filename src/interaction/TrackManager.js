@@ -551,10 +551,10 @@ class TrackManager {
    * @param {boolean} notifyHistory Whether to notify history manager
    */
   notifyTrackChangeEventListeners_(notifyHistory = true) {
-    this.trackChangeEventListeners_.forEach(handler => handler());
     if (notifyHistory) {
       this.pushNewStateToHistoryManager_();
     }
+    this.trackChangeEventListeners_.forEach(handler => handler());
   }
 
   addManualHistoryEntry() {
@@ -613,8 +613,8 @@ class TrackManager {
           return clone;
         }
         ));
-        this.notifyTrackChangeEventListeners_(false);
       }
+      this.notifyTrackChangeEventListeners_(false);
     }
   }
 
@@ -631,8 +631,8 @@ class TrackManager {
           clone.setId(feature.getId());
           return clone;
         }));
-        this.notifyTrackChangeEventListeners_(false);
       }
+      this.notifyTrackChangeEventListeners_(false);
     }
   }
 
