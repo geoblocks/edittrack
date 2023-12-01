@@ -613,8 +613,8 @@ class TrackManager {
           return clone;
         }
         ));
-        this.notifyTrackChangeEventListeners_(false);
       }
+      this.notifyTrackChangeEventListeners_(false);
     }
   }
 
@@ -631,8 +631,8 @@ class TrackManager {
           clone.setId(feature.getId());
           return clone;
         }));
-        this.notifyTrackChangeEventListeners_(false);
       }
+      this.notifyTrackChangeEventListeners_(false);
     }
   }
 
