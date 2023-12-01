@@ -586,6 +586,20 @@ class TrackManager {
   }
 
   /**
+   * @return {number} number of entries in history
+   */
+  get historySize() {
+    return this.historyManager_.size();
+  }
+
+  /**
+   * @return {number} current position in history
+   */
+  get historyPosition() {
+    return this.historyManager_.position();
+  }
+
+  /**
    * Undo one drawing step
    */
   async undo() {
