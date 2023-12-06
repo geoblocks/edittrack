@@ -1,13 +1,10 @@
 import {distance} from 'ol/coordinate.js';
-/** @typedef {import('ol/geom/LineString').default} LineString */
+import type Feature from 'ol/Feature.js';
+import type LineString from 'ol/geom/LineString.js';
 
-export default class ExtractFromSegment {
+export default class ExtractFromSegment implements geoblocks.Profiler {
 
-  /**
-   * @param {import("ol/Feature").default<LineString>} segment
-   * @return {Promise<void>}
-   */
-  computeProfile(segment) {
+  computeProfile(segment: Feature<LineString>): Promise<void> {
 
     return new Promise((resolve, reject) => {
       const geometry = segment.getGeometry();
@@ -15,7 +12,7 @@ export default class ExtractFromSegment {
         segment.set('profile', geometry.getCoordinates());
         resolve();
       } else if (geometry.getLayout() === 'XYZ') {
-        const profile = [];
+        const profile: number[][] = [];
         let accDistance = 0;
         const coordinates = geometry.getCoordinates();
         for (let i = 0, ii = coordinates.length; i < ii; i++) {

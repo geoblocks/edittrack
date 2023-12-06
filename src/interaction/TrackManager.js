@@ -2,7 +2,7 @@ import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
 import TrackData from './TrackData.ts';
-import TrackUpdater from './TrackUpdater.js';
+import TrackUpdater from './TrackUpdater.ts';
 import TrackInteraction from './TrackInteraction.js';
 import HistoryManager from './HistoryManager.ts';
 
