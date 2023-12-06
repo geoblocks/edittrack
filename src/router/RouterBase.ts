@@ -1,15 +1,16 @@
-import { distance } from 'ol/coordinate';
+import {distance} from 'ol/coordinate';
 import type Map from 'ol/Map';
-import type { Coordinate } from 'ol/coordinate';
+import type {Coordinate} from 'ol/coordinate';
 import type Feature from 'ol/Feature';
-import type { LineString, Point } from 'ol/geom';
+import type {LineString, Point} from 'ol/geom';
+import type {Router} from './router.d.ts';
 
 export type RouterBaseOptions = {
   map: Map;
   maxRoutingTolerance?: number;
 };
 
-export default abstract class RouterBase implements geoblocks.Router {
+export default abstract class RouterBase implements Router {
   map: Map;
   maxRoutingTolerance: number;
 

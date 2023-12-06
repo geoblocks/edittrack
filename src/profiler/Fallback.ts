@@ -1,12 +1,13 @@
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
+import type {Profiler} from './profiler.d.ts';
 
 type FallbackOptions = {
-  profilers: geoblocks.Profiler[];
+  profilers: Profiler[];
 };
 
-export default class Fallback implements geoblocks.Profiler {
-  private profilers: geoblocks.Profiler[];
+export default class Fallback implements Profiler {
+  private profilers: Profiler[];
 
   constructor(options: FallbackOptions) {
     this.profilers = options.profilers;

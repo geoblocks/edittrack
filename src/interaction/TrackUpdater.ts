@@ -2,12 +2,13 @@ import type Point from 'ol/geom/Point.js';
 import type LineString from 'ol/geom/LineString.js';
 import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData.ts';
-
+import type {Router} from '../router/router.d.ts';
+import type {Profiler} from '../profiler/profiler.d.ts';
 
 type TrackUpdaterOptions = {
   trackData: TrackData;
-  router: geoblocks.Router;
-  profiler: geoblocks.Profiler;
+  router: Router;
+  profiler: Profiler;
 };
 
 
@@ -16,8 +17,8 @@ type TrackUpdaterOptions = {
  */
 export default class TrackUpdater {
   private trackData: TrackData;
-  private profiler: geoblocks.Profiler;
-  private router: geoblocks.Router;
+  private profiler: Profiler;
+  private router: Router;
 
   constructor(options: TrackUpdaterOptions) {
     this.trackData = options.trackData;

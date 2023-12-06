@@ -1,8 +1,9 @@
 import {distance} from 'ol/coordinate.js';
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
+import type {Profiler} from './profiler.d.ts';
 
-export default class ExtractFromSegment implements geoblocks.Profiler {
+export default class ExtractFromSegment implements Profiler {
 
   computeProfile(segment: Feature<LineString>): Promise<void> {
 
