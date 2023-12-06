@@ -3,6 +3,7 @@ import {get as getProjection} from 'ol/proj.js';
 import type {ProjectionLike} from 'ol/proj.js';
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
+import type {Profiler} from './profiler.d.ts';
 
 
 // https://api3.geo.admin.ch/services/sdiservices.html#profile
@@ -18,7 +19,7 @@ type SwisstopoProfileItem = {
   northing: number;
 };
 
-export default class SwisstopoProfiler implements geoblocks.Profiler {
+export default class SwisstopoProfiler implements Profiler {
   private url = 'https://api3.geo.admin.ch/rest/services/profile.json';
   private geojsonFormat: GeoJSONFormat;
 
