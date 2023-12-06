@@ -50,7 +50,7 @@
     "ts-node": "10.9.1",
     "tsconfig-paths": "4.2.0",
     "typedoc": "0.25.4",
-    "typescript": "5.3.2"
+    "typescript": "5.3.3"
   },
   "optionalDependencies": {
     "@geoblocks/d3profile": "0.0.6"
