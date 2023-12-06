@@ -19,7 +19,7 @@ type SwisstopoProfileItem = {
 };
 
 export default class SwisstopoProfiler implements geoblocks.Profiler {
-  private url: 'https://api3.geo.admin.ch/rest/services/profile.json';
+  private url = 'https://api3.geo.admin.ch/rest/services/profile.json';
   private geojsonFormat: GeoJSONFormat;
 
   constructor(options: SwisstopoProfilerOptions) {

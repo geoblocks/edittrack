@@ -167,7 +167,6 @@ class TrackManager {
     // @ts-ignore too complicate to declare proper events
     this.interaction_.on('drawend',
     /**
-     *
      * @param {import ('ol/interaction/Draw').DrawEvent} event
      */
     async (event) => {
@@ -242,7 +241,7 @@ class TrackManager {
         this.trackData_.updatePOIIndexes();
         this.onTrackChanged_();
       } else if (type === 'controlPoint') {
-        await this.updater_.updateAdjacentSegmentsGeometries(feature);
+        await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
         this.updater_.changeAdjacentSegmentsStyling(feature, '');
         await this.updater_.computeAdjacentSegmentsProfile(feature);
         this.trackData_.updatePOIIndexes();
@@ -263,7 +262,7 @@ class TrackManager {
         console.assert(!!before && !!after);
         this.source_.addFeatures([before, after]);
 
-        await this.updater_.updateAdjacentSegmentsGeometries(controlPoint);
+        await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
         this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
         await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
         this.trackData_.updatePOIIndexes();
@@ -303,10 +302,10 @@ class TrackManager {
         if (pointBefore || pointAfter) {
           const geometryUpdates = [];
           if (pointBefore) {
-            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore));
+            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
           }
           if (pointAfter) {
-            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter));
+            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
           }
           Promise.all(geometryUpdates).then(() => {
             const segmentUpdates = [];
@@ -421,7 +420,7 @@ class TrackManager {
     for (let i = 1, ii = points.length; i < ii; i += 2) {
       const point = points[i];
       this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
-      this.updater_.updateAdjacentSegmentsGeometries(point)
+      this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
       .then(() => {
         this.updater_.changeAdjacentSegmentsStyling(point, '');
         this.updater_.computeAdjacentSegmentsProfile(point);
