@@ -2,7 +2,7 @@ import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
 import TrackData from './TrackData.ts';
-import TrackUpdater from './TrackUpdater.ts';
+import TrackUpdater, {moveLastCoordinate} from './TrackUpdater.ts';
 import TrackInteraction from './TrackInteraction.js';
 import HistoryManager from './HistoryManager.ts';
 
@@ -178,6 +178,12 @@ class TrackManager {
         let snapped = false;
         if (this.snapping) {
           snapped = await this.router_.snapSegment(segment, pointFrom, pointTo);
+          const {before} = this.trackData_.getAdjacentSegments(pointFrom);
+          if (before) {
+            // adjust last coordinate of before segment to match snapped point.
+            // this is only needed when the previous segment was drawn with snapping disabled.
+            moveLastCoordinate(before, pointFrom);
+          }
         }
         await this.profiler_.computeProfile(segment);
         if (!snapped) {

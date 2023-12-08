@@ -87,3 +87,11 @@ export default class TrackUpdater {
     }
   }
 }
+
+
+export function moveLastCoordinate(segment: Feature<LineString>, point: Feature<Point>) {
+  const geometry = segment.getGeometry();
+  const coordinates = geometry.getCoordinates();
+  coordinates[coordinates.length - 1] = point.getGeometry().getCoordinates();
+ geometry.setCoordinates(coordinates);
+}

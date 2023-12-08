@@ -17,7 +17,8 @@ function main() {
   const router = new GraphHopperRouter({
     map: map,
     url: ROUTING_URL,
-    mapProjection: map.getView().getProjection()
+    mapProjection: map.getView().getProjection(),
+    maxRoutingTolerance: 15,
   });
 
   const profiler = new FallbackProfiler({
