@@ -52,9 +52,6 @@
     "typedoc": "0.25.4",
     "typescript": "5.3.3"
   },
-  "optionalDependencies": {
-    "@geoblocks/d3profile": "0.0.6"
-  },
   "peerDependencies": {
     "ol": "^6 || ^7 || ^8.0.0",
     "proj4": "^2"
