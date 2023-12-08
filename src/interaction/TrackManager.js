@@ -607,6 +607,7 @@ class TrackManager {
       this.clearInternal_();
       if (features) {
         await this.restoreFeaturesInternal_(features.map(feature => {
+          // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
           clone.setId(feature.getId());
           return clone;
@@ -626,6 +627,7 @@ class TrackManager {
       this.clearInternal_();
       if (features) {
         await this.restoreFeaturesInternal_(features.map(feature => {
+          // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
           clone.setId(feature.getId());
           return clone;
