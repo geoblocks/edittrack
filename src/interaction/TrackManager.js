@@ -530,6 +530,19 @@ class TrackManager {
   }
 
   /**
+   * Delete a POI and notify track change listeners.
+   * @param {number} index
+   */
+  deletePOI(index) {
+    const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
+    const feature = this.source_.getFeatures().find(feature => feature.get('index') === index);
+    this.source_.removeFeature(feature);
+    this.trackData_.deletePOI(poi);
+    this.trackData_.updatePOIIndexes();
+    this.notifyTrackChangeEventListeners_();
+  }
+
+  /**
    * Add new event listener to be notified on track changes.
    * @param {Function} fn EventListener
    */
