@@ -33,23 +33,27 @@ export default class SwisstopoProfiler implements Profiler {
     });
   }
 
-  computeProfile(segment: Feature<LineString>): Promise<void> {
+  async computeProfile(segment: Feature<LineString>): Promise<void> {
+    const geometry = segment.getGeometry();
+    if (segment.get('profile_revision') === geometry.getRevision()) {
+      return;
+    }
     // TODO: round to coordinate to meter precision
-    const geom = this.geojsonFormat.writeGeometry(segment.getGeometry());
+    const geom = this.geojsonFormat.writeGeometry(geometry);
 
-    const request = fetch(this.url, {
+    const request = await fetch(this.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: `geom=${geom}&sr=2056&offset=1`
     });
-    return request
-      .then(response => response.json())
-      .then((profile) => segment.set('profile', profile.map(swisstopoToXYZM)));
+    const profile = await request.json();
+    segment.set('profile', profile.map(swisstopoToXYZM))
+    segment.set('profile_revision', geometry.getRevision());
   }
 }
-
+// FIXME: don't compute distance
 function swisstopoToXYZM(p: SwisstopoProfileItem): [number, number, number, number] {
   return [p.easting, p.northing, p.alts.COMB, p.dist];
 }

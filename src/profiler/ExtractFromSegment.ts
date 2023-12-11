@@ -9,10 +9,16 @@ export default class ExtractFromSegment implements Profiler {
 
     return new Promise((resolve, reject) => {
       const geometry = segment.getGeometry();
+      if (segment.get('profile_revision') === geometry.getRevision()) {
+        resolve();
+        return;
+      }
       if (geometry.getLayout() === 'XYZM') {
         segment.set('profile', geometry.getCoordinates());
+        segment.set('profile_revision', geometry.getRevision());
         resolve();
       } else if (geometry.getLayout() === 'XYZ') {
+        // FIXME: remove distance computation
         const profile: number[][] = [];
         let accDistance = 0;
         const coordinates = geometry.getCoordinates();
@@ -25,6 +31,7 @@ export default class ExtractFromSegment implements Profiler {
           profile.push([coos[0], coos[1], coos[2], accDistance]);
         }
         segment.set('profile', profile);
+        segment.set('profile_revision', geometry.getRevision());
         resolve();
       } else {
         reject();
