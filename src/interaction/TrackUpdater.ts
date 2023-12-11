@@ -3,41 +3,23 @@ import type LineString from 'ol/geom/LineString.js';
 import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData.ts';
 import type {Router} from '../router/router.d.ts';
-import type {Profiler} from '../profiler/profiler.d.ts';
 
 type TrackUpdaterOptions = {
   trackData: TrackData;
   router: Router;
-  profiler: Profiler;
 };
 
 
 /**
- * Drive the chosen router and profiler to update the segment geometries.
+ * Drive the chosen router to update the segment geometries.
  */
 export default class TrackUpdater {
   private trackData: TrackData;
-  private profiler: Profiler;
   private router: Router;
 
   constructor(options: TrackUpdaterOptions) {
     this.trackData = options.trackData;
-    this.profiler = options.profiler;
     this.router = options.router;
-  }
-
-  computeAdjacentSegmentsProfile(modifiedControlPoint: Feature<Point>): Promise<any> {
-    const promises = [];
-    if (modifiedControlPoint) {
-      const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
-      if (before) {
-        promises.push(this.profiler.computeProfile(before));
-      }
-      if (after) {
-        promises.push(this.profiler.computeProfile(after));
-      }
-    }
-    return Promise.all(promises);
   }
 
   changeAdjacentSegmentsStyling(modifiedControlPoint: Feature<Point>, subtype: string) {
@@ -73,7 +55,6 @@ export default class TrackUpdater {
         } else {
           this.moveSegment(before, pointFrom, modifiedControlPoint);
         }
-        await this.profiler.computeProfile(before);
       }
       if (after) {
         const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
@@ -82,7 +63,6 @@ export default class TrackUpdater {
         } else {
           this.moveSegment(after, modifiedControlPoint, pointTo);
         }
-        await this.profiler.computeProfile(after);
       }
     }
   }
