@@ -107,12 +107,6 @@ class TrackManager {
     this.trackHoverEventListeners_ = [];
 
     /**
-     * @type {Array<Function>}
-     * @private
-     */
-    this.poiAddedEventListeners_ = [];
-
-    /**
      * @private
      */
     this.trackData_ = new TrackData();
