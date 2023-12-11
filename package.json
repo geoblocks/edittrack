@@ -31,7 +31,7 @@
     }
   },
   "devDependencies": {
-    "@geoblocks/d3profile": "0.0.6",
+    "@geoblocks/elevation-profile": "0.0.11",
     "@geoblocks/proj": "0.4.8",
     "@geoblocks/sources": "0.3.2",
     "@types/chai": "4.3.11",
