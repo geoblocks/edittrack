@@ -2,11 +2,10 @@
 import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper.ts';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.ts';
-import Profile from '../../src/Profile.ts';
 import {styleRules} from './style';
-import {Style, Circle, Fill} from 'ol/style';
 import {createMap} from './osm';
 import {Overlay} from "ol";
+import '@geoblocks/elevation-profile';
 
 const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
@@ -55,27 +54,25 @@ function main() {
 
   window.trackManager = trackManager;
 
-  /**
-   * @type {Profile}
-   */
-  const d3Profile = new Profile({
-    map: map,
-    profileTarget: '#profile',
-  });
-
-
+  const profileElement = document.querySelector('#profile');
   trackManager.addTrackChangeEventListener(() => {
-    const segments = trackManager.getSegments();
-    d3Profile.refreshProfile(segments);
+    const fullProfile = [];
+    let distance = 0;
+    for (const segment of trackManager.getSegments()) {
+      const profile = segment.get('profile');
+      fullProfile.push(...profile.map(c => [c[0], c[1], c[2], c[3] + distance]));
+      distance += profile.at(-1).at(3);
+    }
+    profileElement.lines = [fullProfile];
   });
 
-  trackManager.addTrackHoverEventListener((distance) => {
-    if (distance !== undefined) {
-      d3Profile.highlight(distance);
-    } else {
-      d3Profile.clearHighlight();
-    }
-  });
+  // trackManager.addTrackHoverEventListener((distance) => {
+  //   if (distance !== undefined) {
+  //     d3Profile.highlight(distance);
+  //   } else {
+  //     d3Profile.clearHighlight();
+  //   }
+  // });
 
   trackManager.mode = 'edit';
   const tmEl = document.querySelector('#trackmode');
@@ -133,15 +130,6 @@ function main() {
     }
     trackManager.addPOI(poiOverlay, onAddListener)
   });
-
-  d3Profile.setTrackHoverStyle(new Style({
-    image: new Circle({
-      fill: new Fill({
-        color: 'blue',
-      }),
-      radius: 9
-    })
-  }));
 }
 
 main();

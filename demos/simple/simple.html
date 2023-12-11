@@ -5,6 +5,7 @@
   <title>Edit track demo</title>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/8.2.0/ol.css" integrity="sha512-VW0BZX/F8iCSJ3tnd/7IEVoHjVFabVrgtFUk1rmPoBMhJYus9cekwSiBhqFYJ5TaICYFx0ZY9sKSbrv7mOV3MA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="./profile.css">
   <script src="./demo.js" type="module"></script>
   <style>
     html, body, main {
@@ -19,6 +20,7 @@
       width: 100%;
     }
     #profile {
+      display: block;
       height: 150px;
       width: 300px;
     }
@@ -28,7 +30,7 @@
 <body>
   <main>
     <div>
-      <div id="profile"></div>
+      <elevation-profile id="profile"></elevation-profile>
       <select id="trackmode">
         <option value="edit">edit</option>
         <option value="">view</option>
