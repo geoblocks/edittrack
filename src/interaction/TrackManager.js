@@ -535,7 +535,7 @@ class TrackManager {
    */
   deletePOI(index) {
     const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
-    const feature = this.source_.getFeatures().find(feature => feature.get('index') === index);
+    const feature = this.source_.getFeatures().find(feature => feature.get('type') === 'POI' && feature.get('index') === index);
     this.source_.removeFeature(feature);
     this.trackData_.deletePOI(poi);
     this.trackData_.updatePOIIndexes();
