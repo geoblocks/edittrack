@@ -1,5 +1,5 @@
 import {toLonLat} from 'ol/proj.js';
-import PolyLineXYZMFormat from './PolylineXYZM.ts';
+import PolyLineFormat from 'ol/format/Polyline.js';
 import RouterBase, {RouterBaseOptions} from './RouterBase.ts';
 import type {LineString, Point} from 'ol/geom.js';
 import type Feature from 'ol/Feature.js';
@@ -9,7 +9,10 @@ type GraphHopperOptions = RouterBaseOptions & {
 };
 
 export default class GraphHopper extends RouterBase {
-  private polylineFormat = new PolyLineXYZMFormat();
+  private polylineFormat = new PolyLineFormat({
+    factor: 1e5,
+    geometryLayout: 'XYZ'
+  });
   public url: string;
 
   constructor(options: GraphHopperOptions) {
@@ -34,8 +37,9 @@ export default class GraphHopper extends RouterBase {
       const path = json.paths[0];
       const resultGeometry = this.polylineFormat.readGeometry(path.points, {
         featureProjection: mapProjection
-      });
+      }) as LineString;
       const resultCoordinates = resultGeometry.getCoordinates();
+      resultCoordinates.forEach(c => c[2] *= 1000);
       const resultFromCoordinates = resultCoordinates[0].slice(0, 2);
       const resultToCoordinates = resultCoordinates[resultCoordinates.length - 1].slice(0, 2);
 
@@ -44,7 +48,7 @@ export default class GraphHopper extends RouterBase {
       const snapped = pointFrom.get('snapped') && pointTo.get('snapped');
 
       if (snapped) {
-        segment.getGeometry()!.setCoordinates(resultCoordinates, 'XYZM');
+        segment.getGeometry()!.setCoordinates(resultCoordinates, 'XYZ');
         pointFromGeometry!.setCoordinates(resultFromCoordinates);
         pointToGeometry!.setCoordinates(resultToCoordinates);
       } else {
