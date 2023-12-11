@@ -1,6 +1,6 @@
 {
   "name": "@geoblocks/edittrack",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "description": "Geoblocks edittrack",
   "module": "src/index.js",
   "scripts": {
