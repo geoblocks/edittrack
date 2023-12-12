@@ -215,35 +215,35 @@ class TrackManager {
         const feature = event.feature;
         const type = feature.get('type');
 
-      if (type === 'POI') {
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_();
-      } else if (type === 'controlPoint') {
-        await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
-        this.updater_.changeAdjacentSegmentsStyling(feature, '');
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_();
-      } else if (type === 'segment') {
-        const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
+        if (type === 'POI') {
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        } else if (type === 'controlPoint') {
+          await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
+          this.updater_.changeAdjacentSegmentsStyling(feature, '');
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        } else if (type === 'segment') {
+          const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
-        console.assert(indexOfSegment >= 0);
-        const controlPoint = new Feature({
-          geometry: new Point(event.coordinate)
-        });
-        this.source_.addFeature(controlPoint);
-        const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
-        console.assert(!!removed);
-        this.source_.removeFeature(removed);
+          console.assert(indexOfSegment >= 0);
+          const controlPoint = new Feature({
+            geometry: new Point(event.coordinate)
+          });
+          this.source_.addFeature(controlPoint);
+          const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
+          console.assert(!!removed);
+          this.source_.removeFeature(removed);
 
-        const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
-        console.assert(!!before && !!after);
-        this.source_.addFeatures([before, after]);
+          const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
+          console.assert(!!before && !!after);
+          this.source_.addFeatures([before, after]);
 
-        await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
-        this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_();
-      }
+          await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
+          this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        }
     });
 
     this.interaction_.on(
@@ -253,7 +253,7 @@ class TrackManager {
        *
        * @param {import ('ol/interaction/Select').SelectEvent} event
        */
-      (event) => {
+      async (event) => {
         event.mapBrowserEvent.stopPropagation();
         const selected = /** @type {Feature<Point>} */ (event.selected[0]);
         console.assert(selected.getGeometry().getType() === 'Point');
@@ -266,29 +266,28 @@ class TrackManager {
           // control point
           const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
-        // remove deleted features from source
-        deleted.forEach(f => this.source_.removeFeature(f));
+          // remove deleted features from source
+          deleted.forEach(f => this.source_.removeFeature(f));
 
-        // add newly created segment to source
-        if (newSegment) {
-          this.source_.addFeature(newSegment);
+          // add newly created segment to source
+          if (newSegment) {
+            this.source_.addFeature(newSegment);
+          }
+
+          // update adjacent points
+          if (pointBefore || pointAfter) {
+            if (pointBefore) {
+              await this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping);
+            }
+            if (pointAfter) {
+              await this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping);
+            }
+            this.onTrackChanged_()
+          }
         }
 
-        // update adjacent points
-        if (pointBefore || pointAfter) {
-          const geometryUpdates = [];
-          if (pointBefore) {
-            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
-          }
-          if (pointAfter) {
-            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
-          }
-          Promise.all(geometryUpdates).then(() => this.onTrackChanged_());
-        }
-      }
-
-      // unselect deleted feature
-      this.interaction_.clearSelected();
+        // unselect deleted feature
+        this.interaction_.clearSelected();
     });
   }
 
