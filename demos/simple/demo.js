@@ -55,6 +55,7 @@ function main() {
 
   const profileElement = document.querySelector('#profile');
   trackManager.addTrackChangeEventListener(async () => {
+    trackManager.trackData_.assertValid();
     const fullProfile = [];
     let distance = 0;
     for (const segment of trackManager.getSegments()) {

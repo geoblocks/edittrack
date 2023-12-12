@@ -163,6 +163,7 @@ class TrackManager {
         this.source_.addFeature(segment);
         if (this.snapping) {
           await this.router_.snapSegment(segment, pointFrom, pointTo);
+          this.updater_.equalizeCoordinates(pointFrom);
         }
         this.onTrackChanged_();
       }

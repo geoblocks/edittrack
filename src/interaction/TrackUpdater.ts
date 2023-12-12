@@ -3,6 +3,7 @@ import type LineString from 'ol/geom/LineString.js';
 import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData.ts';
 import type {Router} from '../router/router.d.ts';
+import {equals} from 'ol/coordinate';
 
 type TrackUpdaterOptions = {
   trackData: TrackData;
@@ -48,8 +49,9 @@ export default class TrackUpdater {
   async updateAdjacentSegmentsGeometries(modifiedControlPoint: Feature<Point>, snapping: boolean): Promise<any> {
     if (modifiedControlPoint) {
       const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
+      const pointFrom = this.trackData.getControlPointBefore(modifiedControlPoint);
+      const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
       if (before) {
-        const pointFrom = this.trackData.getControlPointBefore(modifiedControlPoint);
         if (snapping) {
           await this.router.snapSegment(before, pointFrom, modifiedControlPoint);
         } else {
@@ -57,13 +59,34 @@ export default class TrackUpdater {
         }
       }
       if (after) {
-        const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
         if (snapping) {
           await this.router.snapSegment(after, modifiedControlPoint, pointTo);
         } else {
           this.moveSegment(after, modifiedControlPoint, pointTo);
         }
       }
+      this.equalizeCoordinates(pointFrom);
+      this.equalizeCoordinates(modifiedControlPoint);
+      this.equalizeCoordinates(pointTo);
     }
   }
+
+  // If needed, equalize the control point, the segment before and after to all share the same coordinate.
+  equalizeCoordinates(controlPoint: Feature<Point>) {
+    const {before, after} = this.trackData.getAdjacentSegments(controlPoint);
+    if (before && after) {
+      const firstCoordinate = before.getGeometry().getLastCoordinate();
+      const lastCoordinate = after.getGeometry().getFirstCoordinate();
+
+      if (!equals(firstCoordinate.slice(0, 2), lastCoordinate.slice(0, 2))) {
+        // both segments were snapped but the middle point results from the two routing was not exactly the same.
+        const beforeCoordinates = before.getGeometry().getCoordinates();
+        beforeCoordinates[beforeCoordinates.length - 1] = lastCoordinate;
+        before.getGeometry().setCoordinates(beforeCoordinates);
+
+        controlPoint.getGeometry().setCoordinates(lastCoordinate);
+      }
+    }
+  }
+
 }

@@ -320,6 +320,23 @@ export default class TrackData {
     this.segments.length = 0;
     this.pois.length = 0;
   }
+
+  assertValid() {
+    // same coordinates for control points and segments last and first coordinates
+    for (const point of this.controlPoints) {
+      const coordinates = [point.getGeometry().getCoordinates().splice(0, 2)];
+      const {before, after} = this.getAdjacentSegments(point);
+      if (before) {
+        coordinates.push(before.getGeometry().getLastCoordinate().splice(0, 2));
+      }
+      if (after) {
+        coordinates.push(after.getGeometry().getFirstCoordinate().splice(0, 2));
+      }
+      if (!coordinates.every((value, _, array) => equals(value, array[0]))) {
+        console.warn(`Not same coordinates at control point ${point.get('index')}`);
+      }
+    }
+  }
 }
 
 function sortByIndex(left: Feature<any>, right: Feature<any>): number {
