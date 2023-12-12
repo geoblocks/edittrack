@@ -543,6 +543,17 @@ class TrackManager {
   }
 
   /**
+   * Update the meta of a POI given by its index
+   * @param {number} index 
+   * @param {Object} meta
+   */
+  updatePOIMeta(index, meta) {
+    const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
+    poi.set('meta', meta);
+    this.addManualHistoryEntry();
+  }
+
+  /**
    * Add new event listener to be notified on track changes.
    * @param {Function} fn EventListener
    */
