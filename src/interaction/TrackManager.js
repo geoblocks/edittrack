@@ -254,7 +254,7 @@ class TrackManager {
        *
        * @param {import ('ol/interaction/Select').SelectEvent} event
        */
-      async (event) => {
+      (event) => {
         event.mapBrowserEvent.stopPropagation();
         const selected = /** @type {Feature<Point>} */ (event.selected[0]);
         console.assert(selected.getGeometry().getType() === 'Point');
@@ -277,13 +277,14 @@ class TrackManager {
 
           // update adjacent points
           if (pointBefore || pointAfter) {
+            const geometryUpdates = [];
             if (pointBefore) {
-              await this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping);
+              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
             }
             if (pointAfter) {
-              await this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping);
+              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
             }
-            this.onTrackChanged_()
+            Promise.all(geometryUpdates).then(() => this.onTrackChanged_());
           }
         }
 

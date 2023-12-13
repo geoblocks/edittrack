@@ -51,23 +51,26 @@ export default class TrackUpdater {
       const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
       const pointFrom = this.trackData.getControlPointBefore(modifiedControlPoint);
       const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
+      const geometryUpdates = [];
       if (before) {
         if (snapping) {
-          await this.router.snapSegment(before, pointFrom, modifiedControlPoint);
+          geometryUpdates.push(this.router.snapSegment(before, pointFrom, modifiedControlPoint));
         } else {
           this.moveSegment(before, pointFrom, modifiedControlPoint);
         }
       }
       if (after) {
         if (snapping) {
-          await this.router.snapSegment(after, modifiedControlPoint, pointTo);
+          geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
         } else {
           this.moveSegment(after, modifiedControlPoint, pointTo);
         }
       }
-      this.equalizeCoordinates(pointFrom);
-      this.equalizeCoordinates(modifiedControlPoint);
-      this.equalizeCoordinates(pointTo);
+      await Promise.all(geometryUpdates).then(() => {
+        this.equalizeCoordinates(pointFrom);
+        this.equalizeCoordinates(modifiedControlPoint);
+        this.equalizeCoordinates(pointTo);
+      });
     }
   }
 
