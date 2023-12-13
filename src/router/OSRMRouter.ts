@@ -29,6 +29,7 @@ export default class OSRMRouter extends RouterBase {
   }
 
   async snapSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>): Promise<boolean> {
+    // FIXME: use same logic about 'snapped' as in GraphHopper.ts
     const mapProjection = this.map.getView().getProjection();
     const pointFromGeometry = pointFrom.getGeometry();
     const pointToGeometry = pointTo.getGeometry();
@@ -47,7 +48,7 @@ export default class OSRMRouter extends RouterBase {
     console.assert(jsonResponse.code === 'Ok');
     console.assert(jsonResponse.routes.length === 1);
     const route = jsonResponse.routes[0];
-    const segmentCoordinates = /** @type {import('ol/coordinate').Coordinate[]} */ (route.geometry.coordinates).map(cc => fromLonLat(cc, mapProjection));
+    const segmentCoordinates = route.geometry.coordinates.map((cc: number[]) => fromLonLat(cc, mapProjection));
     const segmentGeometry = segment.getGeometry();
     segmentGeometry!.setCoordinates(segmentCoordinates);
 

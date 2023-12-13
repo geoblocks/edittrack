@@ -16,7 +16,7 @@ function main() {
   const router = new GraphHopperRouter({
     map: map,
     url: ROUTING_URL,
-    mapProjection: map.getView().getProjection()
+    maxRoutingTolerance: 15,
   });
 
   const profiler = new FallbackProfiler({
@@ -56,6 +56,7 @@ function main() {
 
   const profileElement = document.querySelector('#profile');
   trackManager.addTrackChangeEventListener(() => {
+    trackManager.trackData_.assertValid();
     const fullProfile = [];
     let distance = 0;
     for (const segment of trackManager.getSegments()) {

@@ -34,7 +34,6 @@
   "include": [
     "test/**/*.js",
     "src/**/*.js",
-    "src/**/*.d.ts",
-    "types/**/*",
+    "src/**/*.ts",
   ]
 }

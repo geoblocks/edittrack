@@ -8,7 +8,7 @@ import HistoryManager from './HistoryManager.ts';
 
 import {findClosestPointInLines} from './closestfinder.ts';
 
-import {debounce, setZ} from './util.ts';
+import {debounce} from './util.ts';
 
 
 /** @typedef {import('ol/geom/LineString').default} LineString */
@@ -107,12 +107,6 @@ class TrackManager {
     this.trackHoverEventListeners_ = [];
 
     /**
-     * @type {Array<Function>}
-     * @private
-     */
-    this.poiAddedEventListeners_ = [];
-
-    /**
      * @private
      */
     this.trackData_ = new TrackData();
@@ -172,20 +166,16 @@ class TrackManager {
     async (event) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
       const feature = /** @type {Feature<Point>} */ (event.feature);
+      if (!this.snapping) {
+        feature.set('snapped', false);
+      }
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
       if (segment) {
         this.source_.addFeature(segment);
-        let snapped = false;
-        if (this.snapping) {
-          snapped = await this.router_.snapSegment(segment, pointFrom, pointTo);
-        }
+        await this.router_.snapSegment(segment, pointFrom, pointTo);
+        this.updater_.equalizeCoordinates(pointFrom);
         await this.profiler_.computeProfile(segment);
-        if (!snapped) {
-          const segmentProfile = segment.get('profile');
-          if (segmentProfile) {
-            setZ(segment, segmentProfile[0][2], segmentProfile[segmentProfile.length - 1][2]);
-          }
-        }
+        // FIXME: setZ ?
         this.onTrackChanged_();
       }
     });
@@ -237,37 +227,37 @@ class TrackManager {
         const feature = event.feature;
         const type = feature.get('type');
 
-      if (type === 'POI') {
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_();
-      } else if (type === 'controlPoint') {
-        await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
-        this.updater_.changeAdjacentSegmentsStyling(feature, '');
-        await this.updater_.computeAdjacentSegmentsProfile(feature);
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_();
-      } else if (type === 'segment') {
-        const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
+        if (type === 'POI') {
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        } else if (type === 'controlPoint') {
+          await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
+          this.updater_.changeAdjacentSegmentsStyling(feature, '');
+          await this.updater_.computeAdjacentSegmentsProfile(feature);
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        } else if (type === 'segment') {
+          const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
-        console.assert(indexOfSegment >= 0);
-        const controlPoint = new Feature({
-          geometry: new Point(event.coordinate)
-        });
-        this.source_.addFeature(controlPoint);
-        const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
-        console.assert(!!removed);
-        this.source_.removeFeature(removed);
+          console.assert(indexOfSegment >= 0);
+          const controlPoint = new Feature({
+            geometry: new Point(event.coordinate)
+          });
+          this.source_.addFeature(controlPoint);
+          const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
+          console.assert(!!removed);
+          this.source_.removeFeature(removed);
 
-        const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
-        console.assert(!!before && !!after);
-        this.source_.addFeatures([before, after]);
+          const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
+          console.assert(!!before && !!after);
+          this.source_.addFeatures([before, after]);
 
-        await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
-        this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
-        await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_();
-      }
+          await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
+          this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
+          await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        }
     });
 
     this.interaction_.on(
@@ -290,40 +280,40 @@ class TrackManager {
           // control point
           const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
 
-        // remove deleted features from source
-        deleted.forEach(f => this.source_.removeFeature(f));
+          // remove deleted features from source
+          deleted.forEach(f => this.source_.removeFeature(f));
 
-        // add newly created segment to source
-        if (newSegment) {
-          this.source_.addFeature(newSegment);
-        }
+          // add newly created segment to source
+          if (newSegment) {
+            this.source_.addFeature(newSegment);
+          }
 
-        // update adjacent points
-        if (pointBefore || pointAfter) {
-          const geometryUpdates = [];
-          if (pointBefore) {
-            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
-          }
-          if (pointAfter) {
-            geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
-          }
-          Promise.all(geometryUpdates).then(() => {
-            const segmentUpdates = [];
+          // update adjacent points
+          if (pointBefore || pointAfter) {
+            const geometryUpdates = [];
             if (pointBefore) {
-              segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
             }
             if (pointAfter) {
-              segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
             }
-            Promise.all(segmentUpdates).then(() => {
-              this.onTrackChanged_();
+            Promise.all(geometryUpdates).then(() => {
+              const segmentUpdates = [];
+              if (pointBefore) {
+                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+              }
+              if (pointAfter) {
+                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+              }
+              Promise.all(segmentUpdates).then(() => {
+                this.onTrackChanged_();
+              });
             });
-          });
+          }
         }
-      }
 
-      // unselect deleted feature
-      this.interaction_.clearSelected();
+        // unselect deleted feature
+        this.interaction_.clearSelected();
     });
   }
 

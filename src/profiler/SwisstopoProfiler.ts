@@ -33,20 +33,19 @@ export default class SwisstopoProfiler implements Profiler {
     });
   }
 
-  computeProfile(segment: Feature<LineString>): Promise<void> {
+  async computeProfile(segment: Feature<LineString>): Promise<void> {
     // TODO: round to coordinate to meter precision
     const geom = this.geojsonFormat.writeGeometry(segment.getGeometry());
 
-    const request = fetch(this.url, {
+    const request = await fetch(this.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: `geom=${geom}&sr=2056&offset=1`
     });
-    return request
-      .then(response => response.json())
-      .then((profile) => segment.set('profile', profile.map(swisstopoToXYZM)));
+    const profile = await request.json();
+    segment.set('profile', profile.map(swisstopoToXYZM));
   }
 }
 

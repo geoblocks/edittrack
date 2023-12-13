@@ -4,16 +4,6 @@ export const controlPoint = {
   "circle-fill-color": "white",
 };
 
-export const firstControlPoint = {
-  ...controlPoint,
-  "circle-fill-color": "green",
-};
-
-export const lastControlPoint = {
-  ...controlPoint,
-  "circle-fill-color": "red",
-};
-
 export const sketchControlPoint = {
   "circle-radius": 5,
   "circle-fill-color": "#ffffffdd",
@@ -46,6 +36,16 @@ export const numberedControlPoint = {
   "text-color": "blue",
   // use 'concat' to convert number to string
   "text-value": ["concat", ["get", "index"], ""],
+};
+
+export const snappedTrue = {
+  ...controlPoint,
+  "circle-fill-color": "green",
+};
+
+export const snappedFalse = {
+  ...controlPoint,
+  "circle-fill-color": "red",
 };
 
 export const sketchLabel = {
@@ -92,17 +92,16 @@ export const styleRules = [
     style: poiPoint,
   },
   {
-    // FIXME: shorter filter?
-    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["!=", ["get", "subtype"], "first"], ["!=", ["get", "subtype"], "last"]],
+    filter: ["==", ["get", "type"], "controlPoint"],
     style: numberedControlPoint,
   },
   {
-    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["==", ["get", "subtype"], "first"]],
-    style: firstControlPoint,
+    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["==", ["get", "snapped"], true]],
+    style: snappedTrue,
   },
   {
-    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["==", ["get", "subtype"], "last"]],
-    style: lastControlPoint,
+    filter: ["all", ["==", ["get", "type"], "controlPoint"], ["==", ["get", "snapped"], false]],
+    style: snappedFalse,
   },
   {
     filter: ["all", ["==", ["get", "type"], "segment"], ["!=", ["get", "subtype"], "modifying"]],
