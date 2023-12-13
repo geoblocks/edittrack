@@ -1,7 +1,6 @@
 import {fromLonLat, toLonLat} from 'ol/proj.js';
 import RouterBase, {RouterBaseOptions} from './RouterBase.ts';
-import type {LineString, Point} from 'ol/geom.js';
-import type Feature from 'ol/Feature.js';
+import type {Coordinate} from 'ol/coordinate.js';
 
 export const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foot/route/v1/driving';
 export const OSRM_DEFAULT_PROFILE_URL = 'https://router.project-osrm.org/route/v1/driving';
@@ -28,12 +27,9 @@ export default class OSRMRouter extends RouterBase {
     this.extraParams = options.extraParams;
   }
 
-  async snapSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>): Promise<boolean> {
-    // FIXME: use same logic about 'snapped' as in GraphHopper.ts
+  async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]> {
     const mapProjection = this.map.getView().getProjection();
-    const pointFromGeometry = pointFrom.getGeometry();
-    const pointToGeometry = pointTo.getGeometry();
-    const coordinates = [pointFromGeometry!.getCoordinates(), pointToGeometry!.getCoordinates()].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
+    const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
 
     // [ [a,b] , [c,d] ] -> 'a,b;c,d'
     const coordinateString = coordinates.map(c => c.join(',')).join(';');
@@ -48,16 +44,6 @@ export default class OSRMRouter extends RouterBase {
     console.assert(jsonResponse.code === 'Ok');
     console.assert(jsonResponse.routes.length === 1);
     const route = jsonResponse.routes[0];
-    const segmentCoordinates = route.geometry.coordinates.map((cc: number[]) => fromLonLat(cc, mapProjection));
-    const segmentGeometry = segment.getGeometry();
-    segmentGeometry!.setCoordinates(segmentCoordinates);
-
-    pointFromGeometry!.setCoordinates(segmentCoordinates[0]);
-    pointToGeometry!.setCoordinates(segmentCoordinates[segmentCoordinates.length - 1]);
-    segment.set('snapped', true);
-    pointFrom.set('snapped', true);
-    pointTo.set('snapped', true);
-
-    return true;
+    return route.geometry.coordinates.map((cc: number[]) => fromLonLat(cc, mapProjection));
   }
 }
