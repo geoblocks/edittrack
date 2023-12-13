@@ -534,7 +534,7 @@ class TrackManager {
 
   /**
    * Update the meta of a POI given by its index
-   * @param {number} index 
+   * @param {number} index
    * @param {Object} meta
    */
   updatePOIMeta(index, meta) {
