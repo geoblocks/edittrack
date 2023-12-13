@@ -1,5 +1,4 @@
 import type Point from 'ol/geom/Point.js';
-import type LineString from 'ol/geom/LineString.js';
 import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData.ts';
 import type {Router} from '../router/router.d.ts';
@@ -35,36 +34,18 @@ export default class TrackUpdater {
     }
   }
 
-  moveSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>) {
-    const pointFromGeometry = pointFrom.getGeometry();
-    const pointToGeometry = pointTo.getGeometry();
-
-    segment.set('snapped', false);
-    pointFrom.set('snapped', false);
-    pointTo.set('snapped', false);
-
-    segment.getGeometry().setCoordinates([pointFromGeometry.getCoordinates(), pointToGeometry.getCoordinates()], 'XY');
-  }
-
   async updateAdjacentSegmentsGeometries(modifiedControlPoint: Feature<Point>, snapping: boolean): Promise<any> {
     if (modifiedControlPoint) {
       const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
       const pointFrom = this.trackData.getControlPointBefore(modifiedControlPoint);
       const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
+      modifiedControlPoint.set('snapped', snapping ? undefined : false);
       const geometryUpdates = [];
       if (before) {
-        if (snapping) {
-          geometryUpdates.push(this.router.snapSegment(before, pointFrom, modifiedControlPoint));
-        } else {
-          this.moveSegment(before, pointFrom, modifiedControlPoint);
-        }
+        geometryUpdates.push(this.router.snapSegment(before, pointFrom, modifiedControlPoint));
       }
       if (after) {
-        if (snapping) {
-          geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
-        } else {
-          this.moveSegment(after, modifiedControlPoint, pointTo);
-        }
+        geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
       }
       await Promise.all(geometryUpdates).then(() => {
         this.equalizeCoordinates(pointFrom);

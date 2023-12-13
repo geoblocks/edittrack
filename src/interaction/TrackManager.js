@@ -158,13 +158,14 @@ class TrackManager {
     async (event) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
       const feature = /** @type {Feature<Point>} */ (event.feature);
+      if (!this.snapping) {
+        feature.set('snapped', false);
+      }
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
       if (segment) {
         this.source_.addFeature(segment);
-        if (this.snapping) {
-          await this.router_.snapSegment(segment, pointFrom, pointTo);
-          this.updater_.equalizeCoordinates(pointFrom);
-        }
+        await this.router_.snapSegment(segment, pointFrom, pointTo);
+        this.updater_.equalizeCoordinates(pointFrom);
         this.onTrackChanged_();
       }
     });

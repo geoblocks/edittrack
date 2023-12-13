@@ -22,11 +22,18 @@ export default class GraphHopper extends RouterBase {
   }
 
   async snapSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>): Promise<boolean> {
+    const pointFromSnapped = pointFrom.get('snapped');
+    const pointToSnapped = pointTo.get('snapped');
     const mapProjection = this.map.getView().getProjection();
     const pointFromGeometry = pointFrom.getGeometry();
     const pointToGeometry = pointTo.getGeometry();
     const pointFromCoordinates = pointFromGeometry!.getCoordinates();
     const pointToCoordinates = pointToGeometry!.getCoordinates();
+
+    if (pointFromSnapped == false || pointToSnapped === false) {
+      segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
+      return false;
+    }
 
     const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
     const coordinateString = coordinates.map(c => `point=${c.reverse().join(',')}`).join('&');
@@ -43,8 +50,12 @@ export default class GraphHopper extends RouterBase {
       const resultFromCoordinates = resultCoordinates[0].slice(0, 2);
       const resultToCoordinates = resultCoordinates[resultCoordinates.length - 1].slice(0, 2);
 
-      pointFrom.set('snapped', this.isInTolerance(pointFromCoordinates, resultFromCoordinates));
-      pointTo.set('snapped', this.isInTolerance(pointToCoordinates, resultToCoordinates));
+      if (pointFromSnapped === undefined) {
+        pointFrom.set('snapped', this.isInTolerance(pointFromCoordinates, resultFromCoordinates));
+      }
+      if (pointToSnapped === undefined) {
+        pointTo.set('snapped', this.isInTolerance(pointToCoordinates, resultToCoordinates));
+      }
       const snapped = pointFrom.get('snapped') && pointTo.get('snapped');
 
       if (snapped) {
