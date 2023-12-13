@@ -2,11 +2,13 @@ import type Point from 'ol/geom/Point.js';
 import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData.ts';
 import type {Router} from '../router/router.d.ts';
+import type {Profiler} from '../profiler/profiler.d.ts';
 import {equals} from 'ol/coordinate';
 
 type TrackUpdaterOptions = {
   trackData: TrackData;
   router: Router;
+  profiler: Profiler;
 };
 
 
@@ -15,11 +17,27 @@ type TrackUpdaterOptions = {
  */
 export default class TrackUpdater {
   private trackData: TrackData;
+  private profiler: Profiler;
   private router: Router;
 
   constructor(options: TrackUpdaterOptions) {
     this.trackData = options.trackData;
+    this.profiler = options.profiler;
     this.router = options.router;
+  }
+
+  computeAdjacentSegmentsProfile(modifiedControlPoint: Feature<Point>): Promise<any> {
+    const promises = [];
+    if (modifiedControlPoint) {
+      const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
+      if (before) {
+        promises.push(this.profiler.computeProfile(before));
+      }
+      if (after) {
+        promises.push(this.profiler.computeProfile(after));
+      }
+    }
+    return Promise.all(promises);
   }
 
   changeAdjacentSegmentsStyling(modifiedControlPoint: Feature<Point>, subtype: string) {
@@ -47,10 +65,18 @@ export default class TrackUpdater {
       if (after) {
         geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
       }
-      await Promise.all(geometryUpdates).then(() => {
+      await Promise.all(geometryUpdates).then(async () => {
         this.equalizeCoordinates(pointFrom);
         this.equalizeCoordinates(modifiedControlPoint);
         this.equalizeCoordinates(pointTo);
+        const profileUpdates = [];
+        if (before) {
+          profileUpdates.push(this.profiler.computeProfile(before));
+        }
+        if (after) {
+          profileUpdates.push(this.profiler.computeProfile(after));
+        }
+        await Promise.all(profileUpdates);
       });
     }
   }

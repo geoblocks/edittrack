@@ -29,6 +29,7 @@ import {debounce} from './util.ts';
  * @property {VectorLayer} trackLayer
  * @property {VectorLayer} [shadowTrackLayer]
  * @property {geoblocks.Router} router
+ * @property {geoblocks.Profiler} profiler
  * @property {StyleLike | FlatStyleLike} style
  * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
  * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
@@ -119,9 +120,16 @@ class TrackManager {
     this.router_ = options.router;
 
     /**
+     * @type {geoblocks.Profiler}
+     * @private
+     */
+    this.profiler_ = options.profiler;
+
+    /**
      * @private
      */
     this.updater_ = new TrackUpdater({
+      profiler: this.profiler_,
       router: this.router_,
       trackData: this.trackData_
     });
@@ -166,6 +174,8 @@ class TrackManager {
         this.source_.addFeature(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
         this.updater_.equalizeCoordinates(pointFrom);
+        await this.profiler_.computeProfile(segment);
+        // FIXME: setZ ?
         this.onTrackChanged_();
       }
     });
@@ -223,6 +233,7 @@ class TrackManager {
         } else if (type === 'controlPoint') {
           await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
+          await this.updater_.computeAdjacentSegmentsProfile(feature);
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'segment') {
@@ -243,6 +254,7 @@ class TrackManager {
 
           await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
+          await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         }
@@ -285,7 +297,18 @@ class TrackManager {
             if (pointAfter) {
               geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
             }
-            Promise.all(geometryUpdates).then(() => this.onTrackChanged_());
+            Promise.all(geometryUpdates).then(() => {
+              const segmentUpdates = [];
+              if (pointBefore) {
+                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+              }
+              if (pointAfter) {
+                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+              }
+              Promise.all(segmentUpdates).then(() => {
+                this.onTrackChanged_();
+              });
+            });
           }
         }
 
@@ -390,6 +413,7 @@ class TrackManager {
       this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
       .then(() => {
         this.updater_.changeAdjacentSegmentsStyling(point, '');
+        this.updater_.computeAdjacentSegmentsProfile(point);
       })
       .then(() => {
         this.trackData_.updatePOIIndexes();
@@ -420,20 +444,24 @@ class TrackManager {
    * This function does not trigger track changed events.
    * @private
    * @param {Array<Feature<Point|LineString>>} features
+   * @return {Promise<any>}
    */
-  restoreFeaturesInternal_(features) {
+  async restoreFeaturesInternal_(features) {
     // should parse features first, compute profile, and then replace the trackdata and add history
     const parsedFeatures = this.trackData_.parseFeatures(features);
     this.source_.addFeatures(features);
+    const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
+    await Promise.all(profileRequests);
     this.trackData_.restoreParsedFeatures(parsedFeatures);
   }
 
   /**
    * @param {Array<Feature<Point|LineString>>} features
+   * @return {Promise<any>}
    */
-  restoreFeatures(features) {
+  async restoreFeatures(features) {
     this.clearInternal_();
-    this.restoreFeaturesInternal_(features);
+    await this.restoreFeaturesInternal_(features);
     this.onTrackChanged_();
   }
 
@@ -576,12 +604,12 @@ class TrackManager {
   /**
    * Undo one drawing step
    */
-  undo() {
+  async undo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.undo();
       this.clearInternal_();
       if (features) {
-        this.restoreFeaturesInternal_(features.map(feature => {
+        await this.restoreFeaturesInternal_(features.map(feature => {
           // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
           clone.setId(feature.getId());
@@ -596,12 +624,12 @@ class TrackManager {
   /**
    * Redo one drawing step
    */
-  redo() {
+  async redo() {
     if (this.mode === 'edit') {
       const features = this.historyManager_.redo();
       this.clearInternal_();
       if (features) {
-        this.restoreFeaturesInternal_(features.map(feature => {
+        await this.restoreFeaturesInternal_(features.map(feature => {
           // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
           clone.setId(feature.getId());

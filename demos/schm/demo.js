@@ -1,6 +1,7 @@
 
 import TrackManager from '../../src/interaction/TrackManager';
 import GraphHopperRouter from '../../src/router/GraphHopper.ts';
+import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.ts';
 import {styleFunction} from './style';
 import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
@@ -20,6 +21,15 @@ async function main() {
     maxRoutingTolerance: 15,
   });
 
+  const profiler = new FallbackProfiler({
+    profilers: [
+      new ExtractFromSegmentProfiler(),
+      new SwisstopoProfiler({
+        projection: projection,
+      })
+    ]
+  });
+
   /**
    * @param {MapBrowserEvent} mapBrowserEvent
    * @param {string} pointType
@@ -32,6 +42,7 @@ async function main() {
   const trackManager = new TrackManager({
     map: map,
     router: router,
+    profiler: profiler,
     trackLayer: trackLayer,
     shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,

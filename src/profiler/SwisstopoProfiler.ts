@@ -34,12 +34,8 @@ export default class SwisstopoProfiler implements Profiler {
   }
 
   async computeProfile(segment: Feature<LineString>): Promise<void> {
-    const geometry = segment.getGeometry();
-    if (segment.get('profile_revision') === geometry.getRevision()) {
-      return;
-    }
     // TODO: round to coordinate to meter precision
-    const geom = this.geojsonFormat.writeGeometry(geometry);
+    const geom = this.geojsonFormat.writeGeometry(segment.getGeometry());
 
     const request = await fetch(this.url, {
       method: 'POST',
@@ -49,11 +45,10 @@ export default class SwisstopoProfiler implements Profiler {
       body: `geom=${geom}&sr=2056&offset=1`
     });
     const profile = await request.json();
-    segment.set('profile', profile.map(swisstopoToXYZM))
-    segment.set('profile_revision', geometry.getRevision());
+    segment.set('profile', profile.map(swisstopoToXYZM));
   }
 }
-// FIXME: don't compute distance
+
 function swisstopoToXYZM(p: SwisstopoProfileItem): [number, number, number, number] {
   return [p.easting, p.northing, p.alts.COMB, p.dist];
 }

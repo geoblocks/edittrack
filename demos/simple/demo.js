@@ -44,6 +44,7 @@ function main() {
   const trackManager = new TrackManager({
     map: map,
     router: router,
+    profiler: profiler,
     trackLayer: trackLayer,
     shadowTrackLayer: shadowTrackLayer,
     style: styleRules,
@@ -54,12 +55,11 @@ function main() {
   window.trackManager = trackManager;
 
   const profileElement = document.querySelector('#profile');
-  trackManager.addTrackChangeEventListener(async () => {
+  trackManager.addTrackChangeEventListener(() => {
     trackManager.trackData_.assertValid();
     const fullProfile = [];
     let distance = 0;
     for (const segment of trackManager.getSegments()) {
-      await profiler.computeProfile(segment);
       const profile = segment.get('profile');
       fullProfile.push(...profile.map(c => [c[0], c[1], c[2], c[3] + distance]));
       distance += profile.at(-1).at(3);
