@@ -580,25 +580,23 @@ var _trackManager = require("../../src/interaction/TrackManager");
 var _trackManagerDefault = parcelHelpers.interopDefault(_trackManager);
 var _graphHopperTs = require("../../src/router/GraphHopper.ts");
 var _graphHopperTsDefault = parcelHelpers.interopDefault(_graphHopperTs);
-var _index = require("../../src/profiler/index");
-var _profileTs = require("../../src/Profile.ts");
-var _profileTsDefault = parcelHelpers.interopDefault(_profileTs);
+var _indexTs = require("../../src/profiler/index.ts");
 var _style = require("./style");
-var _style1 = require("ol/style");
 var _osm = require("./osm");
 var _ol = require("ol");
+var _elevationProfile = require("@geoblocks/elevation-profile");
 const ROUTING_URL = "https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true";
 function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _osm.createMap)("map");
     const router = new (0, _graphHopperTsDefault.default)({
         map: map,
         url: ROUTING_URL,
-        mapProjection: map.getView().getProjection()
+        maxRoutingTolerance: 15
     });
-    const profiler = new (0, _index.FallbackProfiler)({
+    const profiler = new (0, _indexTs.FallbackProfiler)({
         profilers: [
-            new (0, _index.ExtractFromSegmentProfiler)(),
-            new (0, _index.SwisstopoProfiler)({
+            new (0, _indexTs.ExtractFromSegmentProfiler)(),
+            new (0, _indexTs.SwisstopoProfiler)({
                 projection: map.getView().getProjection()
             })
         ]
@@ -625,20 +623,32 @@ function main() {
         hitTolerance: 10
     });
     window.trackManager = trackManager;
-    /**
-   * @type {Profile}
-   */ const d3Profile = new (0, _profileTsDefault.default)({
-        map: map,
-        profileTarget: "#profile"
-    });
+    const profileElement = document.querySelector("#profile");
     trackManager.addTrackChangeEventListener(()=>{
-        const segments = trackManager.getSegments();
-        d3Profile.refreshProfile(segments);
+        trackManager.trackData_.assertValid();
+        const fullProfile = [];
+        let distance = 0;
+        for (const segment of trackManager.getSegments()){
+            const profile = segment.get("profile");
+            fullProfile.push(...profile.map((c)=>[
+                    c[0],
+                    c[1],
+                    c[2],
+                    c[3] + distance
+                ]));
+            distance += profile.at(-1).at(3);
+        }
+        profileElement.lines = [
+            fullProfile
+        ];
     });
-    trackManager.addTrackHoverEventListener((distance)=>{
-        if (distance !== undefined) d3Profile.highlight(distance);
-        else d3Profile.clearHighlight();
-    });
+    // trackManager.addTrackHoverEventListener((distance) => {
+    //   if (distance !== undefined) {
+    //     d3Profile.highlight(distance);
+    //   } else {
+    //     d3Profile.clearHighlight();
+    //   }
+    // });
     trackManager.mode = "edit";
     const tmEl = document.querySelector("#trackmode");
     tmEl.addEventListener("change", (evt)=>trackManager.mode = evt.target.value);
@@ -695,2216 +705,2341 @@ function main() {
         };
         trackManager.addPOI(poiOverlay, onAddListener);
     });
-    d3Profile.setTrackHoverStyle(new (0, _style1.Style)({
-        image: new (0, _style1.Circle)({
-            fill: new (0, _style1.Fill)({
-                color: "blue"
-            }),
-            radius: 9
-        })
-    }));
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper.ts":"fak2b","../../src/profiler/index":"d5CmD","../../src/Profile.ts":"i4hMD","./style":"bV6WG","ol/style":"hEQxF","./osm":"2SIll","ol":"3a1E4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"i4hMD":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper.ts":"fak2b","../../src/profiler/index.ts":"1rK0e","./style":"bV6WG","./osm":"2SIll","ol":"3a1E4","@geoblocks/elevation-profile":"fmUZ9","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-var _featureJs = require("ol/Feature.js");
-var _featureJsDefault = parcelHelpers.interopDefault(_featureJs);
-var _vectorJs = require("ol/source/Vector.js");
-var _vectorJsDefault = parcelHelpers.interopDefault(_vectorJs);
-var _pointJs = require("ol/geom/Point.js");
-var _pointJsDefault = parcelHelpers.interopDefault(_pointJs);
-var _vectorJs1 = require("ol/layer/Vector.js");
-var _vectorJsDefault1 = parcelHelpers.interopDefault(_vectorJs1);
-// @ts-ignore FIXME: introduce a type declaration
-var _d3ElevationJs = require("@geoblocks/d3profile/src/d3Elevation.js");
-var _d3ElevationJsDefault = parcelHelpers.interopDefault(_d3ElevationJs);
-const defaultStyleDefs = `
-.domain {
-  color: rgb(0, 130, 205);
+parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
+parcelHelpers.export(exports, "sketchControlPoint", ()=>sketchControlPoint);
+parcelHelpers.export(exports, "trackLine", ()=>trackLine);
+parcelHelpers.export(exports, "trackLineModifying", ()=>trackLineModifying);
+parcelHelpers.export(exports, "poiPoint", ()=>poiPoint);
+parcelHelpers.export(exports, "numberedControlPoint", ()=>numberedControlPoint);
+parcelHelpers.export(exports, "snappedTrue", ()=>snappedTrue);
+parcelHelpers.export(exports, "snappedFalse", ()=>snappedFalse);
+parcelHelpers.export(exports, "sketchLabel", ()=>sketchLabel);
+parcelHelpers.export(exports, "sketchLabelPOI", ()=>sketchLabelPOI);
+parcelHelpers.export(exports, "sketchLabelControlPoint", ()=>sketchLabelControlPoint);
+parcelHelpers.export(exports, "sketchLabelSegment", ()=>sketchLabelSegment);
+parcelHelpers.export(exports, "styleRules", ()=>styleRules);
+const controlPoint = {
+    "z-index": 10,
+    "circle-radius": 8,
+    "circle-fill-color": "white"
+};
+const sketchControlPoint = {
+    "circle-radius": 5,
+    "circle-fill-color": "#ffffffdd"
+};
+const trackLine = {
+    "stroke-width": 6,
+    "stroke-color": "purple"
+};
+const trackLineModifying = {
+    ...trackLine,
+    "stroke-width": 3,
+    "stroke-line-dash": [
+        5,
+        9
+    ]
+};
+const poiPoint = {
+    "z-index": 100,
+    "circle-radius": 8,
+    "circle-fill-color": "yellow",
+    "text-font": "bold 11px Inter",
+    "text-fill-color": "#000",
+    // use 'concat' to convert number to string
+    "text-value": [
+        "concat",
+        [
+            "get",
+            "index"
+        ],
+        ""
+    ]
+};
+const numberedControlPoint = {
+    ...controlPoint,
+    "circle-fill-color": "#ffffffdd",
+    "text-color": "blue",
+    // use 'concat' to convert number to string
+    "text-value": [
+        "concat",
+        [
+            "get",
+            "index"
+        ],
+        ""
+    ]
+};
+const snappedTrue = {
+    ...controlPoint,
+    "circle-fill-color": "green"
+};
+const snappedFalse = {
+    ...controlPoint,
+    "circle-fill-color": "red"
+};
+const sketchLabel = {
+    "text-font": "20px sans-serif",
+    "text-offset-x": 20,
+    "text-align": "left",
+    "text-background-fill-color": "#ffffffaa"
+};
+const sketchLabelPOI = {
+    ...sketchLabel,
+    "text-value": "click to delete\ndrag to move POI"
+};
+const sketchLabelControlPoint = {
+    ...sketchLabel,
+    "text-value": "click to delete\ndrag to move point"
+};
+const sketchLabelSegment = {
+    ...sketchLabel,
+    "text-value": "drag to create point"
+};
+const styleRules = [
+    {
+        filter: [
+            "==",
+            [
+                "get",
+                "type"
+            ],
+            "sketch"
+        ],
+        style: sketchControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "sketch"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "POI"
+            ]
+        ],
+        style: sketchLabelPOI
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "sketch"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "controlPoint"
+            ]
+        ],
+        style: sketchLabelControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "sketch"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "segment"
+            ]
+        ],
+        style: sketchLabelSegment
+    },
+    {
+        filter: [
+            "==",
+            [
+                "get",
+                "type"
+            ],
+            "POI"
+        ],
+        style: poiPoint
+    },
+    {
+        filter: [
+            "==",
+            [
+                "get",
+                "type"
+            ],
+            "controlPoint"
+        ],
+        style: numberedControlPoint
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "controlPoint"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "snapped"
+                ],
+                true
+            ]
+        ],
+        style: snappedTrue
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "controlPoint"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "snapped"
+                ],
+                false
+            ]
+        ],
+        style: snappedFalse
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "segment"
+            ],
+            [
+                "!=",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "modifying"
+            ]
+        ],
+        style: trackLine
+    },
+    {
+        filter: [
+            "all",
+            [
+                "==",
+                [
+                    "get",
+                    "type"
+                ],
+                "segment"
+            ],
+            [
+                "==",
+                [
+                    "get",
+                    "subtype"
+                ],
+                "modifying"
+            ]
+        ],
+        style: trackLineModifying
+    }
+];
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2SIll":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "createMap", ()=>createMap);
+var _epsg2056 = require("@geoblocks/proj/src/EPSG_2056");
+var _epsg2056Default = parcelHelpers.interopDefault(_epsg2056);
+var _tile = require("ol/layer/Tile");
+var _tileDefault = parcelHelpers.interopDefault(_tile);
+var _osm = require("ol/source/OSM");
+var _osmDefault = parcelHelpers.interopDefault(_osm);
+var _vector = require("ol/layer/Vector");
+var _vectorDefault = parcelHelpers.interopDefault(_vector);
+var _vector1 = require("ol/source/Vector");
+var _vectorDefault1 = parcelHelpers.interopDefault(_vector1);
+var _ol = require("ol");
+var _style = require("./style");
+var _proj = require("ol/proj");
+var _shadowtrack = require("./shadowtrack");
+function createMap(target) {
+    const trackSource = new (0, _vectorDefault1.default)();
+    const trackLayer = new (0, _vectorDefault.default)({
+        source: trackSource,
+        style: (0, _style.styleRules)
+    });
+    const extent = (0, _proj.transformExtent)((0, _epsg2056.proj).getExtent(), (0, _epsg2056Default.default), "EPSG:3857");
+    const view = new (0, _ol.View)({
+        extent: extent,
+        center: (0, _proj.transform)([
+            2532661.0,
+            1151654.0
+        ], (0, _epsg2056Default.default), "EPSG:3857"),
+        zoom: 10
+    });
+    const bgLayer = new (0, _tileDefault.default)({
+        source: new (0, _osmDefault.default)()
+    });
+    const shadowTrackLayer = (0, _shadowtrack.createShadowLayer)();
+    const map = new (0, _ol.Map)({
+        target,
+        view,
+        layers: [
+            bgLayer,
+            shadowTrackLayer,
+            trackLayer
+        ]
+    });
+    window["mymap"] = map;
+    return {
+        map,
+        trackLayer,
+        shadowTrackLayer
+    };
 }
-.y.axis .tick:first-of-type, .y.axis .tick:last-of-type {
-  display: inline;
-}
-.x.axis .domain, .y.axis .domain {
-  stroke: rgb(0, 130, 205) !important;
-}
-.x.label, .y.label {
-  display: none;
-}
-.x.grid-hover line, .y.grid-hover line {
-  stroke-dasharray: none !important;
-  stroke: rgb(0, 130, 205) !important;
-  stroke-width: 0.7 !important;
-}
-.line.elevation {
-  stroke-width: 2;
-}
-.area {
-  fill: #fff !important;
-}`;
-class Profile {
-    constructor(options){
-        this.hoverActive = true;
-        this.map = options.map;
-        this.profileTarget = options.profileTarget;
-        this.styleDefs = options.styleDefs || defaultStyleDefs;
-        const callbacks = this.createProfileCallbacks_();
-        function distanceExtractor(item) {
-            return item.dist;
-        }
-        function zExtractor(item) {
-            return item.ele;
-        }
-        this.profile = (0, _d3ElevationJsDefault.default)({
-            distanceExtractor,
-            linesConfiguration: {
-                elevation: {
-                    zExtractor
-                }
-            },
-            lightXAxis: options.lightXAxis,
-            styleDefs: this.styleDefs,
-            hoverCallback: callbacks.hoverCallback,
-            outCallback: callbacks.outCallback
+
+},{"@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/source/OSM":"dmxOv","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","./style":"bV6WG","ol/proj":"SznqC","./shadowtrack":"gmvf6","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dmxOv":[function(require,module,exports) {
+/**
+ * @module ol/source/OSM
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "ATTRIBUTION", ()=>ATTRIBUTION);
+var _xyzJs = require("./XYZ.js");
+var _xyzJsDefault = parcelHelpers.interopDefault(_xyzJs);
+const ATTRIBUTION = '&#169; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors.';
+/**
+ * @typedef {Object} Options
+ * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
+ * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
+ * @property {null|string} [crossOrigin='anonymous'] The `crossOrigin` attribute for loaded images.  Note that
+ * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
+ * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
+ * @property {boolean} [interpolate=true] Use interpolated values when resampling.  By default,
+ * linear interpolation is used when resampling.  Set to false to use the nearest neighbor instead.
+ * @property {number} [maxZoom=19] Max zoom.
+ * @property {boolean} [opaque=true] Whether the layer is opaque.
+ * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
+ * Higher values can increase reprojection performance, but decrease precision.
+ * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
+ * ```js
+ * function(imageTile, src) {
+ *   imageTile.getImage().src = src;
+ * };
+ * ```
+ * @property {number} [transition=250] Duration of the opacity transition for rendering.
+ * To disable the opacity transition, pass `transition: 0`.
+ * @property {string} [url='https://tile.openstreetmap.org/{z}/{x}/{y}.png'] URL template.
+ * Must include `{x}`, `{y}` or `{-y}`, and `{z}` placeholders.
+ * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
+ * @property {number|import("../array.js").NearestDirectionFunction} [zDirection=0]
+ * Choose whether to use tiles with a higher or lower zoom level when between integer
+ * zoom levels. See {@link module:ol/tilegrid/TileGrid~TileGrid#getZForResolution}.
+ */ /**
+ * @classdesc
+ * Layer source for the OpenStreetMap tile server.
+ * @api
+ */ class OSM extends (0, _xyzJsDefault.default) {
+    /**
+   * @param {Options} [options] Open Street Map options.
+   */ constructor(options){
+        options = options || {};
+        let attributions;
+        if (options.attributions !== undefined) attributions = options.attributions;
+        else attributions = [
+            ATTRIBUTION
+        ];
+        const crossOrigin = options.crossOrigin !== undefined ? options.crossOrigin : "anonymous";
+        const url = options.url !== undefined ? options.url : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+        super({
+            attributions: attributions,
+            attributionsCollapsible: false,
+            cacheSize: options.cacheSize,
+            crossOrigin: crossOrigin,
+            interpolate: options.interpolate,
+            maxZoom: options.maxZoom !== undefined ? options.maxZoom : 19,
+            opaque: options.opaque !== undefined ? options.opaque : true,
+            reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+            tileLoadFunction: options.tileLoadFunction,
+            transition: options.transition,
+            url: url,
+            wrapX: options.wrapX,
+            zDirection: options.zDirection
         });
     }
-    createProfileCallbacks_() {
-        const profileHoverGeometry = new (0, _pointJsDefault.default)([
-            0,
-            0
-        ]);
-        this.hoverFeature = new (0, _featureJsDefault.default)({
-            geometry: profileHoverGeometry
+}
+exports.default = OSM;
+
+},{"./XYZ.js":"7BJTx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7BJTx":[function(require,module,exports) {
+/**
+ * @module ol/source/XYZ
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _tileImageJs = require("./TileImage.js");
+var _tileImageJsDefault = parcelHelpers.interopDefault(_tileImageJs);
+var _tilegridJs = require("../tilegrid.js");
+/**
+ * @typedef {Object} Options
+ * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
+ * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
+ * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
+ * @property {null|string} [crossOrigin] The `crossOrigin` attribute for loaded images.  Note that
+ * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
+ * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
+ * @property {boolean} [interpolate=true] Use interpolated values when resampling.  By default,
+ * linear interpolation is used when resampling.  Set to false to use the nearest neighbor instead.
+ * @property {boolean} [opaque=false] Whether the layer is opaque.
+ * @property {import("../proj.js").ProjectionLike} [projection='EPSG:3857'] Projection.
+ * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
+ * Higher values can increase reprojection performance, but decrease precision.
+ * @property {number} [maxZoom=42] Optional max zoom level. Not used if `tileGrid` is provided.
+ * @property {number} [minZoom=0] Optional min zoom level. Not used if `tileGrid` is provided.
+ * @property {number} [maxResolution] Optional tile grid resolution at level zero. Not used if `tileGrid` is provided.
+ * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid.
+ * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
+ * ```js
+ * function(imageTile, src) {
+ *   imageTile.getImage().src = src;
+ * };
+ * ```
+ * @property {number} [tilePixelRatio=1] The pixel ratio used by the tile service.
+ * For example, if the tile service advertizes 256px by 256px tiles but actually sends 512px
+ * by 512px images (for retina/hidpi devices) then `tilePixelRatio`
+ * should be set to `2`.
+ * @property {number|import("../size.js").Size} [tileSize=[256, 256]] The tile size used by the tile service.
+ * Not used if `tileGrid` is provided.
+ * @property {number} [gutter=0] The size in pixels of the gutter around image tiles to ignore.
+ * This allows artifacts of rendering at tile edges to be ignored.
+ * Supported images should be wider and taller than the tile size by a value of `2 x gutter`.
+ * @property {import("../Tile.js").UrlFunction} [tileUrlFunction] Optional function to get
+ * tile URL given a tile coordinate and the projection.
+ * Required if `url` or `urls` are not provided.
+ * @property {string} [url] URL template. Must include `{x}`, `{y}` or `{-y}`,
+ * and `{z}` placeholders. A `{?-?}` template pattern, for example `subdomain{a-f}.domain.com`,
+ * may be used instead of defining each one separately in the `urls` option.
+ * @property {Array<string>} [urls] An array of URL templates.
+ * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
+ * @property {number} [transition=250] Duration of the opacity transition for rendering.
+ * To disable the opacity transition, pass `transition: 0`.
+ * @property {number|import("../array.js").NearestDirectionFunction} [zDirection=0]
+ * Choose whether to use tiles with a higher or lower zoom level when between integer
+ * zoom levels. See {@link module:ol/tilegrid/TileGrid~TileGrid#getZForResolution}.
+ */ /**
+ * @classdesc
+ * Layer source for tile data with URLs in a set XYZ format that are
+ * defined in a URL template. By default, this follows the widely-used
+ * Google grid where `x` 0 and `y` 0 are in the top left. Grids like
+ * TMS where `x` 0 and `y` 0 are in the bottom left can be used by
+ * using the `{-y}` placeholder in the URL template, so long as the
+ * source does not have a custom tile grid. In this case
+ * a `tileUrlFunction` can be used, such as:
+ * ```js
+ *  tileUrlFunction: function(coordinate) {
+ *    return 'http://mapserver.com/' + coordinate[0] + '/' +
+ *      coordinate[1] + '/' + (-coordinate[2] - 1) + '.png';
+ *  }
+ * ```
+ * @api
+ */ class XYZ extends (0, _tileImageJsDefault.default) {
+    /**
+   * @param {Options} [options] XYZ options.
+   */ constructor(options){
+        options = options || {};
+        const projection = options.projection !== undefined ? options.projection : "EPSG:3857";
+        const tileGrid = options.tileGrid !== undefined ? options.tileGrid : (0, _tilegridJs.createXYZ)({
+            extent: (0, _tilegridJs.extentFromProjection)(projection),
+            maxResolution: options.maxResolution,
+            maxZoom: options.maxZoom,
+            minZoom: options.minZoom,
+            tileSize: options.tileSize
         });
-        const profileHoverVector = new (0, _vectorJsDefault1.default)({
-            visible: false,
-            source: new (0, _vectorJsDefault.default)({
-                features: [
-                    this.hoverFeature
-                ]
-            })
+        super({
+            attributions: options.attributions,
+            cacheSize: options.cacheSize,
+            crossOrigin: options.crossOrigin,
+            interpolate: options.interpolate,
+            opaque: options.opaque,
+            projection: projection,
+            reprojectionErrorThreshold: options.reprojectionErrorThreshold,
+            tileGrid: tileGrid,
+            tileLoadFunction: options.tileLoadFunction,
+            tilePixelRatio: options.tilePixelRatio,
+            tileUrlFunction: options.tileUrlFunction,
+            url: options.url,
+            urls: options.urls,
+            wrapX: options.wrapX !== undefined ? options.wrapX : true,
+            transition: options.transition,
+            attributionsCollapsible: options.attributionsCollapsible,
+            zDirection: options.zDirection
         });
-        this.map.addLayer(profileHoverVector);
-        const outCallback = ()=>{
-            profileHoverVector.setVisible(false);
-        };
-        const hoverCallback = (item)=>{
-            if (this.hoverActive) {
-                // An item in the list of points given to the profile.
-                profileHoverGeometry.setCoordinates([
-                    item.x,
-                    item.y
-                ]);
-                profileHoverVector.setVisible(true); // no notify if already visible
-            }
-        };
-        return {
-            outCallback,
-            hoverCallback
-        };
-    }
-    getTrackProfile(segments) {
-        let profile = [];
-        let previousDistance = 0;
-        for (const segment of segments){
-            const segmentProfile = segment.get("profile");
-            if (segmentProfile.length > 0) {
-                profile = profile.concat(segmentProfile.map((item)=>{
-                    return {
-                        x: item[0],
-                        y: item[1],
-                        ele: item[2],
-                        dist: previousDistance + item[3]
-                    };
-                }));
-                previousDistance = profile[profile.length - 1].dist;
-            }
-        }
-        return profile;
-    }
-    refreshProfile(segments) {
-        const trackProfile = this.getTrackProfile(segments);
-        this.profile.refreshProfile(this.profileTarget, trackProfile.length > 0 ? trackProfile : undefined);
-    }
-    setTrackHoverStyle(style) {
-        this.hoverFeature.setStyle(style);
+        /**
+     * @private
+     * @type {number}
+     */ this.gutter_ = options.gutter !== undefined ? options.gutter : 0;
     }
     /**
-   * Remove any highlight.
-   * Fire the outCallback callback.
-   */ clearHighlight() {
-        this.profile.clearHighlight();
-    }
-    /*
-   * Highlight the given distance and corresponding elevation on chart.
-   * Fire the hoverCallback callback with corresponding point.
-   */ highlight(distance) {
-        this.profile.highlight(distance);
+   * @return {number} Gutter.
+   */ getGutter() {
+        return this.gutter_;
     }
 }
-exports.default = Profile;
+exports.default = XYZ;
 
-},{"ol/Feature.js":"liabO","ol/source/Vector.js":"9w7Fr","ol/geom/Point.js":"hx2Ar","ol/layer/Vector.js":"iTrAy","@geoblocks/d3profile/src/d3Elevation.js":"96MpX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"96MpX":[function(require,module,exports) {
-// @ts-nocheck
+},{"./TileImage.js":"2cBKP","../tilegrid.js":"1Yr4i","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gmvf6":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
- * Provides a D3js component to be used to draw an elevation
- * profile chart.
  *
- *     let selection = d3.select('#element_id');
- *     let profile = ngeo.profile.d3Elevation({
- *       distanceExtractor: function (item) {return item['dist'];},
- *       linesConfiguration: {
- *         'lineZ1': {
- *           zExtractor: function (item) {return item['values']['z1'];}
- *         },
- *         'lineZ2': {
- *           color: '#00F',
- *           zExtractor: function (item) {return item['values']['z2'];}
- *         }
- *       },
- *       hoverCallback: function(point, dist, xUnits, elevations, yUnits) {
- *         console.log(point.x, point.y);
- *       },
- *       outCallback: function() {
- *         console.log("out");
- *       }
- *     });
- *     selection.datum(data).call(profile);
- *
- * The selection data must be an array.
- * The layout for the items of this array is unconstrained: the distance values
- * is extracted using the distanceExtractor config option and multiples z values
- * can be displayed by providing multiple linesConfiguration with its specific
- * zExtractor.
- * Optionally you can provide a color in your linesConfiguration. A line without
- * color will be red. Each linesConfiguration name is used as class for its
- * respective line. So you can pass a styleDefs config option (inline css) to
- * customize the line or all the chart.
- * Optionally, POIs can be displayed and depend on a poiExtractor
- * config option.
- *
- * The data below will work for the above example:
- *
- *     [
- *         {
- *             "y": 199340,
- *             "values": {"z1": 788.7, "z2": 774.2},
- *             "dist": 0.0,
- *             "x": 541620
- *         }, ...
- *     ]
- *
- * @return {Object} D3js component.
- * @param {ProfileOptions} options Profile options.
- * @export
- */ parcelHelpers.export(exports, "default", ()=>function(options) {
-        /**
-   * Whether the simplified profile should be shown.
-   * @type {boolean}
-   */ const light = options.light !== undefined ? options.light : false;
-        /**
-   * The values for margins around the chart defined in pixels.
-   */ const margin = light ? {
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0
-        } : {
-            top: 10,
+ * @return {VectorLayer}
+ */ parcelHelpers.export(exports, "createShadowLayer", ()=>createShadowLayer);
+var _vectorJs = require("ol/source/Vector.js");
+var _vectorJsDefault = parcelHelpers.interopDefault(_vectorJs);
+var _vectorJs1 = require("ol/layer/Vector.js");
+var _vectorJsDefault1 = parcelHelpers.interopDefault(_vectorJs1);
+function createShadowLayer() {
+    return new (0, _vectorJsDefault1.default)({
+        source: new (0, _vectorJsDefault.default)(),
+        style: {
+            "stroke-color": "#00cc33aa",
+            "stroke-width": 6
+        }
+    });
+}
+
+},{"ol/source/Vector.js":"9w7Fr","ol/layer/Vector.js":"iTrAy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fmUZ9":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>$916babf1e6dc2c08$export$2e2bcd8739ae039);
+var _lit = require("lit");
+var _decoratorsJs = require("lit/decorators.js");
+var _resizeControllerJs = require("@lit-labs/observers/resize-controller.js");
+var _d3Array = require("d3-array");
+var _d3Scale = require("d3-scale");
+var _d3Shape = require("d3-shape");
+var _d3Axis = require("d3-axis");
+var _d3Selection = require("d3-selection");
+var _simplifyJs = require("simplify-js");
+var _simplifyJsDefault = parcelHelpers.interopDefault(_simplifyJs);
+var $916babf1e6dc2c08$var$__decorate = function(decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for(var i = decorators.length - 1; i >= 0; i--)if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+let $916babf1e6dc2c08$var$ElevationProfile = class ElevationProfile extends (0, _lit.LitElement) {
+    constructor(){
+        super(...arguments);
+        this.tolerance = 1;
+        this.locale = navigator.language;
+        this.lines = [];
+        this.updateScale = (x, y, width, height)=>{};
+        this.margin = {
+            top: 20,
             right: 20,
-            bottom: 30,
+            bottom: 20,
             left: 40
         };
-        /**
-   * Hover callback function.
-   * @type {function(Object, number, string, Object.<string, number>, string):void}
-   */ const hoverCallback = options.hoverCallback !== undefined ? options.hoverCallback : ()=>{};
-        /**
-   * Out callback function.
-   * @type {function():void}
-   */ const outCallback = options.outCallback !== undefined ? options.outCallback : ()=>{};
-        /**
-   * Distance data extractor used to get the dist values.
-   */ const distanceExtractor = options.distanceExtractor;
-        /**
-   * Line configuration object.
-   */ const linesConfiguration = options.linesConfiguration;
-        /**
-   * Number of different configurations for the line.
-   */ const numberOfLines = Object.keys(linesConfiguration).length;
-        /**
-   * Method to get the index of the closest distance.
-   */ const closestDistance = (array, d)=>{
-            let prevDist = Number.POSITIVE_INFINITY;
-            for(let i = 0; i < array.length; ++i){
-                const diff = Math.abs(d - distanceExtractor(array[i]));
-                if (diff > prevDist) return i - 1;
-                prevDist = diff;
-            }
-            return array.length - 1;
+        this.tickSize = {
+            x: 100,
+            y: 40
         };
-        /**
-   * POI data extractor.
-   */ const poiExtractor = options.poiExtractor;
-        /**
-   * Optional SVG inline style.
-   */ const styleDefs = options.styleDefs;
-        /**
-   * @type {number}
-   */ const poiLabelAngle = options.poiLabelAngle !== undefined ? options.poiLabelAngle : -60;
-        /**
-   * @type {Object.<string, string>}
-   */ const i18n = options.i18n || {};
-        /**
-   * @type {string}
-   */ const xAxisLabel = i18n.xAxis || "Distance";
-        /**
-   * @type {string}
-   */ const yAxisLabel = i18n.yAxis || "Elevation";
-        /**
-   * @type {ProfileFormatter}
-   */ const formatter = {
-            /**
-     * @param {number} dist Distance.
-     * @param {string} units Units.
-     * @return {string} Distance.
-     */ xhover (dist, units) {
-                return `${parseFloat(dist.toPrecision(3))} ${units}`;
-            },
-            /**
-     * @param {number} ele Elevation.
-     * @param {string} units Units.
-     * @return {string} Elevation.
-     */ yhover (ele, units) {
-                return `${Math.round(ele)} ${units}`;
-            },
-            /**
-     * @param {number} dist Distance.
-     * @param {string} _ Units.
-     * @return {string|number} Distance.
-     */ xtick (dist, _) {
-                return dist;
-            },
-            /**
-     * @param {number} ele Elevation.
-     * @param {string} _ Units.
-     * @return {string|number} Elevation.
-     */ ytick (ele, _) {
-                return ele;
-            }
+        this.pointer = {
+            x: 0,
+            y: 0
         };
-        Object.assign(formatter, options.formatter);
-        /**
-   * @type {boolean}
-   */ const lightXAxis = options.lightXAxis !== undefined ? options.lightXAxis : false;
-        // Objects shared with the showPois function
-        /**
-   * @type {Object}
-   */ let svg;
-        /**
-   * D3 x scale.
-   */ let x;
-        /**
-   * D3 y scale.
-   */ let y;
-        /**
-   * Scale modifier to allow customizing the x and y scales.
-   */ const scaleModifier = options.scaleModifier;
-        let g;
-        /**
-   * Height of the chart in pixels
-   */ let height;
-        /**
-   * Width of the chart in pixels
-   */ let width;
-        /**
-  * Factor to determine whether to use 'm' or 'km'.
-  */ let xFactor;
-        /**
-  * Distance units. Either 'm' or 'km'.
-  */ let xUnits;
-        /**
-   * D3 extent of the distance.
-   */ let xDomain;
-        const profile = function(selection) {
-            selection.each(function(data) {
-                d3.select(this).selectAll("svg").remove();
-                if (data === undefined) return;
-                width = Math.max(this.clientWidth - margin.right - margin.left, 0);
-                x = d3.scaleLinear().range([
-                    0,
-                    width
-                ]);
-                height = Math.max(this.clientHeight - margin.top - margin.bottom, 0);
-                y = d3.scaleLinear().range([
-                    height,
-                    0
-                ]);
-                const xAxis = d3.axisBottom(x);
-                const yAxis = d3.axisLeft(y);
-                let area;
-                if (numberOfLines === 1) area = d3.area().x((d)=>x(distanceExtractor(d))).y0(height).y1((d)=>{
-                    const firstLineName = Object.keys(linesConfiguration)[0];
-                    return y(linesConfiguration[firstLineName].zExtractor(d));
+        this._resizeController = new (0, _resizeControllerJs.ResizeController)(this, {});
+        this.plotData = [];
+        this.scaleX = (0, _d3Scale.scaleLinear)();
+        this.scaleY = (0, _d3Scale.scaleLinear)();
+        this.bisectDistance = (0, _d3Array.bisector)((point)=>point.x);
+        this.line = (0, _d3Shape.line)().defined((point)=>!isNaN(point.y)).x((point)=>this.scaleX(point.x)).y((point)=>this.scaleY(point.y));
+        this.area = (0, _d3Shape.area)().defined((point)=>!isNaN(point.y)).x((point)=>this.scaleX(point.x)).y1((point)=>this.scaleY(point.y));
+        this.xAxis = (0, _d3Axis.axisBottom)(this.scaleX).tickFormat((value)=>this.tickFormat(value));
+        this.yAxis = (0, _d3Axis.axisLeft)(this.scaleY).tickFormat((value)=>this.meterFormat.format(value));
+        this.xGrid = (0, _d3Axis.axisBottom)(this.scaleX).tickFormat(()=>"");
+        this.yGrid = (0, _d3Axis.axisLeft)(this.scaleY).tickFormat(()=>"");
+        this.meterFormat = null;
+        this.kilometerFormat = null;
+    }
+    updated(changedProperties) {
+        if (changedProperties.has("locale")) {
+            this.meterFormat = new Intl.NumberFormat(this.locale, {
+                style: "unit",
+                unit: "meter"
+            });
+            this.kilometerFormat = new Intl.NumberFormat(this.locale, {
+                style: "unit",
+                unit: "kilometer"
+            });
+        }
+    }
+    willUpdate(changedProperties) {
+        if (changedProperties.has("lines")) {
+            this.plotData.length = 0;
+            for (const line of this.lines){
+                const data = line.map((coordinate)=>({
+                        x: coordinate[3],
+                        y: coordinate[2],
+                        coordinate: coordinate
+                    }));
+                this.plotData.push(...(0, _simplifyJsDefault.default)(data, this.tolerance));
+                this.plotData.push({
+                    x: line[line.length - 1][3],
+                    y: NaN,
+                    coordinate: []
                 });
-                // Select the svg element, if it exists.
-                svg = d3.select(this).selectAll("svg").data([
-                    data
-                ]);
-                // Otherwise, create the skeletal chart.
-                const svgEnter = svg.enter().append("svg");
-                // Then select it again to get the complete object.
-                svg = d3.select(this).selectAll("svg").data([
-                    data
-                ]);
-                if (styleDefs !== undefined) svgEnter.append("defs").append("style").attr("type", "text/css").text(styleDefs);
-                const gEnter = svgEnter.append("g");
-                clearPois();
-                gEnter.style("font", "11px Arial");
-                if (numberOfLines === 1) gEnter.append("path").attr("class", "area").style("fill", "rgba(222, 222, 222, 0.5)");
-                gEnter.insert("g", ":first-child").attr("class", "grid-y");
-                if (!light) {
-                    gEnter.append("g").attr("class", "x axis").attr("transform", `translate(0,${height})`);
-                    gEnter.append("text").attr("class", "x label").attr("text-anchor", "end").attr("x", width - 4).attr("y", height - 4);
-                    gEnter.append("g").attr("class", "y axis");
-                    gEnter.append("text").attr("class", "y label").attr("text-anchor", "end").attr("y", 6).attr("dy", ".75em").attr("transform", "rotate(-90)").style("fill", "grey").text(`${yAxisLabel} [m]`);
-                    gEnter.append("g").attr("class", "metas").attr("transform", `translate(${width + 3}, 0)`);
-                }
-                gEnter.append("g").attr("class", "pois");
-                const xHover = gEnter.append("g").attr("class", "x grid-hover");
-                xHover.append("svg:line").attr("stroke-dasharray", "5,5");
-                xHover.append("text");
-                gEnter.append("rect").attr("class", "overlay").attr("width", width).attr("height", height).style("fill", "none").style("pointer-events", "all");
-                // Update the outer dimensions.
-                svg.attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom);
-                // Update the inner dimensions.
-                g = svg.select("g").attr("transform", `translate(${margin.left},${margin.top})`);
-                xDomain = d3.extent(data, (d)=>distanceExtractor(d));
-                x.domain(xDomain);
-                // Return an array with the min and max value of the min/max values of
-                // each lines.
-                const yDomain = function() {
-                    let elevationsValues = [];
-                    let extent, name;
-                    // Get min/max values (extent) of each lines.
-                    for(name in linesConfiguration){
-                        extent = d3.extent(data, (d)=>linesConfiguration[name].zExtractor(d));
-                        elevationsValues = elevationsValues.concat(extent);
-                    }
-                    return [
-                        Math.min.apply(null, elevationsValues),
-                        Math.max.apply(null, elevationsValues)
-                    ];
-                }();
-                y.domain(yDomain).nice();
-                // set the ratio according to the horizontal distance
-                if (scaleModifier !== undefined) scaleModifier(x, y, width, height);
-                // Update the area path.
-                if (numberOfLines === 1) g.select(".area").transition().attr("d", area);
-                // Set style and update the lines paths and y hover guides for each lines.
-                let line, name, yHover;
-                for(name in linesConfiguration){
-                    // Set style of each line and add a class with its respective name.
-                    gEnter.append("path").attr("class", `line ${name}`).style("stroke", linesConfiguration[name].color || "#F00").style("fill", "none");
-                    // Set y hover guides
-                    yHover = gEnter.append("g").attr("class", `y grid-hover ${name}`);
-                    yHover.append("svg:line").attr("stroke-dasharray", "5,5");
-                    yHover.append("text");
-                    // Configure the d3 line.
-                    line = d3.line().x((d)=>x(distanceExtractor(d))).y((d)=>y(linesConfiguration[name].zExtractor(d)));
-                    // Update path for the line.
-                    g.select(`.line.${name}`).transition().attr("d", line);
-                }
-                if (xDomain[1] > 2000) {
-                    xFactor = 1000;
-                    xUnits = "km";
-                } else {
-                    xFactor = 1;
-                    xUnits = "m";
-                }
-                if (!light) {
-                    xAxis.tickFormat((d)=>formatter.xtick(d / xFactor, xUnits));
-                    if (lightXAxis) {
-                        xAxis.tickValues([
-                            0,
-                            x.domain()[1]
-                        ]);
-                        xAxis.tickSizeOuter(0);
-                        yAxis.tickSizeOuter(0);
-                        yAxis.tickSizeInner(0);
-                    }
-                    yAxis.tickFormat((d)=>formatter.ytick(d, "m"));
-                    g.select(".x.axis").transition().call(xAxis);
-                    g.select(".x.label").text(`${xAxisLabel} [${xUnits}]`).style("fill", "grey").style("shape-rendering", "crispEdges");
-                    // Avoid too much lines with overlapping labels in small profiles
-                    if (height / 15 < 10) yAxis.ticks(height / 15);
-                    g.select(".y.axis").transition().call(yAxis);
-                }
-                g.select(".grid-y").transition().call(yAxis.tickSize(-width, 0).tickFormat("")).selectAll(".tick line").style("stroke", "#ccc").style("opacity", 0.7);
-                g.selectAll(".axis").selectAll("path, line").style("fill", "none").style("stroke", "#000").style("shape-rendering", "crispEdges");
-                g.select(".grid-y").select("path").style("stroke", "none");
-                g.selectAll(".grid-hover line").style("stroke", "#222").style("opacity", 0.8);
-                g.select(".overlay").on("mouseout", mouseout).on("mousemove", mousemove);
-                function mousemove() {
-                    const mouseX = d3.mouse(this)[0];
-                    const x0 = x.invert(mouseX);
-                    profile.highlight(x0);
-                }
-                function mouseout() {
-                    profile.clearHighlight();
-                }
-            });
-        };
-        /**
-   * Remove any highlight.
-   * Fire the outCallback callback.
-   */ profile.clearHighlight = function() {
-            if (!g) return;
-            g.selectAll(".grid-hover").style("display", "none");
-            outCallback();
-        };
-        /**
-   * @param {string|HTMLElement} target
-   * @param {Array} datum
-   */ profile.refreshProfile = function(target, datum) {
-            d3.select(target).datum(datum).call(this);
-        };
-        /**
-   * Highlight the given distance and corresponding elevation on chart.
-   * Fire the hoverCallback callback with corresponding point.
-   * @param {number} distance Distance.
-   */ profile.highlight = function(distance) {
-            if (!svg) return;
-            const data = svg.datum();
-            const i = closestDistance(data, distance);
-            if (i >= data.length) return;
-            const point = data[i];
-            const dist = distanceExtractor(point);
-            let elevation;
-            const elevations = [];
-            const elevationsRef = {};
-            let lineName;
-            for(lineName in linesConfiguration){
-                elevation = linesConfiguration[lineName].zExtractor(point);
-                elevations.push(elevation);
-                elevationsRef[lineName] = elevation;
-                g.select(`.y.grid-hover.${lineName}`).style("display", "inline").select("line").attr("x1", x(0)).attr("y1", y(elevation)).attr("x2", width).attr("y2", y(elevation));
             }
-            g.select(".x.grid-hover").style("display", "inline").select("line").attr("x1", x(dist)).attr("y1", height).attr("x2", x(dist)).attr("y2", y(Math.max.apply(null, elevations)));
-            const right = dist > xDomain[1] / 2;
-            let xtranslate = x(dist);
-            xtranslate += right ? -10 : 10;
-            g.select(".x.grid-hover text").text(formatter.xhover(dist / xFactor, xUnits)).style("text-anchor", right ? "end" : "start").attr("transform", `translate(${xtranslate},${height - 10})`);
-            const yUnits = "m";
-            // Display altitude on guides only if there is one line.
-            if (numberOfLines === 1) g.select(".y.grid-hover text").text(formatter.yhover(elevations[0], "m")).style("text-anchor", right ? "end" : "start").attr("transform", `translate(${xtranslate},${y(elevations[0]) - 10})`);
-            hoverCallback(point, dist / xFactor, xUnits, elevationsRef, yUnits);
-        };
-        profile.showPois = function(pois) {
-            pois = pois !== undefined ? pois : [];
-            console.assert(pois.length === 0 || poiExtractor !== undefined);
-            const pe = poiExtractor;
-            const g = svg.select("g");
-            const profileData = svg.datum();
-            const ps = g.select(".pois");
-            const p = ps.selectAll(".poi").data(pois, (d)=>{
-                const i = closestDistance(profileData, Math.round(pe.dist(d) * 10) / 10, 1);
-                const point = profileData[i];
-                if (point) {
-                    let lineName;
-                    const elevations = [];
-                    for(lineName in linesConfiguration)elevations.push(linesConfiguration[lineName].zExtractor(point));
-                    const z = Math.max.apply(null, elevations);
-                    pe.z(d, z);
-                }
-                return pe.id(d);
-            });
-            const poiEnterG = p.enter().append("g").attr("class", "poi");
-            poiEnterG.append("text").attr("x", light ? 0 : 9).attr("dy", ".35em").attr("text-anchor", light ? "middle" : "start");
-            poiEnterG.append("line").style("shape-rendering", "crispEdges");
-            poiEnterG.style("opacity", 0).transition().duration(1000).delay(100).style("opacity", 1);
-            poiEnterG.selectAll("text").attr("transform", (d)=>{
-                if (light) return [
-                    "translate(",
-                    x(pe.dist(d)),
-                    ",",
-                    y(pe.z(d)) - 10,
-                    ")"
-                ].join("");
-                else return [
-                    "translate(",
-                    x(pe.dist(d)),
-                    ",",
-                    y(pe.z(d)) - 20,
-                    ") rotate(",
-                    poiLabelAngle,
-                    ")"
-                ].join("");
-            }).text((d)=>pe.sort(d) + (light ? "" : ` - ${pe.title(d)}`));
-            poiEnterG.selectAll("line").style("stroke", "grey").attr("x1", (d)=>x(pe.dist(d))).attr("y1", (_)=>y(y.domain()[0])).attr("x2", (d)=>x(pe.dist(d))).attr("y2", (d)=>y(pe.z(d)));
-            // remove unused pois
-            poiEnterG.exit().remove();
-        };
-        function clearPois() {
-            profile.showPois([]);
+            this.scaleX.domain((0, _d3Array.extent)(this.plotData, (data)=>data.x));
+            this.scaleY.domain((0, _d3Array.extent)(this.plotData, (data)=>data.y)).nice();
+            this.updateScale(this.scaleX, this.scaleY, this.offsetWidth, this.offsetHeight);
         }
-        return profile;
-    });
-var _d3Transition = require("d3-transition");
-var _d3Array = require("d3-array");
-var _d3Axis = require("d3-axis");
-var _d3Scale = require("d3-scale");
-var _d3Selection = require("d3-selection");
-var _d3Shape = require("d3-shape");
-const d3 = {
-    bisector: (0, _d3Array.bisector),
-    extent: (0, _d3Array.extent),
-    axisBottom: (0, _d3Axis.axisBottom),
-    axisLeft: (0, _d3Axis.axisLeft),
-    scaleLinear: (0, _d3Scale.scaleLinear),
-    mouse: (0, _d3Selection.mouse),
-    select: (0, _d3Selection.select),
-    selectAll: (0, _d3Selection.selectAll),
-    area: (0, _d3Shape.area),
-    line: (0, _d3Shape.line)
-};
-
-},{"d3-transition":"4lorl","d3-array":"1yX2W","d3-axis":"2g6gM","d3-scale":"UQ8g3","d3-selection":"gn9gd","d3-shape":"SqrXv","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4lorl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "transition", ()=>(0, _indexJsDefault.default));
-parcelHelpers.export(exports, "active", ()=>(0, _activeJsDefault.default));
-parcelHelpers.export(exports, "interrupt", ()=>(0, _interruptJsDefault.default));
-var _indexJs = require("./selection/index.js");
-var _indexJs1 = require("./transition/index.js");
-var _indexJsDefault = parcelHelpers.interopDefault(_indexJs1);
-var _activeJs = require("./active.js");
-var _activeJsDefault = parcelHelpers.interopDefault(_activeJs);
-var _interruptJs = require("./interrupt.js");
-var _interruptJsDefault = parcelHelpers.interopDefault(_interruptJs);
-
-},{"./selection/index.js":"heX1u","./transition/index.js":"h2Srb","./active.js":"a4qOn","./interrupt.js":"j3g05","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"heX1u":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-var _d3Selection = require("d3-selection");
-var _interruptJs = require("./interrupt.js");
-var _interruptJsDefault = parcelHelpers.interopDefault(_interruptJs);
-var _transitionJs = require("./transition.js");
-var _transitionJsDefault = parcelHelpers.interopDefault(_transitionJs);
-(0, _d3Selection.selection).prototype.interrupt = (0, _interruptJsDefault.default);
-(0, _d3Selection.selection).prototype.transition = (0, _transitionJsDefault.default);
-
-},{"d3-selection":"gn9gd","./interrupt.js":"ecsW0","./transition.js":"aZzEX","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gn9gd":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "create", ()=>(0, _createDefault.default));
-parcelHelpers.export(exports, "creator", ()=>(0, _creatorDefault.default));
-parcelHelpers.export(exports, "local", ()=>(0, _localDefault.default));
-parcelHelpers.export(exports, "matcher", ()=>(0, _matcherDefault.default));
-parcelHelpers.export(exports, "mouse", ()=>(0, _mouseDefault.default));
-parcelHelpers.export(exports, "namespace", ()=>(0, _namespaceDefault.default));
-parcelHelpers.export(exports, "namespaces", ()=>(0, _namespacesDefault.default));
-parcelHelpers.export(exports, "clientPoint", ()=>(0, _pointDefault.default));
-parcelHelpers.export(exports, "select", ()=>(0, _selectDefault.default));
-parcelHelpers.export(exports, "selectAll", ()=>(0, _selectAllDefault.default));
-parcelHelpers.export(exports, "selection", ()=>(0, _indexDefault.default));
-parcelHelpers.export(exports, "selector", ()=>(0, _selectorDefault.default));
-parcelHelpers.export(exports, "selectorAll", ()=>(0, _selectorAllDefault.default));
-parcelHelpers.export(exports, "style", ()=>(0, _style.styleValue));
-parcelHelpers.export(exports, "touch", ()=>(0, _touchDefault.default));
-parcelHelpers.export(exports, "touches", ()=>(0, _touchesDefault.default));
-parcelHelpers.export(exports, "window", ()=>(0, _windowDefault.default));
-parcelHelpers.export(exports, "event", ()=>(0, _on.event));
-parcelHelpers.export(exports, "customEvent", ()=>(0, _on.customEvent));
-var _create = require("./create");
-var _createDefault = parcelHelpers.interopDefault(_create);
-var _creator = require("./creator");
-var _creatorDefault = parcelHelpers.interopDefault(_creator);
-var _local = require("./local");
-var _localDefault = parcelHelpers.interopDefault(_local);
-var _matcher = require("./matcher");
-var _matcherDefault = parcelHelpers.interopDefault(_matcher);
-var _mouse = require("./mouse");
-var _mouseDefault = parcelHelpers.interopDefault(_mouse);
-var _namespace = require("./namespace");
-var _namespaceDefault = parcelHelpers.interopDefault(_namespace);
-var _namespaces = require("./namespaces");
-var _namespacesDefault = parcelHelpers.interopDefault(_namespaces);
-var _point = require("./point");
-var _pointDefault = parcelHelpers.interopDefault(_point);
-var _select = require("./select");
-var _selectDefault = parcelHelpers.interopDefault(_select);
-var _selectAll = require("./selectAll");
-var _selectAllDefault = parcelHelpers.interopDefault(_selectAll);
-var _index = require("./selection/index");
-var _indexDefault = parcelHelpers.interopDefault(_index);
-var _selector = require("./selector");
-var _selectorDefault = parcelHelpers.interopDefault(_selector);
-var _selectorAll = require("./selectorAll");
-var _selectorAllDefault = parcelHelpers.interopDefault(_selectorAll);
-var _style = require("./selection/style");
-var _touch = require("./touch");
-var _touchDefault = parcelHelpers.interopDefault(_touch);
-var _touches = require("./touches");
-var _touchesDefault = parcelHelpers.interopDefault(_touches);
-var _window = require("./window");
-var _windowDefault = parcelHelpers.interopDefault(_window);
-var _on = require("./selection/on");
-
-},{"./create":false,"./creator":false,"./local":false,"./matcher":"hovSo","./mouse":"chEM9","./namespace":"a23xG","./namespaces":false,"./point":false,"./select":"4pqgd","./selectAll":"eAYBy","./selection/index":"fK3Dl","./selector":"7VF9r","./selectorAll":"2SKTE","./selection/style":"GUHZ1","./touch":false,"./touches":false,"./window":false,"./selection/on":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a6062":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name) {
-        var fullname = (0, _namespaceDefault.default)(name);
-        return (fullname.local ? creatorFixed : creatorInherit)(fullname);
-    });
-var _namespace = require("./namespace");
-var _namespaceDefault = parcelHelpers.interopDefault(_namespace);
-var _namespaces = require("./namespaces");
-function creatorInherit(name) {
-    return function() {
-        var document = this.ownerDocument, uri = this.namespaceURI;
-        return uri === (0, _namespaces.xhtml) && document.documentElement.namespaceURI === (0, _namespaces.xhtml) ? document.createElement(name) : document.createElementNS(uri, name);
-    };
-}
-function creatorFixed(fullname) {
-    return function() {
-        return this.ownerDocument.createElementNS(fullname.space, fullname.local);
-    };
-}
-
-},{"./namespace":"a23xG","./namespaces":"dDfgS","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a23xG":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name) {
-        var prefix = name += "", i = prefix.indexOf(":");
-        if (i >= 0 && (prefix = name.slice(0, i)) !== "xmlns") name = name.slice(i + 1);
-        return (0, _namespacesDefault.default).hasOwnProperty(prefix) ? {
-            space: (0, _namespacesDefault.default)[prefix],
-            local: name
-        } : name;
-    });
-var _namespaces = require("./namespaces");
-var _namespacesDefault = parcelHelpers.interopDefault(_namespaces);
-
-},{"./namespaces":"dDfgS","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dDfgS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "xhtml", ()=>xhtml);
-var xhtml = "http://www.w3.org/1999/xhtml";
-exports.default = {
-    svg: "http://www.w3.org/2000/svg",
-    xhtml: xhtml,
-    xlink: "http://www.w3.org/1999/xlink",
-    xml: "http://www.w3.org/XML/1998/namespace",
-    xmlns: "http://www.w3.org/2000/xmlns/"
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hovSo":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selector) {
-        return function() {
-            return this.matches(selector);
+    }
+    render() {
+        const width = this.offsetWidth;
+        const height = this.offsetHeight;
+        this.scaleX.range([
+            this.margin.left,
+            width - this.margin.right
+        ]);
+        this.scaleY.range([
+            height - this.margin.bottom,
+            this.margin.top
+        ]);
+        this.area.y0(height - this.margin.bottom);
+        this.yGrid.tickSize(-width + this.margin.left + this.margin.right);
+        this.xGrid.tickSize(height - this.margin.top - this.margin.bottom);
+        const xTicks = width / this.tickSize.x;
+        const yTicks = height / this.tickSize.y;
+        this.xAxis.ticks(xTicks);
+        this.xGrid.ticks(xTicks);
+        this.yAxis.ticks(yTicks);
+        this.yGrid.ticks(yTicks);
+        (0, _d3Selection.select)(this.querySelector(".axis.x")).call(this.xAxis);
+        (0, _d3Selection.select)(this.querySelector(".axis.y")).call(this.yAxis);
+        (0, _d3Selection.select)(this.querySelector(".grid.x")).call(this.xGrid);
+        (0, _d3Selection.select)(this.querySelector(".grid.y")).call(this.yGrid);
+        return (0, _lit.svg)`
+      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <g class="grid y" transform="translate(${this.margin.left}, 0)" />
+        <g class="grid x" transform="translate(0, ${this.margin.bottom})" />
+        <g class="axis x" transform="translate(0, ${height - this.margin.bottom})" />
+        <g class="axis y" transform="translate(${this.margin.left}, 0)" />
+        <path class="area" d="${this.area(this.plotData)}" />
+        <path class="elevation" d="${this.line(this.plotData)}" fill="none" />
+        <g style="visibility: ${this.pointer.x > 0 ? "visible" : "hidden"}">
+          <path class="elevation highlight" d="${this.line(this.plotData)}" fill="none"
+            clip-path="polygon(0 0, ${this.pointer.x - this.margin.left} 0, ${this.pointer.x - this.margin.left} 100%, 0 100%)"
+          />
+          <line
+            class="pointer-line y"
+            x1="${this.pointer.x}"
+            y1="${this.margin.top}"
+            x2="${this.pointer.x}"
+            y2="${height - this.margin.bottom}"
+          />
+          <circle class="pointer-circle-outline" cx="${this.pointer.x}" cy="${this.pointer.y}" r="16"/>
+          <circle class="pointer-circle" cx="${this.pointer.x}" cy="${this.pointer.y}" r="6"/>
+        </g>
+        <rect
+          width="${width}"
+          height="${height}"
+          fill="none"
+          pointer-events="all"
+          style="display: block; touch-action: none;"
+          @pointermove="${this.pointerMove}"
+          @pointerout="${this.pointerOut}"
+        />
+      </svg>
+    `;
+    }
+    tickFormat(value) {
+        if (value < 1000) return this.meterFormat.format(value);
+        else return this.kilometerFormat.format(value / 1000);
+    }
+    firstUpdated() {
+        // FIXME: because the ref element are used before render is done, we need to force an update
+        this.requestUpdate();
+    }
+    pointerMove(event) {
+        const pointerDistance = this.scaleX.invert((0, _d3Selection.pointer)(event)[0]);
+        const index = Math.min(this.bisectDistance.left(this.plotData, pointerDistance), this.plotData.length - 1);
+        if (index < 0) return;
+        // FIXME:
+        // var d0 = this.plotData[index - 1]
+        // var d1 = this.plotData[index];
+        // // work out which date value is closest to the mouse
+        // var d = mouseDate - d0[0] > d1[0] - mouseDate ? d1 : d0;
+        const data = this.plotData[index];
+        if (isNaN(data.y)) return;
+        this.pointer = {
+            x: this.scaleX(data.x),
+            y: this.scaleY(data.y)
         };
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"chEM9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node) {
-        var event = (0, _sourceEventDefault.default)();
-        if (event.changedTouches) event = event.changedTouches[0];
-        return (0, _pointDefault.default)(node, event);
-    });
-var _sourceEvent = require("./sourceEvent");
-var _sourceEventDefault = parcelHelpers.interopDefault(_sourceEvent);
-var _point = require("./point");
-var _pointDefault = parcelHelpers.interopDefault(_point);
-
-},{"./sourceEvent":"cDi5d","./point":"4SPKm","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cDi5d":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var current = (0, _on.event), source;
-        while(source = current.sourceEvent)current = source;
-        return current;
-    });
-var _on = require("./selection/on");
-
-},{"./selection/on":"ktlxw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ktlxw":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "event", ()=>event);
-parcelHelpers.export(exports, "default", ()=>function(typename, value, capture) {
-        var typenames = parseTypenames(typename + ""), i, n = typenames.length, t;
-        if (arguments.length < 2) {
-            var on = this.node().__on;
-            if (on) for(var j = 0, m = on.length, o; j < m; ++j)for(i = 0, o = on[j]; i < n; ++i){
-                if ((t = typenames[i]).type === o.type && t.name === o.name) return o.value;
+        this.dispatchEvent(new CustomEvent("over", {
+            detail: {
+                coordinate: this.plotData[index].coordinate,
+                position: this.pointer
             }
-            return;
-        }
-        on = value ? onAdd : onRemove;
-        if (capture == null) capture = false;
-        for(i = 0; i < n; ++i)this.each(on(typenames[i], value, capture));
+        }));
+    }
+    pointerOut() {
+        this.pointer = {
+            x: 0,
+            y: 0
+        };
+        this.dispatchEvent(new CustomEvent("out"));
+    }
+    createRenderRoot() {
         return this;
-    });
-parcelHelpers.export(exports, "customEvent", ()=>customEvent);
-var filterEvents = {};
-var event = null;
-if (typeof document !== "undefined") {
-    var element = document.documentElement;
-    if (!("onmouseenter" in element)) filterEvents = {
-        mouseenter: "mouseover",
-        mouseleave: "mouseout"
-    };
-}
-function filterContextListener(listener, index, group) {
-    listener = contextListener(listener, index, group);
-    return function(event) {
-        var related = event.relatedTarget;
-        if (!related || related !== this && !(related.compareDocumentPosition(this) & 8)) listener.call(this, event);
-    };
-}
-function contextListener(listener, index, group) {
-    return function(event1) {
-        var event0 = event; // Events can be reentrant (e.g., focus).
-        event = event1;
-        try {
-            listener.call(this, this.__data__, index, group);
-        } finally{
-            event = event0;
-        }
-    };
-}
-function parseTypenames(typenames) {
-    return typenames.trim().split(/^|\s+/).map(function(t) {
-        var name = "", i = t.indexOf(".");
-        if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-        return {
-            type: t,
-            name: name
-        };
-    });
-}
-function onRemove(typename) {
-    return function() {
-        var on = this.__on;
-        if (!on) return;
-        for(var j = 0, i = -1, m = on.length, o; j < m; ++j)if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) this.removeEventListener(o.type, o.listener, o.capture);
-        else on[++i] = o;
-        if (++i) on.length = i;
-        else delete this.__on;
-    };
-}
-function onAdd(typename, value, capture) {
-    var wrap = filterEvents.hasOwnProperty(typename.type) ? filterContextListener : contextListener;
-    return function(d, i, group) {
-        var on = this.__on, o, listener = wrap(value, i, group);
-        if (on) {
-            for(var j = 0, m = on.length; j < m; ++j)if ((o = on[j]).type === typename.type && o.name === typename.name) {
-                this.removeEventListener(o.type, o.listener, o.capture);
-                this.addEventListener(o.type, o.listener = listener, o.capture = capture);
-                o.value = value;
-                return;
-            }
-        }
-        this.addEventListener(typename.type, listener, capture);
-        o = {
-            type: typename.type,
-            name: typename.name,
-            value: value,
-            listener: listener,
-            capture: capture
-        };
-        if (!on) this.__on = [
-            o
-        ];
-        else on.push(o);
-    };
-}
-function customEvent(event1, listener, that, args) {
-    var event0 = event;
-    event1.sourceEvent = event;
-    event = event1;
-    try {
-        return listener.apply(that, args);
-    } finally{
-        event = event0;
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4SPKm":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node, event) {
-        var svg = node.ownerSVGElement || node;
-        if (svg.createSVGPoint) {
-            var point = svg.createSVGPoint();
-            point.x = event.clientX, point.y = event.clientY;
-            point = point.matrixTransform(node.getScreenCTM().inverse());
-            return [
-                point.x,
-                point.y
-            ];
-        }
-        var rect = node.getBoundingClientRect();
-        return [
-            event.clientX - rect.left - node.clientLeft,
-            event.clientY - rect.top - node.clientTop
-        ];
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4pqgd":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selector) {
-        return typeof selector === "string" ? new (0, _index.Selection)([
-            [
-                document.querySelector(selector)
-            ]
-        ], [
-            document.documentElement
-        ]) : new (0, _index.Selection)([
-            [
-                selector
-            ]
-        ], (0, _index.root));
-    });
-var _index = require("./selection/index");
-
-},{"./selection/index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fK3Dl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "root", ()=>root);
-parcelHelpers.export(exports, "Selection", ()=>Selection);
-var _select = require("./select");
-var _selectDefault = parcelHelpers.interopDefault(_select);
-var _selectAll = require("./selectAll");
-var _selectAllDefault = parcelHelpers.interopDefault(_selectAll);
-var _filter = require("./filter");
-var _filterDefault = parcelHelpers.interopDefault(_filter);
-var _data = require("./data");
-var _dataDefault = parcelHelpers.interopDefault(_data);
-var _enter = require("./enter");
-var _enterDefault = parcelHelpers.interopDefault(_enter);
-var _exit = require("./exit");
-var _exitDefault = parcelHelpers.interopDefault(_exit);
-var _join = require("./join");
-var _joinDefault = parcelHelpers.interopDefault(_join);
-var _merge = require("./merge");
-var _mergeDefault = parcelHelpers.interopDefault(_merge);
-var _order = require("./order");
-var _orderDefault = parcelHelpers.interopDefault(_order);
-var _sort = require("./sort");
-var _sortDefault = parcelHelpers.interopDefault(_sort);
-var _call = require("./call");
-var _callDefault = parcelHelpers.interopDefault(_call);
-var _nodes = require("./nodes");
-var _nodesDefault = parcelHelpers.interopDefault(_nodes);
-var _node = require("./node");
-var _nodeDefault = parcelHelpers.interopDefault(_node);
-var _size = require("./size");
-var _sizeDefault = parcelHelpers.interopDefault(_size);
-var _empty = require("./empty");
-var _emptyDefault = parcelHelpers.interopDefault(_empty);
-var _each = require("./each");
-var _eachDefault = parcelHelpers.interopDefault(_each);
-var _attr = require("./attr");
-var _attrDefault = parcelHelpers.interopDefault(_attr);
-var _style = require("./style");
-var _styleDefault = parcelHelpers.interopDefault(_style);
-var _property = require("./property");
-var _propertyDefault = parcelHelpers.interopDefault(_property);
-var _classed = require("./classed");
-var _classedDefault = parcelHelpers.interopDefault(_classed);
-var _text = require("./text");
-var _textDefault = parcelHelpers.interopDefault(_text);
-var _html = require("./html");
-var _htmlDefault = parcelHelpers.interopDefault(_html);
-var _raise = require("./raise");
-var _raiseDefault = parcelHelpers.interopDefault(_raise);
-var _lower = require("./lower");
-var _lowerDefault = parcelHelpers.interopDefault(_lower);
-var _append = require("./append");
-var _appendDefault = parcelHelpers.interopDefault(_append);
-var _insert = require("./insert");
-var _insertDefault = parcelHelpers.interopDefault(_insert);
-var _remove = require("./remove");
-var _removeDefault = parcelHelpers.interopDefault(_remove);
-var _clone = require("./clone");
-var _cloneDefault = parcelHelpers.interopDefault(_clone);
-var _datum = require("./datum");
-var _datumDefault = parcelHelpers.interopDefault(_datum);
-var _on = require("./on");
-var _onDefault = parcelHelpers.interopDefault(_on);
-var _dispatch = require("./dispatch");
-var _dispatchDefault = parcelHelpers.interopDefault(_dispatch);
-var root = [
-    null
-];
-function Selection(groups, parents) {
-    this._groups = groups;
-    this._parents = parents;
-}
-function selection() {
-    return new Selection([
-        [
-            document.documentElement
-        ]
-    ], root);
-}
-Selection.prototype = selection.prototype = {
-    constructor: Selection,
-    select: (0, _selectDefault.default),
-    selectAll: (0, _selectAllDefault.default),
-    filter: (0, _filterDefault.default),
-    data: (0, _dataDefault.default),
-    enter: (0, _enterDefault.default),
-    exit: (0, _exitDefault.default),
-    join: (0, _joinDefault.default),
-    merge: (0, _mergeDefault.default),
-    order: (0, _orderDefault.default),
-    sort: (0, _sortDefault.default),
-    call: (0, _callDefault.default),
-    nodes: (0, _nodesDefault.default),
-    node: (0, _nodeDefault.default),
-    size: (0, _sizeDefault.default),
-    empty: (0, _emptyDefault.default),
-    each: (0, _eachDefault.default),
-    attr: (0, _attrDefault.default),
-    style: (0, _styleDefault.default),
-    property: (0, _propertyDefault.default),
-    classed: (0, _classedDefault.default),
-    text: (0, _textDefault.default),
-    html: (0, _htmlDefault.default),
-    raise: (0, _raiseDefault.default),
-    lower: (0, _lowerDefault.default),
-    append: (0, _appendDefault.default),
-    insert: (0, _insertDefault.default),
-    remove: (0, _removeDefault.default),
-    clone: (0, _cloneDefault.default),
-    datum: (0, _datumDefault.default),
-    on: (0, _onDefault.default),
-    dispatch: (0, _dispatchDefault.default)
-};
-exports.default = selection;
-
-},{"./select":"aK9lB","./selectAll":"8U28K","./filter":"i1GfU","./data":"jIP7J","./enter":"27tIy","./exit":"6ubri","./join":"g7QcH","./merge":"fXm9Z","./order":"cmxvd","./sort":"4UUI2","./call":"bsAaT","./nodes":"jjFrN","./node":"gPGkg","./size":"coOTw","./empty":"8ybxO","./each":"9Y1px","./attr":"k8cb1","./style":"GUHZ1","./property":"f4q4V","./classed":"jd3ig","./text":"dVAdB","./html":"egFAg","./raise":"4Xi1m","./lower":"l1I8n","./append":"1GNgv","./insert":"3Xphl","./remove":"iNsSa","./clone":"jfNc9","./datum":"lMowl","./on":"ktlxw","./dispatch":"eZMTj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aK9lB":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(select) {
-        if (typeof select !== "function") select = (0, _selectorDefault.default)(select);
-        for(var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i)if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
-                if ("__data__" in node) subnode.__data__ = node.__data__;
-                subgroup[i] = subnode;
-            }
-        }
-        return new (0, _index.Selection)(subgroups, this._parents);
-    });
-var _index = require("./index");
-var _selector = require("../selector");
-var _selectorDefault = parcelHelpers.interopDefault(_selector);
-
-},{"./index":"fK3Dl","../selector":"7VF9r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7VF9r":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selector) {
-        return selector == null ? none : function() {
-            return this.querySelector(selector);
-        };
-    });
-function none() {}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8U28K":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(select) {
-        if (typeof select !== "function") select = (0, _selectorAllDefault.default)(select);
-        for(var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, node, i = 0; i < n; ++i)if (node = group[i]) {
-                subgroups.push(select.call(node, node.__data__, i, group));
-                parents.push(node);
-            }
-        }
-        return new (0, _index.Selection)(subgroups, parents);
-    });
-var _index = require("./index");
-var _selectorAll = require("../selectorAll");
-var _selectorAllDefault = parcelHelpers.interopDefault(_selectorAll);
-
-},{"./index":"fK3Dl","../selectorAll":"2SKTE","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2SKTE":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selector) {
-        return selector == null ? empty : function() {
-            return this.querySelectorAll(selector);
-        };
-    });
-function empty() {
-    return [];
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"i1GfU":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(match) {
-        if (typeof match !== "function") match = (0, _matcherDefault.default)(match);
-        for(var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i)if ((node = group[i]) && match.call(node, node.__data__, i, group)) subgroup.push(node);
-        }
-        return new (0, _index.Selection)(subgroups, this._parents);
-    });
-var _index = require("./index");
-var _matcher = require("../matcher");
-var _matcherDefault = parcelHelpers.interopDefault(_matcher);
-
-},{"./index":"fK3Dl","../matcher":"hovSo","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jIP7J":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value, key) {
-        if (!value) {
-            data = new Array(this.size()), j = -1;
-            this.each(function(d) {
-                data[++j] = d;
-            });
-            return data;
-        }
-        var bind = key ? bindKey : bindIndex, parents = this._parents, groups = this._groups;
-        if (typeof value !== "function") value = (0, _constantDefault.default)(value);
-        for(var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j){
-            var parent = parents[j], group = groups[j], groupLength = group.length, data = value.call(parent, parent && parent.__data__, j, parents), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength), exitGroup = exit[j] = new Array(groupLength);
-            bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
-            // Now connect the enter nodes to their following update node, such that
-            // appendChild can insert the materialized enter node before this node,
-            // rather than at the end of the parent node.
-            for(var i0 = 0, i1 = 0, previous, next; i0 < dataLength; ++i0)if (previous = enterGroup[i0]) {
-                if (i0 >= i1) i1 = i0 + 1;
-                while(!(next = updateGroup[i1]) && ++i1 < dataLength);
-                previous._next = next || null;
-            }
-        }
-        update = new (0, _index.Selection)(update, parents);
-        update._enter = enter;
-        update._exit = exit;
-        return update;
-    });
-var _index = require("./index");
-var _enter = require("./enter");
-var _constant = require("../constant");
-var _constantDefault = parcelHelpers.interopDefault(_constant);
-var keyPrefix = "$"; // Protect against keys like “__proto__”.
-function bindIndex(parent, group, enter, update, exit, data) {
-    var i = 0, node, groupLength = group.length, dataLength = data.length;
-    // Put any non-null nodes that fit into update.
-    // Put any null nodes into enter.
-    // Put any remaining data into enter.
-    for(; i < dataLength; ++i)if (node = group[i]) {
-        node.__data__ = data[i];
-        update[i] = node;
-    } else enter[i] = new (0, _enter.EnterNode)(parent, data[i]);
-    // Put any non-null nodes that don’t fit into exit.
-    for(; i < groupLength; ++i)if (node = group[i]) exit[i] = node;
-}
-function bindKey(parent, group, enter, update, exit, data, key) {
-    var i, node, nodeByKeyValue = {}, groupLength = group.length, dataLength = data.length, keyValues = new Array(groupLength), keyValue;
-    // Compute the key for each node.
-    // If multiple nodes have the same key, the duplicates are added to exit.
-    for(i = 0; i < groupLength; ++i)if (node = group[i]) {
-        keyValues[i] = keyValue = keyPrefix + key.call(node, node.__data__, i, group);
-        if (keyValue in nodeByKeyValue) exit[i] = node;
-        else nodeByKeyValue[keyValue] = node;
-    }
-    // Compute the key for each datum.
-    // If there a node associated with this key, join and add it to update.
-    // If there is not (or the key is a duplicate), add it to enter.
-    for(i = 0; i < dataLength; ++i){
-        keyValue = keyPrefix + key.call(parent, data[i], i, data);
-        if (node = nodeByKeyValue[keyValue]) {
-            update[i] = node;
-            node.__data__ = data[i];
-            nodeByKeyValue[keyValue] = null;
-        } else enter[i] = new (0, _enter.EnterNode)(parent, data[i]);
-    }
-    // Add any remaining nodes that were not bound to data to exit.
-    for(i = 0; i < groupLength; ++i)if ((node = group[i]) && nodeByKeyValue[keyValues[i]] === node) exit[i] = node;
-}
-
-},{"./index":"fK3Dl","./enter":"27tIy","../constant":"1wZol","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"27tIy":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return new (0, _index.Selection)(this._enter || this._groups.map((0, _sparseDefault.default)), this._parents);
-    });
-parcelHelpers.export(exports, "EnterNode", ()=>EnterNode);
-var _sparse = require("./sparse");
-var _sparseDefault = parcelHelpers.interopDefault(_sparse);
-var _index = require("./index");
-function EnterNode(parent, datum) {
-    this.ownerDocument = parent.ownerDocument;
-    this.namespaceURI = parent.namespaceURI;
-    this._next = null;
-    this._parent = parent;
-    this.__data__ = datum;
-}
-EnterNode.prototype = {
-    constructor: EnterNode,
-    appendChild: function(child) {
-        return this._parent.insertBefore(child, this._next);
-    },
-    insertBefore: function(child, next) {
-        return this._parent.insertBefore(child, next);
-    },
-    querySelector: function(selector) {
-        return this._parent.querySelector(selector);
-    },
-    querySelectorAll: function(selector) {
-        return this._parent.querySelectorAll(selector);
     }
 };
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.property)({
+        type: Number
+    })
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "tolerance", void 0);
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.property)({
+        type: String
+    })
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "locale", void 0);
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.property)({
+        type: Array
+    })
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "lines", void 0);
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.property)()
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "updateScale", void 0);
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.property)({
+        type: Object
+    })
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "margin", void 0);
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.property)({
+        type: Object
+    })
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "tickSize", void 0);
+$916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.state)()
+], $916babf1e6dc2c08$var$ElevationProfile.prototype, "pointer", void 0);
+$916babf1e6dc2c08$var$ElevationProfile = $916babf1e6dc2c08$var$__decorate([
+    (0, _decoratorsJs.customElement)("elevation-profile")
+], $916babf1e6dc2c08$var$ElevationProfile);
+var $916babf1e6dc2c08$export$2e2bcd8739ae039 = $916babf1e6dc2c08$var$ElevationProfile;
 
-},{"./sparse":"juhNo","./index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"juhNo":[function(require,module,exports) {
+},{"lit":"4antt","lit/decorators.js":"bCPKi","@lit-labs/observers/resize-controller.js":"567XO","d3-array":"aerWx","d3-scale":"3mOB2","d3-shape":"lOZb8","d3-axis":"7kYfy","d3-selection":"4Vxhm","simplify-js":"6057L","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4antt":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(update) {
-        return new Array(update.length);
-    });
+var _reactiveElement = require("@lit/reactive-element");
+var _litHtml = require("lit-html");
+var _litElementJs = require("lit-element/lit-element.js");
+parcelHelpers.exportAll(_litElementJs, exports);
+var _isServerJs = require("lit-html/is-server.js");
+parcelHelpers.exportAll(_isServerJs, exports);
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1wZol":[function(require,module,exports) {
+},{"@lit/reactive-element":"hypet","lit-html":"1cmQt","lit-element/lit-element.js":"9YxkX","lit-html/is-server.js":"e2OXP","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hypet":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(x) {
-        return function() {
-            return x;
-        };
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6ubri":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return new (0, _index.Selection)(this._exit || this._groups.map((0, _sparseDefault.default)), this._parents);
-    });
-var _sparse = require("./sparse");
-var _sparseDefault = parcelHelpers.interopDefault(_sparse);
-var _index = require("./index");
-
-},{"./sparse":"juhNo","./index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"g7QcH":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(onenter, onupdate, onexit) {
-        var enter = this.enter(), update = this, exit = this.exit();
-        enter = typeof onenter === "function" ? onenter(enter) : enter.append(onenter + "");
-        if (onupdate != null) update = onupdate(update);
-        if (onexit == null) exit.remove();
-        else onexit(exit);
-        return enter && update ? enter.merge(update).order() : update;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fXm9Z":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selection) {
-        for(var groups0 = this._groups, groups1 = selection._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j){
-            for(var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i)if (node = group0[i] || group1[i]) merge[i] = node;
+parcelHelpers.export(exports, "CSSResult", ()=>(0, _cssTagJs.CSSResult));
+parcelHelpers.export(exports, "adoptStyles", ()=>(0, _cssTagJs.adoptStyles));
+parcelHelpers.export(exports, "css", ()=>(0, _cssTagJs.css));
+parcelHelpers.export(exports, "getCompatibleStyle", ()=>(0, _cssTagJs.getCompatibleStyle));
+parcelHelpers.export(exports, "supportsAdoptingStyleSheets", ()=>(0, _cssTagJs.supportsAdoptingStyleSheets));
+parcelHelpers.export(exports, "unsafeCSS", ()=>(0, _cssTagJs.unsafeCSS));
+parcelHelpers.export(exports, "ReactiveElement", ()=>b);
+parcelHelpers.export(exports, "defaultConverter", ()=>u);
+parcelHelpers.export(exports, "notEqual", ()=>f);
+var _cssTagJs = require("./css-tag.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ const { is: i, defineProperty: e, getOwnPropertyDescriptor: r, getOwnPropertyNames: h, getOwnPropertySymbols: o, getPrototypeOf: n } = Object, a = globalThis, c = a.trustedTypes, l = c ? c.emptyScript : "", p = a.reactiveElementPolyfillSupport, d = (t, s)=>t, u = {
+    toAttribute (t, s) {
+        switch(s){
+            case Boolean:
+                t = t ? l : null;
+                break;
+            case Object:
+            case Array:
+                t = null == t ? t : JSON.stringify(t);
         }
-        for(; j < m0; ++j)merges[j] = groups0[j];
-        return new (0, _index.Selection)(merges, this._parents);
-    });
-var _index = require("./index");
-
-},{"./index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cmxvd":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        for(var groups = this._groups, j = -1, m = groups.length; ++j < m;){
-            for(var group = groups[j], i = group.length - 1, next = group[i], node; --i >= 0;)if (node = group[i]) {
-                if (next && node.compareDocumentPosition(next) ^ 4) next.parentNode.insertBefore(node, next);
-                next = node;
-            }
-        }
-        return this;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4UUI2":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(compare) {
-        if (!compare) compare = ascending;
-        function compareNode(a, b) {
-            return a && b ? compare(a.__data__, b.__data__) : !a - !b;
-        }
-        for(var groups = this._groups, m = groups.length, sortgroups = new Array(m), j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, sortgroup = sortgroups[j] = new Array(n), node, i = 0; i < n; ++i)if (node = group[i]) sortgroup[i] = node;
-            sortgroup.sort(compareNode);
-        }
-        return new (0, _index.Selection)(sortgroups, this._parents).order();
-    });
-var _index = require("./index");
-function ascending(a, b) {
-    return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
-}
-
-},{"./index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bsAaT":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var callback = arguments[0];
-        arguments[0] = this;
-        callback.apply(null, arguments);
-        return this;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jjFrN":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var nodes = new Array(this.size()), i = -1;
-        this.each(function() {
-            nodes[++i] = this;
-        });
-        return nodes;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gPGkg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        for(var groups = this._groups, j = 0, m = groups.length; j < m; ++j)for(var group = groups[j], i = 0, n = group.length; i < n; ++i){
-            var node = group[i];
-            if (node) return node;
-        }
-        return null;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"coOTw":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var size = 0;
-        this.each(function() {
-            ++size;
-        });
-        return size;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8ybxO":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return !this.node();
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9Y1px":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(callback) {
-        for(var groups = this._groups, j = 0, m = groups.length; j < m; ++j){
-            for(var group = groups[j], i = 0, n = group.length, node; i < n; ++i)if (node = group[i]) callback.call(node, node.__data__, i, group);
-        }
-        return this;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"k8cb1":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value) {
-        var fullname = (0, _namespaceDefault.default)(name);
-        if (arguments.length < 2) {
-            var node = this.node();
-            return fullname.local ? node.getAttributeNS(fullname.space, fullname.local) : node.getAttribute(fullname);
-        }
-        return this.each((value == null ? fullname.local ? attrRemoveNS : attrRemove : typeof value === "function" ? fullname.local ? attrFunctionNS : attrFunction : fullname.local ? attrConstantNS : attrConstant)(fullname, value));
-    });
-var _namespace = require("../namespace");
-var _namespaceDefault = parcelHelpers.interopDefault(_namespace);
-function attrRemove(name) {
-    return function() {
-        this.removeAttribute(name);
-    };
-}
-function attrRemoveNS(fullname) {
-    return function() {
-        this.removeAttributeNS(fullname.space, fullname.local);
-    };
-}
-function attrConstant(name, value) {
-    return function() {
-        this.setAttribute(name, value);
-    };
-}
-function attrConstantNS(fullname, value) {
-    return function() {
-        this.setAttributeNS(fullname.space, fullname.local, value);
-    };
-}
-function attrFunction(name, value) {
-    return function() {
-        var v = value.apply(this, arguments);
-        if (v == null) this.removeAttribute(name);
-        else this.setAttribute(name, v);
-    };
-}
-function attrFunctionNS(fullname, value) {
-    return function() {
-        var v = value.apply(this, arguments);
-        if (v == null) this.removeAttributeNS(fullname.space, fullname.local);
-        else this.setAttributeNS(fullname.space, fullname.local, v);
-    };
-}
-
-},{"../namespace":"a23xG","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"GUHZ1":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value, priority) {
-        return arguments.length > 1 ? this.each((value == null ? styleRemove : typeof value === "function" ? styleFunction : styleConstant)(name, value, priority == null ? "" : priority)) : styleValue(this.node(), name);
-    });
-parcelHelpers.export(exports, "styleValue", ()=>styleValue);
-var _window = require("../window");
-var _windowDefault = parcelHelpers.interopDefault(_window);
-function styleRemove(name) {
-    return function() {
-        this.style.removeProperty(name);
-    };
-}
-function styleConstant(name, value, priority) {
-    return function() {
-        this.style.setProperty(name, value, priority);
-    };
-}
-function styleFunction(name, value, priority) {
-    return function() {
-        var v = value.apply(this, arguments);
-        if (v == null) this.style.removeProperty(name);
-        else this.style.setProperty(name, v, priority);
-    };
-}
-function styleValue(node, name) {
-    return node.style.getPropertyValue(name) || (0, _windowDefault.default)(node).getComputedStyle(node, null).getPropertyValue(name);
-}
-
-},{"../window":"6di7h","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6di7h":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node) {
-        return node.ownerDocument && node.ownerDocument.defaultView // node is a Node
-         || node.document && node // node is a Window
-         || node.defaultView; // node is a Document
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"f4q4V":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value) {
-        return arguments.length > 1 ? this.each((value == null ? propertyRemove : typeof value === "function" ? propertyFunction : propertyConstant)(name, value)) : this.node()[name];
-    });
-function propertyRemove(name) {
-    return function() {
-        delete this[name];
-    };
-}
-function propertyConstant(name, value) {
-    return function() {
-        this[name] = value;
-    };
-}
-function propertyFunction(name, value) {
-    return function() {
-        var v = value.apply(this, arguments);
-        if (v == null) delete this[name];
-        else this[name] = v;
-    };
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jd3ig":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value) {
-        var names = classArray(name + "");
-        if (arguments.length < 2) {
-            var list = classList(this.node()), i = -1, n = names.length;
-            while(++i < n)if (!list.contains(names[i])) return false;
-            return true;
-        }
-        return this.each((typeof value === "function" ? classedFunction : value ? classedTrue : classedFalse)(names, value));
-    });
-function classArray(string) {
-    return string.trim().split(/^|\s+/);
-}
-function classList(node) {
-    return node.classList || new ClassList(node);
-}
-function ClassList(node) {
-    this._node = node;
-    this._names = classArray(node.getAttribute("class") || "");
-}
-ClassList.prototype = {
-    add: function(name) {
-        var i = this._names.indexOf(name);
-        if (i < 0) {
-            this._names.push(name);
-            this._node.setAttribute("class", this._names.join(" "));
-        }
-    },
-    remove: function(name) {
-        var i = this._names.indexOf(name);
-        if (i >= 0) {
-            this._names.splice(i, 1);
-            this._node.setAttribute("class", this._names.join(" "));
-        }
-    },
-    contains: function(name) {
-        return this._names.indexOf(name) >= 0;
-    }
-};
-function classedAdd(node, names) {
-    var list = classList(node), i = -1, n = names.length;
-    while(++i < n)list.add(names[i]);
-}
-function classedRemove(node, names) {
-    var list = classList(node), i = -1, n = names.length;
-    while(++i < n)list.remove(names[i]);
-}
-function classedTrue(names) {
-    return function() {
-        classedAdd(this, names);
-    };
-}
-function classedFalse(names) {
-    return function() {
-        classedRemove(this, names);
-    };
-}
-function classedFunction(names, value) {
-    return function() {
-        (value.apply(this, arguments) ? classedAdd : classedRemove)(this, names);
-    };
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dVAdB":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        return arguments.length ? this.each(value == null ? textRemove : (typeof value === "function" ? textFunction : textConstant)(value)) : this.node().textContent;
-    });
-function textRemove() {
-    this.textContent = "";
-}
-function textConstant(value) {
-    return function() {
-        this.textContent = value;
-    };
-}
-function textFunction(value) {
-    return function() {
-        var v = value.apply(this, arguments);
-        this.textContent = v == null ? "" : v;
-    };
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"egFAg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        return arguments.length ? this.each(value == null ? htmlRemove : (typeof value === "function" ? htmlFunction : htmlConstant)(value)) : this.node().innerHTML;
-    });
-function htmlRemove() {
-    this.innerHTML = "";
-}
-function htmlConstant(value) {
-    return function() {
-        this.innerHTML = value;
-    };
-}
-function htmlFunction(value) {
-    return function() {
-        var v = value.apply(this, arguments);
-        this.innerHTML = v == null ? "" : v;
-    };
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4Xi1m":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return this.each(raise);
-    });
-function raise() {
-    if (this.nextSibling) this.parentNode.appendChild(this);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l1I8n":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return this.each(lower);
-    });
-function lower() {
-    if (this.previousSibling) this.parentNode.insertBefore(this, this.parentNode.firstChild);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1GNgv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name) {
-        var create = typeof name === "function" ? name : (0, _creatorDefault.default)(name);
-        return this.select(function() {
-            return this.appendChild(create.apply(this, arguments));
-        });
-    });
-var _creator = require("../creator");
-var _creatorDefault = parcelHelpers.interopDefault(_creator);
-
-},{"../creator":"a6062","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3Xphl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, before) {
-        var create = typeof name === "function" ? name : (0, _creatorDefault.default)(name), select = before == null ? constantNull : typeof before === "function" ? before : (0, _selectorDefault.default)(before);
-        return this.select(function() {
-            return this.insertBefore(create.apply(this, arguments), select.apply(this, arguments) || null);
-        });
-    });
-var _creator = require("../creator");
-var _creatorDefault = parcelHelpers.interopDefault(_creator);
-var _selector = require("../selector");
-var _selectorDefault = parcelHelpers.interopDefault(_selector);
-function constantNull() {
-    return null;
-}
-
-},{"../creator":"a6062","../selector":"7VF9r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iNsSa":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return this.each(remove);
-    });
-function remove() {
-    var parent = this.parentNode;
-    if (parent) parent.removeChild(this);
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jfNc9":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(deep) {
-        return this.select(deep ? selection_cloneDeep : selection_cloneShallow);
-    });
-function selection_cloneShallow() {
-    var clone = this.cloneNode(false), parent = this.parentNode;
-    return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
-}
-function selection_cloneDeep() {
-    var clone = this.cloneNode(true), parent = this.parentNode;
-    return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lMowl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        return arguments.length ? this.property("__data__", value) : this.node().__data__;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eZMTj":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(type, params) {
-        return this.each((typeof params === "function" ? dispatchFunction : dispatchConstant)(type, params));
-    });
-var _window = require("../window");
-var _windowDefault = parcelHelpers.interopDefault(_window);
-function dispatchEvent(node, type, params) {
-    var window = (0, _windowDefault.default)(node), event = window.CustomEvent;
-    if (typeof event === "function") event = new event(type, params);
-    else {
-        event = window.document.createEvent("Event");
-        if (params) event.initEvent(type, params.bubbles, params.cancelable), event.detail = params.detail;
-        else event.initEvent(type, false, false);
-    }
-    node.dispatchEvent(event);
-}
-function dispatchConstant(type, params) {
-    return function() {
-        return dispatchEvent(this, type, params);
-    };
-}
-function dispatchFunction(type, params) {
-    return function() {
-        return dispatchEvent(this, type, params.apply(this, arguments));
-    };
-}
-
-},{"../window":"6di7h","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eAYBy":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(selector) {
-        return typeof selector === "string" ? new (0, _index.Selection)([
-            document.querySelectorAll(selector)
-        ], [
-            document.documentElement
-        ]) : new (0, _index.Selection)([
-            selector == null ? [] : selector
-        ], (0, _index.root));
-    });
-var _index = require("./selection/index");
-
-},{"./selection/index":"fK3Dl","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ecsW0":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name) {
-        return this.each(function() {
-            (0, _interruptJsDefault.default)(this, name);
-        });
-    });
-var _interruptJs = require("../interrupt.js");
-var _interruptJsDefault = parcelHelpers.interopDefault(_interruptJs);
-
-},{"../interrupt.js":"j3g05","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"j3g05":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node, name) {
-        var schedules = node.__transition, schedule, active, empty = true, i;
-        if (!schedules) return;
-        name = name == null ? null : name + "";
-        for(i in schedules){
-            if ((schedule = schedules[i]).name !== name) {
-                empty = false;
-                continue;
-            }
-            active = schedule.state > (0, _scheduleJs.STARTING) && schedule.state < (0, _scheduleJs.ENDING);
-            schedule.state = (0, _scheduleJs.ENDED);
-            schedule.timer.stop();
-            schedule.on.call(active ? "interrupt" : "cancel", node, node.__data__, schedule.index, schedule.group);
-            delete schedules[i];
-        }
-        if (empty) delete node.__transition;
-    });
-var _scheduleJs = require("./transition/schedule.js");
-
-},{"./transition/schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"de74c":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "CREATED", ()=>CREATED);
-parcelHelpers.export(exports, "SCHEDULED", ()=>SCHEDULED);
-parcelHelpers.export(exports, "STARTING", ()=>STARTING);
-parcelHelpers.export(exports, "STARTED", ()=>STARTED);
-parcelHelpers.export(exports, "RUNNING", ()=>RUNNING);
-parcelHelpers.export(exports, "ENDING", ()=>ENDING);
-parcelHelpers.export(exports, "ENDED", ()=>ENDED);
-parcelHelpers.export(exports, "default", ()=>function(node, name, id, index, group, timing) {
-        var schedules = node.__transition;
-        if (!schedules) node.__transition = {};
-        else if (id in schedules) return;
-        create(node, id, {
-            name: name,
-            index: index,
-            group: group,
-            on: emptyOn,
-            tween: emptyTween,
-            time: timing.time,
-            delay: timing.delay,
-            duration: timing.duration,
-            ease: timing.ease,
-            timer: null,
-            state: CREATED
-        });
-    });
-parcelHelpers.export(exports, "init", ()=>init);
-parcelHelpers.export(exports, "set", ()=>set);
-parcelHelpers.export(exports, "get", ()=>get);
-var _d3Dispatch = require("d3-dispatch");
-var _d3Timer = require("d3-timer");
-var emptyOn = (0, _d3Dispatch.dispatch)("start", "end", "cancel", "interrupt");
-var emptyTween = [];
-var CREATED = 0;
-var SCHEDULED = 1;
-var STARTING = 2;
-var STARTED = 3;
-var RUNNING = 4;
-var ENDING = 5;
-var ENDED = 6;
-function init(node, id) {
-    var schedule = get(node, id);
-    if (schedule.state > CREATED) throw new Error("too late; already scheduled");
-    return schedule;
-}
-function set(node, id) {
-    var schedule = get(node, id);
-    if (schedule.state > STARTED) throw new Error("too late; already running");
-    return schedule;
-}
-function get(node, id) {
-    var schedule = node.__transition;
-    if (!schedule || !(schedule = schedule[id])) throw new Error("transition not found");
-    return schedule;
-}
-function create(node, id, self) {
-    var schedules = node.__transition, tween;
-    // Initialize the self timer when the transition is created.
-    // Note the actual delay is not known until the first callback!
-    schedules[id] = self;
-    self.timer = (0, _d3Timer.timer)(schedule, 0, self.time);
-    function schedule(elapsed) {
-        self.state = SCHEDULED;
-        self.timer.restart(start, self.delay, self.time);
-        // If the elapsed delay is less than our first sleep, start immediately.
-        if (self.delay <= elapsed) start(elapsed - self.delay);
-    }
-    function start(elapsed) {
-        var i, j, n, o;
-        // If the state is not SCHEDULED, then we previously errored on start.
-        if (self.state !== SCHEDULED) return stop();
-        for(i in schedules){
-            o = schedules[i];
-            if (o.name !== self.name) continue;
-            // While this element already has a starting transition during this frame,
-            // defer starting an interrupting transition until that transition has a
-            // chance to tick (and possibly end); see d3/d3-transition#54!
-            if (o.state === STARTED) return (0, _d3Timer.timeout)(start);
-            // Interrupt the active transition, if any.
-            if (o.state === RUNNING) {
-                o.state = ENDED;
-                o.timer.stop();
-                o.on.call("interrupt", node, node.__data__, o.index, o.group);
-                delete schedules[i];
-            } else if (+i < id) {
-                o.state = ENDED;
-                o.timer.stop();
-                o.on.call("cancel", node, node.__data__, o.index, o.group);
-                delete schedules[i];
-            }
-        }
-        // Defer the first tick to end of the current frame; see d3/d3#1576.
-        // Note the transition may be canceled after start and before the first tick!
-        // Note this must be scheduled before the start event; see d3/d3-transition#16!
-        // Assuming this is successful, subsequent callbacks go straight to tick.
-        (0, _d3Timer.timeout)(function() {
-            if (self.state === STARTED) {
-                self.state = RUNNING;
-                self.timer.restart(tick, self.delay, self.time);
-                tick(elapsed);
-            }
-        });
-        // Dispatch the start event.
-        // Note this must be done before the tween are initialized.
-        self.state = STARTING;
-        self.on.call("start", node, node.__data__, self.index, self.group);
-        if (self.state !== STARTING) return; // interrupted
-        self.state = STARTED;
-        // Initialize the tween, deleting null tween.
-        tween = new Array(n = self.tween.length);
-        for(i = 0, j = -1; i < n; ++i)if (o = self.tween[i].value.call(node, node.__data__, self.index, self.group)) tween[++j] = o;
-        tween.length = j + 1;
-    }
-    function tick(elapsed) {
-        var t = elapsed < self.duration ? self.ease.call(null, elapsed / self.duration) : (self.timer.restart(stop), self.state = ENDING, 1), i = -1, n = tween.length;
-        while(++i < n)tween[i].call(node, t);
-        // Dispatch the end event.
-        if (self.state === ENDING) {
-            self.on.call("end", node, node.__data__, self.index, self.group);
-            stop();
-        }
-    }
-    function stop() {
-        self.state = ENDED;
-        self.timer.stop();
-        delete schedules[id];
-        for(var i in schedules)return; // eslint-disable-line no-unused-vars
-        delete node.__transition;
-    }
-}
-
-},{"d3-dispatch":"5WtHO","d3-timer":"7TEss","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5WtHO":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "dispatch", ()=>(0, _dispatchJsDefault.default));
-var _dispatchJs = require("./dispatch.js");
-var _dispatchJsDefault = parcelHelpers.interopDefault(_dispatchJs);
-
-},{"./dispatch.js":"8Hmyd","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8Hmyd":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var noop = {
-    value: function() {}
-};
-function dispatch() {
-    for(var i = 0, n = arguments.length, _ = {}, t; i < n; ++i){
-        if (!(t = arguments[i] + "") || t in _ || /[\s.]/.test(t)) throw new Error("illegal type: " + t);
-        _[t] = [];
-    }
-    return new Dispatch(_);
-}
-function Dispatch(_) {
-    this._ = _;
-}
-function parseTypenames(typenames, types) {
-    return typenames.trim().split(/^|\s+/).map(function(t) {
-        var name = "", i = t.indexOf(".");
-        if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-        if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
-        return {
-            type: t,
-            name: name
-        };
-    });
-}
-Dispatch.prototype = dispatch.prototype = {
-    constructor: Dispatch,
-    on: function(typename, callback) {
-        var _ = this._, T = parseTypenames(typename + "", _), t, i = -1, n = T.length;
-        // If no callback was specified, return the callback of the given type and name.
-        if (arguments.length < 2) {
-            while(++i < n)if ((t = (typename = T[i]).type) && (t = get(_[t], typename.name))) return t;
-            return;
-        }
-        // If a type was specified, set the callback for the given type and name.
-        // Otherwise, if a null callback was specified, remove callbacks of the given name.
-        if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
-        while(++i < n){
-            if (t = (typename = T[i]).type) _[t] = set(_[t], typename.name, callback);
-            else if (callback == null) for(t in _)_[t] = set(_[t], typename.name, null);
-        }
-        return this;
-    },
-    copy: function() {
-        var copy = {}, _ = this._;
-        for(var t in _)copy[t] = _[t].slice();
-        return new Dispatch(copy);
-    },
-    call: function(type, that) {
-        if ((n = arguments.length - 2) > 0) for(var args = new Array(n), i = 0, n, t; i < n; ++i)args[i] = arguments[i + 2];
-        if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-        for(t = this._[type], i = 0, n = t.length; i < n; ++i)t[i].value.apply(that, args);
-    },
-    apply: function(type, that, args) {
-        if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-        for(var t = this._[type], i = 0, n = t.length; i < n; ++i)t[i].value.apply(that, args);
-    }
-};
-function get(type, name) {
-    for(var i = 0, n = type.length, c; i < n; ++i){
-        if ((c = type[i]).name === name) return c.value;
-    }
-}
-function set(type, name, callback) {
-    for(var i = 0, n = type.length; i < n; ++i)if (type[i].name === name) {
-        type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
-        break;
-    }
-    if (callback != null) type.push({
-        name: name,
-        value: callback
-    });
-    return type;
-}
-exports.default = dispatch;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7TEss":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "now", ()=>(0, _timerJs.now));
-parcelHelpers.export(exports, "timer", ()=>(0, _timerJs.timer));
-parcelHelpers.export(exports, "timerFlush", ()=>(0, _timerJs.timerFlush));
-parcelHelpers.export(exports, "timeout", ()=>(0, _timeoutJsDefault.default));
-parcelHelpers.export(exports, "interval", ()=>(0, _intervalJsDefault.default));
-var _timerJs = require("./timer.js");
-var _timeoutJs = require("./timeout.js");
-var _timeoutJsDefault = parcelHelpers.interopDefault(_timeoutJs);
-var _intervalJs = require("./interval.js");
-var _intervalJsDefault = parcelHelpers.interopDefault(_intervalJs);
-
-},{"./timer.js":"bfF2F","./timeout.js":"ioM7O","./interval.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bfF2F":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "now", ()=>now);
-parcelHelpers.export(exports, "Timer", ()=>Timer);
-parcelHelpers.export(exports, "timer", ()=>timer);
-parcelHelpers.export(exports, "timerFlush", ()=>timerFlush);
-var frame = 0, timeout = 0, interval = 0, pokeDelay = 1000, taskHead, taskTail, clockLast = 0, clockNow = 0, clockSkew = 0, clock = typeof performance === "object" && performance.now ? performance : Date, setFrame = typeof window === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) {
-    setTimeout(f, 17);
-};
-function now() {
-    return clockNow || (setFrame(clearNow), clockNow = clock.now() + clockSkew);
-}
-function clearNow() {
-    clockNow = 0;
-}
-function Timer() {
-    this._call = this._time = this._next = null;
-}
-Timer.prototype = timer.prototype = {
-    constructor: Timer,
-    restart: function(callback, delay, time) {
-        if (typeof callback !== "function") throw new TypeError("callback is not a function");
-        time = (time == null ? now() : +time) + (delay == null ? 0 : +delay);
-        if (!this._next && taskTail !== this) {
-            if (taskTail) taskTail._next = this;
-            else taskHead = this;
-            taskTail = this;
-        }
-        this._call = callback;
-        this._time = time;
-        sleep();
-    },
-    stop: function() {
-        if (this._call) {
-            this._call = null;
-            this._time = Infinity;
-            sleep();
-        }
-    }
-};
-function timer(callback, delay, time) {
-    var t = new Timer;
-    t.restart(callback, delay, time);
-    return t;
-}
-function timerFlush() {
-    now(); // Get the current time, if not already set.
-    ++frame; // Pretend we’ve set an alarm, if we haven’t already.
-    var t = taskHead, e;
-    while(t){
-        if ((e = clockNow - t._time) >= 0) t._call.call(null, e);
-        t = t._next;
-    }
-    --frame;
-}
-function wake() {
-    clockNow = (clockLast = clock.now()) + clockSkew;
-    frame = timeout = 0;
-    try {
-        timerFlush();
-    } finally{
-        frame = 0;
-        nap();
-        clockNow = 0;
-    }
-}
-function poke() {
-    var now = clock.now(), delay = now - clockLast;
-    if (delay > pokeDelay) clockSkew -= delay, clockLast = now;
-}
-function nap() {
-    var t0, t1 = taskHead, t2, time = Infinity;
-    while(t1)if (t1._call) {
-        if (time > t1._time) time = t1._time;
-        t0 = t1, t1 = t1._next;
-    } else {
-        t2 = t1._next, t1._next = null;
-        t1 = t0 ? t0._next = t2 : taskHead = t2;
-    }
-    taskTail = t0;
-    sleep(time);
-}
-function sleep(time) {
-    if (frame) return; // Soonest alarm already set, or will be.
-    if (timeout) timeout = clearTimeout(timeout);
-    var delay = time - clockNow; // Strictly less than if we recomputed clockNow.
-    if (delay > 24) {
-        if (time < Infinity) timeout = setTimeout(wake, time - clock.now() - clockSkew);
-        if (interval) interval = clearInterval(interval);
-    } else {
-        if (!interval) clockLast = clock.now(), interval = setInterval(poke, pokeDelay);
-        frame = 1, setFrame(wake);
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ioM7O":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(callback, delay, time) {
-        var t = new (0, _timerJs.Timer);
-        delay = delay == null ? 0 : +delay;
-        t.restart(function(elapsed) {
-            t.stop();
-            callback(elapsed + delay);
-        }, delay, time);
         return t;
-    });
-var _timerJs = require("./timer.js");
+    },
+    fromAttribute (t, s) {
+        let i = t;
+        switch(s){
+            case Boolean:
+                i = null !== t;
+                break;
+            case Number:
+                i = null === t ? null : Number(t);
+                break;
+            case Object:
+            case Array:
+                try {
+                    i = JSON.parse(t);
+                } catch (t) {
+                    i = null;
+                }
+        }
+        return i;
+    }
+}, f = (t, s)=>!i(t, s), y = {
+    attribute: !0,
+    type: String,
+    converter: u,
+    reflect: !1,
+    hasChanged: f
+};
+Symbol.metadata ??= Symbol("metadata"), a.litPropertyMetadata ??= new WeakMap;
+class b extends HTMLElement {
+    static addInitializer(t) {
+        this._$Ei(), (this.l ??= []).push(t);
+    }
+    static get observedAttributes() {
+        return this.finalize(), this._$Eh && [
+            ...this._$Eh.keys()
+        ];
+    }
+    static createProperty(t, s = y) {
+        if (s.state && (s.attribute = !1), this._$Ei(), this.elementProperties.set(t, s), !s.noAccessor) {
+            const i = Symbol(), r = this.getPropertyDescriptor(t, i, s);
+            void 0 !== r && e(this.prototype, t, r);
+        }
+    }
+    static getPropertyDescriptor(t, s, i) {
+        const { get: e, set: h } = r(this.prototype, t) ?? {
+            get () {
+                return this[s];
+            },
+            set (t) {
+                this[s] = t;
+            }
+        };
+        return {
+            get () {
+                return e?.call(this);
+            },
+            set (s) {
+                const r = e?.call(this);
+                h.call(this, s), this.requestUpdate(t, r, i);
+            },
+            configurable: !0,
+            enumerable: !0
+        };
+    }
+    static getPropertyOptions(t) {
+        return this.elementProperties.get(t) ?? y;
+    }
+    static _$Ei() {
+        if (this.hasOwnProperty(d("elementProperties"))) return;
+        const t = n(this);
+        t.finalize(), void 0 !== t.l && (this.l = [
+            ...t.l
+        ]), this.elementProperties = new Map(t.elementProperties);
+    }
+    static finalize() {
+        if (this.hasOwnProperty(d("finalized"))) return;
+        if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(d("properties"))) {
+            const t = this.properties, s = [
+                ...h(t),
+                ...o(t)
+            ];
+            for (const i of s)this.createProperty(i, t[i]);
+        }
+        const t = this[Symbol.metadata];
+        if (null !== t) {
+            const s = litPropertyMetadata.get(t);
+            if (void 0 !== s) for (const [t, i] of s)this.elementProperties.set(t, i);
+        }
+        this._$Eh = new Map;
+        for (const [t, s] of this.elementProperties){
+            const i = this._$Eu(t, s);
+            void 0 !== i && this._$Eh.set(i, t);
+        }
+        this.elementStyles = this.finalizeStyles(this.styles);
+    }
+    static finalizeStyles(s) {
+        const i = [];
+        if (Array.isArray(s)) {
+            const e = new Set(s.flat(1 / 0).reverse());
+            for (const s of e)i.unshift((0, _cssTagJs.getCompatibleStyle)(s));
+        } else void 0 !== s && i.push((0, _cssTagJs.getCompatibleStyle)(s));
+        return i;
+    }
+    static _$Eu(t, s) {
+        const i = s.attribute;
+        return !1 === i ? void 0 : "string" == typeof i ? i : "string" == typeof t ? t.toLowerCase() : void 0;
+    }
+    constructor(){
+        super(), this._$Ep = void 0, this.isUpdatePending = !1, this.hasUpdated = !1, this._$Em = null, this._$Ev();
+    }
+    _$Ev() {
+        this._$Eg = new Promise((t)=>this.enableUpdating = t), this._$AL = new Map, this._$ES(), this.requestUpdate(), this.constructor.l?.forEach((t)=>t(this));
+    }
+    addController(t) {
+        (this._$E_ ??= new Set).add(t), void 0 !== this.renderRoot && this.isConnected && t.hostConnected?.();
+    }
+    removeController(t) {
+        this._$E_?.delete(t);
+    }
+    _$ES() {
+        const t = new Map, s = this.constructor.elementProperties;
+        for (const i of s.keys())this.hasOwnProperty(i) && (t.set(i, this[i]), delete this[i]);
+        t.size > 0 && (this._$Ep = t);
+    }
+    createRenderRoot() {
+        const t = this.shadowRoot ?? this.attachShadow(this.constructor.shadowRootOptions);
+        return (0, _cssTagJs.adoptStyles)(t, this.constructor.elementStyles), t;
+    }
+    connectedCallback() {
+        this.renderRoot ??= this.createRenderRoot(), this.enableUpdating(!0), this._$E_?.forEach((t)=>t.hostConnected?.());
+    }
+    enableUpdating(t) {}
+    disconnectedCallback() {
+        this._$E_?.forEach((t)=>t.hostDisconnected?.());
+    }
+    attributeChangedCallback(t, s, i) {
+        this._$AK(t, i);
+    }
+    _$EO(t, s) {
+        const i = this.constructor.elementProperties.get(t), e = this.constructor._$Eu(t, i);
+        if (void 0 !== e && !0 === i.reflect) {
+            const r = (void 0 !== i.converter?.toAttribute ? i.converter : u).toAttribute(s, i.type);
+            this._$Em = t, null == r ? this.removeAttribute(e) : this.setAttribute(e, r), this._$Em = null;
+        }
+    }
+    _$AK(t, s) {
+        const i = this.constructor, e = i._$Eh.get(t);
+        if (void 0 !== e && this._$Em !== e) {
+            const t = i.getPropertyOptions(e), r = "function" == typeof t.converter ? {
+                fromAttribute: t.converter
+            } : void 0 !== t.converter?.fromAttribute ? t.converter : u;
+            this._$Em = e, this[e] = r.fromAttribute(s, t.type), this._$Em = null;
+        }
+    }
+    requestUpdate(t, s, i, e = !1, r) {
+        if (void 0 !== t) {
+            if (i ??= this.constructor.getPropertyOptions(t), !(i.hasChanged ?? f)(e ? r : this[t], s)) return;
+            this.C(t, s, i);
+        }
+        !1 === this.isUpdatePending && (this._$Eg = this._$EP());
+    }
+    C(t, s, i) {
+        this._$AL.has(t) || this._$AL.set(t, s), !0 === i.reflect && this._$Em !== t && (this._$Ej ??= new Set).add(t);
+    }
+    async _$EP() {
+        this.isUpdatePending = !0;
+        try {
+            await this._$Eg;
+        } catch (t) {
+            Promise.reject(t);
+        }
+        const t = this.scheduleUpdate();
+        return null != t && await t, !this.isUpdatePending;
+    }
+    scheduleUpdate() {
+        return this.performUpdate();
+    }
+    performUpdate() {
+        if (!this.isUpdatePending) return;
+        if (!this.hasUpdated) {
+            if (this.renderRoot ??= this.createRenderRoot(), this._$Ep) {
+                for (const [t, s] of this._$Ep)this[t] = s;
+                this._$Ep = void 0;
+            }
+            const t = this.constructor.elementProperties;
+            if (t.size > 0) for (const [s, i] of t)!0 !== i.wrapped || this._$AL.has(s) || void 0 === this[s] || this.C(s, this[s], i);
+        }
+        let t = !1;
+        const s = this._$AL;
+        try {
+            t = this.shouldUpdate(s), t ? (this.willUpdate(s), this._$E_?.forEach((t)=>t.hostUpdate?.()), this.update(s)) : this._$ET();
+        } catch (s) {
+            throw t = !1, this._$ET(), s;
+        }
+        t && this._$AE(s);
+    }
+    willUpdate(t) {}
+    _$AE(t) {
+        this._$E_?.forEach((t)=>t.hostUpdated?.()), this.hasUpdated || (this.hasUpdated = !0, this.firstUpdated(t)), this.updated(t);
+    }
+    _$ET() {
+        this._$AL = new Map, this.isUpdatePending = !1;
+    }
+    get updateComplete() {
+        return this.getUpdateComplete();
+    }
+    getUpdateComplete() {
+        return this._$Eg;
+    }
+    shouldUpdate(t) {
+        return !0;
+    }
+    update(t) {
+        this._$Ej &&= this._$Ej.forEach((t)=>this._$EO(t, this[t])), this._$ET();
+    }
+    updated(t) {}
+    firstUpdated(t) {}
+}
+b.elementStyles = [], b.shadowRootOptions = {
+    mode: "open"
+}, b[d("elementProperties")] = new Map, b[d("finalized")] = new Map, p?.({
+    ReactiveElement: b
+}), (a.reactiveElementVersions ??= []).push("2.0.2");
 
-},{"./timer.js":"bfF2F","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aZzEX":[function(require,module,exports) {
+},{"./css-tag.js":"gkZsf","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gkZsf":[function(require,module,exports) {
+/**
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "CSSResult", ()=>n);
+parcelHelpers.export(exports, "adoptStyles", ()=>S);
+parcelHelpers.export(exports, "css", ()=>i);
+parcelHelpers.export(exports, "getCompatibleStyle", ()=>c);
+parcelHelpers.export(exports, "supportsAdoptingStyleSheets", ()=>e);
+parcelHelpers.export(exports, "unsafeCSS", ()=>r);
+const t = globalThis, e = t.ShadowRoot && (void 0 === t.ShadyCSS || t.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, s = Symbol(), o = new WeakMap;
+class n {
+    constructor(t, e, o){
+        if (this._$cssResult$ = !0, o !== s) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
+        this.cssText = t, this.t = e;
+    }
+    get styleSheet() {
+        let t = this.o;
+        const s = this.t;
+        if (e && void 0 === t) {
+            const e = void 0 !== s && 1 === s.length;
+            e && (t = o.get(s)), void 0 === t && ((this.o = t = new CSSStyleSheet).replaceSync(this.cssText), e && o.set(s, t));
+        }
+        return t;
+    }
+    toString() {
+        return this.cssText;
+    }
+}
+const r = (t)=>new n("string" == typeof t ? t : t + "", void 0, s), i = (t, ...e)=>{
+    const o = 1 === t.length ? t[0] : e.reduce((e, s, o)=>e + ((t)=>{
+            if (!0 === t._$cssResult$) return t.cssText;
+            if ("number" == typeof t) return t;
+            throw Error("Value passed to 'css' function must be a 'css' function result: " + t + ". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.");
+        })(s) + t[o + 1], t[0]);
+    return new n(o, t, s);
+}, S = (s, o)=>{
+    if (e) s.adoptedStyleSheets = o.map((t)=>t instanceof CSSStyleSheet ? t : t.styleSheet);
+    else for (const e of o){
+        const o = document.createElement("style"), n = t.litNonce;
+        void 0 !== n && o.setAttribute("nonce", n), o.textContent = e.cssText, s.appendChild(o);
+    }
+}, c = e ? (t)=>t : (t)=>t instanceof CSSStyleSheet ? ((t)=>{
+        let e = "";
+        for (const s of t.cssRules)e += s.cssText;
+        return r(e);
+    })(t) : t;
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1cmQt":[function(require,module,exports) {
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "_$LH", ()=>z);
+parcelHelpers.export(exports, "html", ()=>x);
+parcelHelpers.export(exports, "noChange", ()=>w);
+parcelHelpers.export(exports, "nothing", ()=>T);
+parcelHelpers.export(exports, "render", ()=>j);
+parcelHelpers.export(exports, "svg", ()=>b);
+const t = globalThis, i = t.trustedTypes, s = i ? i.createPolicy("lit-html", {
+    createHTML: (t)=>t
+}) : void 0, e = "$lit$", h = `lit$${(Math.random() + "").slice(9)}$`, o = "?" + h, n = `<${o}>`, r = document, l = ()=>r.createComment(""), c = (t)=>null === t || "object" != typeof t && "function" != typeof t, a = Array.isArray, u = (t)=>a(t) || "function" == typeof t?.[Symbol.iterator], d = "[ 	\n\f\r]", f = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, v = /-->/g, _ = />/g, m = RegExp(`>|${d}(?:([^\\s"'>=/]+)(${d}*=${d}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), p = /'/g, g = /"/g, $ = /^(?:script|style|textarea|title)$/i, y = (t)=>(i, ...s)=>({
+            _$litType$: t,
+            strings: i,
+            values: s
+        }), x = y(1), b = y(2), w = Symbol.for("lit-noChange"), T = Symbol.for("lit-nothing"), A = new WeakMap, E = r.createTreeWalker(r, 129);
+function C(t, i) {
+    if (!Array.isArray(t) || !t.hasOwnProperty("raw")) throw Error("invalid template strings array");
+    return void 0 !== s ? s.createHTML(i) : i;
+}
+const P = (t, i)=>{
+    const s = t.length - 1, o = [];
+    let r, l = 2 === i ? "<svg>" : "", c = f;
+    for(let i = 0; i < s; i++){
+        const s = t[i];
+        let a, u, d = -1, y = 0;
+        for(; y < s.length && (c.lastIndex = y, u = c.exec(s), null !== u);)y = c.lastIndex, c === f ? "!--" === u[1] ? c = v : void 0 !== u[1] ? c = _ : void 0 !== u[2] ? ($.test(u[2]) && (r = RegExp("</" + u[2], "g")), c = m) : void 0 !== u[3] && (c = m) : c === m ? ">" === u[0] ? (c = r ?? f, d = -1) : void 0 === u[1] ? d = -2 : (d = c.lastIndex - u[2].length, a = u[1], c = void 0 === u[3] ? m : '"' === u[3] ? g : p) : c === g || c === p ? c = m : c === v || c === _ ? c = f : (c = m, r = void 0);
+        const x = c === m && t[i + 1].startsWith("/>") ? " " : "";
+        l += c === f ? s + n : d >= 0 ? (o.push(a), s.slice(0, d) + e + s.slice(d) + h + x) : s + h + (-2 === d ? i : x);
+    }
+    return [
+        C(t, l + (t[s] || "<?>") + (2 === i ? "</svg>" : "")),
+        o
+    ];
+};
+class V {
+    constructor({ strings: t, _$litType$: s }, n){
+        let r;
+        this.parts = [];
+        let c = 0, a = 0;
+        const u = t.length - 1, d = this.parts, [f, v] = P(t, s);
+        if (this.el = V.createElement(f, n), E.currentNode = this.el.content, 2 === s) {
+            const t = this.el.content.firstChild;
+            t.replaceWith(...t.childNodes);
+        }
+        for(; null !== (r = E.nextNode()) && d.length < u;){
+            if (1 === r.nodeType) {
+                if (r.hasAttributes()) for (const t of r.getAttributeNames())if (t.endsWith(e)) {
+                    const i = v[a++], s = r.getAttribute(t).split(h), e = /([.?@])?(.*)/.exec(i);
+                    d.push({
+                        type: 1,
+                        index: c,
+                        name: e[2],
+                        strings: s,
+                        ctor: "." === e[1] ? k : "?" === e[1] ? H : "@" === e[1] ? I : R
+                    }), r.removeAttribute(t);
+                } else t.startsWith(h) && (d.push({
+                    type: 6,
+                    index: c
+                }), r.removeAttribute(t));
+                if ($.test(r.tagName)) {
+                    const t = r.textContent.split(h), s = t.length - 1;
+                    if (s > 0) {
+                        r.textContent = i ? i.emptyScript : "";
+                        for(let i = 0; i < s; i++)r.append(t[i], l()), E.nextNode(), d.push({
+                            type: 2,
+                            index: ++c
+                        });
+                        r.append(t[s], l());
+                    }
+                }
+            } else if (8 === r.nodeType) {
+                if (r.data === o) d.push({
+                    type: 2,
+                    index: c
+                });
+                else {
+                    let t = -1;
+                    for(; -1 !== (t = r.data.indexOf(h, t + 1));)d.push({
+                        type: 7,
+                        index: c
+                    }), t += h.length - 1;
+                }
+            }
+            c++;
+        }
+    }
+    static createElement(t, i) {
+        const s = r.createElement("template");
+        return s.innerHTML = t, s;
+    }
+}
+function N(t, i, s = t, e) {
+    if (i === w) return i;
+    let h = void 0 !== e ? s._$Co?.[e] : s._$Cl;
+    const o = c(i) ? void 0 : i._$litDirective$;
+    return h?.constructor !== o && (h?._$AO?.(!1), void 0 === o ? h = void 0 : (h = new o(t), h._$AT(t, s, e)), void 0 !== e ? (s._$Co ??= [])[e] = h : s._$Cl = h), void 0 !== h && (i = N(t, h._$AS(t, i.values), h, e)), i;
+}
+class S {
+    constructor(t, i){
+        this._$AV = [], this._$AN = void 0, this._$AD = t, this._$AM = i;
+    }
+    get parentNode() {
+        return this._$AM.parentNode;
+    }
+    get _$AU() {
+        return this._$AM._$AU;
+    }
+    u(t) {
+        const { el: { content: i }, parts: s } = this._$AD, e = (t?.creationScope ?? r).importNode(i, !0);
+        E.currentNode = e;
+        let h = E.nextNode(), o = 0, n = 0, l = s[0];
+        for(; void 0 !== l;){
+            if (o === l.index) {
+                let i;
+                2 === l.type ? i = new M(h, h.nextSibling, this, t) : 1 === l.type ? i = new l.ctor(h, l.name, l.strings, this, t) : 6 === l.type && (i = new L(h, this, t)), this._$AV.push(i), l = s[++n];
+            }
+            o !== l?.index && (h = E.nextNode(), o++);
+        }
+        return E.currentNode = r, e;
+    }
+    p(t) {
+        let i = 0;
+        for (const s of this._$AV)void 0 !== s && (void 0 !== s.strings ? (s._$AI(t, s, i), i += s.strings.length - 2) : s._$AI(t[i])), i++;
+    }
+}
+class M {
+    get _$AU() {
+        return this._$AM?._$AU ?? this._$Cv;
+    }
+    constructor(t, i, s, e){
+        this.type = 2, this._$AH = T, this._$AN = void 0, this._$AA = t, this._$AB = i, this._$AM = s, this.options = e, this._$Cv = e?.isConnected ?? !0;
+    }
+    get parentNode() {
+        let t = this._$AA.parentNode;
+        const i = this._$AM;
+        return void 0 !== i && 11 === t?.nodeType && (t = i.parentNode), t;
+    }
+    get startNode() {
+        return this._$AA;
+    }
+    get endNode() {
+        return this._$AB;
+    }
+    _$AI(t, i = this) {
+        t = N(this, t, i), c(t) ? t === T || null == t || "" === t ? (this._$AH !== T && this._$AR(), this._$AH = T) : t !== this._$AH && t !== w && this._(t) : void 0 !== t._$litType$ ? this.g(t) : void 0 !== t.nodeType ? this.$(t) : u(t) ? this.T(t) : this._(t);
+    }
+    k(t) {
+        return this._$AA.parentNode.insertBefore(t, this._$AB);
+    }
+    $(t) {
+        this._$AH !== t && (this._$AR(), this._$AH = this.k(t));
+    }
+    _(t) {
+        this._$AH !== T && c(this._$AH) ? this._$AA.nextSibling.data = t : this.$(r.createTextNode(t)), this._$AH = t;
+    }
+    g(t) {
+        const { values: i, _$litType$: s } = t, e = "number" == typeof s ? this._$AC(t) : (void 0 === s.el && (s.el = V.createElement(C(s.h, s.h[0]), this.options)), s);
+        if (this._$AH?._$AD === e) this._$AH.p(i);
+        else {
+            const t = new S(e, this), s = t.u(this.options);
+            t.p(i), this.$(s), this._$AH = t;
+        }
+    }
+    _$AC(t) {
+        let i = A.get(t.strings);
+        return void 0 === i && A.set(t.strings, i = new V(t)), i;
+    }
+    T(t) {
+        a(this._$AH) || (this._$AH = [], this._$AR());
+        const i = this._$AH;
+        let s, e = 0;
+        for (const h of t)e === i.length ? i.push(s = new M(this.k(l()), this.k(l()), this, this.options)) : s = i[e], s._$AI(h), e++;
+        e < i.length && (this._$AR(s && s._$AB.nextSibling, e), i.length = e);
+    }
+    _$AR(t = this._$AA.nextSibling, i) {
+        for(this._$AP?.(!1, !0, i); t && t !== this._$AB;){
+            const i = t.nextSibling;
+            t.remove(), t = i;
+        }
+    }
+    setConnected(t) {
+        void 0 === this._$AM && (this._$Cv = t, this._$AP?.(t));
+    }
+}
+class R {
+    get tagName() {
+        return this.element.tagName;
+    }
+    get _$AU() {
+        return this._$AM._$AU;
+    }
+    constructor(t, i, s, e, h){
+        this.type = 1, this._$AH = T, this._$AN = void 0, this.element = t, this.name = i, this._$AM = e, this.options = h, s.length > 2 || "" !== s[0] || "" !== s[1] ? (this._$AH = Array(s.length - 1).fill(new String), this.strings = s) : this._$AH = T;
+    }
+    _$AI(t, i = this, s, e) {
+        const h = this.strings;
+        let o = !1;
+        if (void 0 === h) t = N(this, t, i, 0), o = !c(t) || t !== this._$AH && t !== w, o && (this._$AH = t);
+        else {
+            const e = t;
+            let n, r;
+            for(t = h[0], n = 0; n < h.length - 1; n++)r = N(this, e[s + n], i, n), r === w && (r = this._$AH[n]), o ||= !c(r) || r !== this._$AH[n], r === T ? t = T : t !== T && (t += (r ?? "") + h[n + 1]), this._$AH[n] = r;
+        }
+        o && !e && this.O(t);
+    }
+    O(t) {
+        t === T ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, t ?? "");
+    }
+}
+class k extends R {
+    constructor(){
+        super(...arguments), this.type = 3;
+    }
+    O(t) {
+        this.element[this.name] = t === T ? void 0 : t;
+    }
+}
+class H extends R {
+    constructor(){
+        super(...arguments), this.type = 4;
+    }
+    O(t) {
+        this.element.toggleAttribute(this.name, !!t && t !== T);
+    }
+}
+class I extends R {
+    constructor(t, i, s, e, h){
+        super(t, i, s, e, h), this.type = 5;
+    }
+    _$AI(t, i = this) {
+        if ((t = N(this, t, i, 0) ?? T) === w) return;
+        const s = this._$AH, e = t === T && s !== T || t.capture !== s.capture || t.once !== s.once || t.passive !== s.passive, h = t !== T && (s === T || e);
+        e && this.element.removeEventListener(this.name, this, s), h && this.element.addEventListener(this.name, this, t), this._$AH = t;
+    }
+    handleEvent(t) {
+        "function" == typeof this._$AH ? this._$AH.call(this.options?.host ?? this.element, t) : this._$AH.handleEvent(t);
+    }
+}
+class L {
+    constructor(t, i, s){
+        this.element = t, this.type = 6, this._$AN = void 0, this._$AM = i, this.options = s;
+    }
+    get _$AU() {
+        return this._$AM._$AU;
+    }
+    _$AI(t) {
+        N(this, t);
+    }
+}
+const z = {
+    j: e,
+    P: h,
+    A: o,
+    C: 1,
+    M: P,
+    L: S,
+    R: u,
+    V: N,
+    D: M,
+    I: R,
+    H,
+    N: I,
+    U: k,
+    B: L
+}, Z = t.litHtmlPolyfillSupport;
+Z?.(V, M), (t.litHtmlVersions ??= []).push("3.1.0");
+const j = (t, i, s)=>{
+    const e = s?.renderBefore ?? i;
+    let h = e._$litPart$;
+    if (void 0 === h) {
+        const t = s?.renderBefore ?? null;
+        e._$litPart$ = h = new M(i.insertBefore(l(), t), t, void 0, s ?? {});
+    }
+    return h._$AI(t), h;
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9YxkX":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name) {
-        var id, timing;
-        if (name instanceof (0, _indexJs.Transition)) id = name._id, name = name._name;
-        else id = (0, _indexJs.newId)(), (timing = defaultTiming).time = (0, _d3Timer.now)(), name = name == null ? null : name + "";
-        for(var groups = this._groups, m = groups.length, j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, node, i = 0; i < n; ++i)if (node = group[i]) (0, _scheduleJsDefault.default)(node, name, id, i, group, timing || inherit(node, id));
-        }
-        return new (0, _indexJs.Transition)(groups, this._parents, name, id);
-    });
-var _indexJs = require("../transition/index.js");
-var _scheduleJs = require("../transition/schedule.js");
-var _scheduleJsDefault = parcelHelpers.interopDefault(_scheduleJs);
-var _d3Ease = require("d3-ease");
-var _d3Timer = require("d3-timer");
-var defaultTiming = {
-    time: null,
-    delay: 0,
-    duration: 250,
-    ease: (0, _d3Ease.easeCubicInOut)
-};
-function inherit(node, id) {
-    var timing;
-    while(!(timing = node.__transition) || !(timing = timing[id])){
-        if (!(node = node.parentNode)) return defaultTiming.time = (0, _d3Timer.now)(), defaultTiming;
+parcelHelpers.export(exports, "LitElement", ()=>s);
+parcelHelpers.export(exports, "_$LE", ()=>o);
+var _reactiveElement = require("@lit/reactive-element");
+parcelHelpers.exportAll(_reactiveElement, exports);
+var _litHtml = require("lit-html");
+parcelHelpers.exportAll(_litHtml, exports);
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ class s extends (0, _reactiveElement.ReactiveElement) {
+    constructor(){
+        super(...arguments), this.renderOptions = {
+            host: this
+        }, this._$Do = void 0;
     }
-    return timing;
+    createRenderRoot() {
+        const t = super.createRenderRoot();
+        return this.renderOptions.renderBefore ??= t.firstChild, t;
+    }
+    update(t) {
+        const i = this.render();
+        this.hasUpdated || (this.renderOptions.isConnected = this.isConnected), super.update(t), this._$Do = (0, _litHtml.render)(i, this.renderRoot, this.renderOptions);
+    }
+    connectedCallback() {
+        super.connectedCallback(), this._$Do?.setConnected(!0);
+    }
+    disconnectedCallback() {
+        super.disconnectedCallback(), this._$Do?.setConnected(!1);
+    }
+    render() {
+        return 0, _litHtml.noChange;
+    }
+}
+s._$litElement$ = !0, s["finalized"] = !0, globalThis.litElementHydrateSupport?.({
+    LitElement: s
+});
+const r = globalThis.litElementPolyfillSupport;
+r?.({
+    LitElement: s
+});
+const o = {
+    _$AK: (t, e, i)=>{
+        t._$AK(e, i);
+    },
+    _$AL: (t)=>t._$AL
+};
+(globalThis.litElementVersions ??= []).push("4.0.2");
+
+},{"@lit/reactive-element":"hypet","lit-html":"1cmQt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"e2OXP":[function(require,module,exports) {
+/**
+ * @license
+ * Copyright 2022 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "isServer", ()=>o);
+const o = !1;
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bCPKi":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _customElementJs = require("@lit/reactive-element/decorators/custom-element.js");
+parcelHelpers.exportAll(_customElementJs, exports);
+var _propertyJs = require("@lit/reactive-element/decorators/property.js");
+parcelHelpers.exportAll(_propertyJs, exports);
+var _stateJs = require("@lit/reactive-element/decorators/state.js");
+parcelHelpers.exportAll(_stateJs, exports);
+var _eventOptionsJs = require("@lit/reactive-element/decorators/event-options.js");
+parcelHelpers.exportAll(_eventOptionsJs, exports);
+var _queryJs = require("@lit/reactive-element/decorators/query.js");
+parcelHelpers.exportAll(_queryJs, exports);
+var _queryAllJs = require("@lit/reactive-element/decorators/query-all.js");
+parcelHelpers.exportAll(_queryAllJs, exports);
+var _queryAsyncJs = require("@lit/reactive-element/decorators/query-async.js");
+parcelHelpers.exportAll(_queryAsyncJs, exports);
+var _queryAssignedElementsJs = require("@lit/reactive-element/decorators/query-assigned-elements.js");
+parcelHelpers.exportAll(_queryAssignedElementsJs, exports);
+var _queryAssignedNodesJs = require("@lit/reactive-element/decorators/query-assigned-nodes.js");
+parcelHelpers.exportAll(_queryAssignedNodesJs, exports);
+
+},{"@lit/reactive-element/decorators/custom-element.js":"cMf50","@lit/reactive-element/decorators/property.js":"ipYYa","@lit/reactive-element/decorators/state.js":"goyf7","@lit/reactive-element/decorators/event-options.js":"8b5ex","@lit/reactive-element/decorators/query.js":"kzuRy","@lit/reactive-element/decorators/query-all.js":"krNkJ","@lit/reactive-element/decorators/query-async.js":"a6gRJ","@lit/reactive-element/decorators/query-assigned-elements.js":"kKpwU","@lit/reactive-element/decorators/query-assigned-nodes.js":"2F824","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cMf50":[function(require,module,exports) {
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "customElement", ()=>t);
+const t = (t)=>(e, o)=>{
+        void 0 !== o ? o.addInitializer(()=>{
+            customElements.define(t, e);
+        }) : customElements.define(t, e);
+    };
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ipYYa":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "property", ()=>n);
+parcelHelpers.export(exports, "standardProperty", ()=>r);
+var _reactiveElementJs = require("../reactive-element.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ const o = {
+    attribute: !0,
+    type: String,
+    converter: (0, _reactiveElementJs.defaultConverter),
+    reflect: !1,
+    hasChanged: (0, _reactiveElementJs.notEqual)
+}, r = (t = o, e, r)=>{
+    const { kind: n, metadata: i } = r;
+    let s = globalThis.litPropertyMetadata.get(i);
+    if (void 0 === s && globalThis.litPropertyMetadata.set(i, s = new Map), s.set(r.name, t), "accessor" === n) {
+        const { name: o } = r;
+        return {
+            set (r) {
+                const n = e.get.call(this);
+                e.set.call(this, r), this.requestUpdate(o, n, t);
+            },
+            init (e) {
+                return void 0 !== e && this.C(o, void 0, t), e;
+            }
+        };
+    }
+    if ("setter" === n) {
+        const { name: o } = r;
+        return function(r) {
+            const n = this[o];
+            e.call(this, r), this.requestUpdate(o, n, t);
+        };
+    }
+    throw Error("Unsupported decorator location: " + n);
+};
+function n(t) {
+    return (e, o)=>"object" == typeof o ? r(t, e, o) : ((t, e, o)=>{
+            const r = e.hasOwnProperty(o);
+            return e.constructor.createProperty(o, r ? {
+                ...t,
+                wrapped: !0
+            } : t), r ? Object.getOwnPropertyDescriptor(e, o) : void 0;
+        })(t, e, o);
 }
 
-},{"../transition/index.js":"h2Srb","../transition/schedule.js":"de74c","d3-ease":"8sCNl","d3-timer":"7TEss","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"h2Srb":[function(require,module,exports) {
+},{"../reactive-element.js":"hypet","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"goyf7":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "Transition", ()=>Transition);
-parcelHelpers.export(exports, "default", ()=>transition);
-parcelHelpers.export(exports, "newId", ()=>newId);
-var _d3Selection = require("d3-selection");
-var _attrJs = require("./attr.js");
-var _attrJsDefault = parcelHelpers.interopDefault(_attrJs);
-var _attrTweenJs = require("./attrTween.js");
-var _attrTweenJsDefault = parcelHelpers.interopDefault(_attrTweenJs);
-var _delayJs = require("./delay.js");
-var _delayJsDefault = parcelHelpers.interopDefault(_delayJs);
-var _durationJs = require("./duration.js");
-var _durationJsDefault = parcelHelpers.interopDefault(_durationJs);
-var _easeJs = require("./ease.js");
-var _easeJsDefault = parcelHelpers.interopDefault(_easeJs);
-var _filterJs = require("./filter.js");
-var _filterJsDefault = parcelHelpers.interopDefault(_filterJs);
+parcelHelpers.export(exports, "state", ()=>r);
+var _propertyJs = require("./property.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ function r(r) {
+    return (0, _propertyJs.property)({
+        ...r,
+        state: !0,
+        attribute: !1
+    });
+}
+
+},{"./property.js":"ipYYa","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8b5ex":[function(require,module,exports) {
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "eventOptions", ()=>t);
+function t(t) {
+    return (n, o)=>{
+        const c = "function" == typeof n ? n : n[o];
+        Object.assign(c, t);
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kzuRy":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "query", ()=>e);
+var _baseJs = require("./base.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ function e(e, r) {
+    return (n, s, i)=>{
+        const o = (t)=>t.renderRoot?.querySelector(e) ?? null;
+        if (r) {
+            const { get: e, set: r } = "object" == typeof s ? n : i ?? (()=>{
+                const t = Symbol();
+                return {
+                    get () {
+                        return this[t];
+                    },
+                    set (e) {
+                        this[t] = e;
+                    }
+                };
+            })();
+            return (0, _baseJs.desc)(n, s, {
+                get () {
+                    let t = e.call(this);
+                    return void 0 === t && (t = o(this), (null !== t || this.hasUpdated) && r.call(this, t)), t;
+                }
+            });
+        }
+        return (0, _baseJs.desc)(n, s, {
+            get () {
+                return o(this);
+            }
+        });
+    };
+}
+
+},{"./base.js":"d0R9Y","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"d0R9Y":[function(require,module,exports) {
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "desc", ()=>e);
+const e = (e, t, c)=>(c.configurable = !0, c.enumerable = !0, Reflect.decorate && "object" != typeof t && Object.defineProperty(e, t, c), c);
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"krNkJ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "queryAll", ()=>r);
+var _baseJs = require("./base.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ let e;
+function r(r) {
+    return (n, o)=>(0, _baseJs.desc)(n, o, {
+            get () {
+                return (this.renderRoot ?? (e ??= document.createDocumentFragment())).querySelectorAll(r);
+            }
+        });
+}
+
+},{"./base.js":"d0R9Y","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a6gRJ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "queryAsync", ()=>r);
+var _baseJs = require("./base.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ function r(r) {
+    return (n, e)=>(0, _baseJs.desc)(n, e, {
+            async get () {
+                return await this.updateComplete, this.renderRoot?.querySelector(r) ?? null;
+            }
+        });
+}
+
+},{"./base.js":"d0R9Y","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kKpwU":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "queryAssignedElements", ()=>o);
+var _baseJs = require("./base.js");
+/**
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ function o(o) {
+    return (e, n)=>{
+        const { slot: r, selector: s } = o ?? {}, c = "slot" + (r ? `[name=${r}]` : ":not([name])");
+        return (0, _baseJs.desc)(e, n, {
+            get () {
+                const t = this.renderRoot?.querySelector(c), e = t?.assignedElements(o) ?? [];
+                return void 0 === s ? e : e.filter((t)=>t.matches(s));
+            }
+        });
+    };
+}
+
+},{"./base.js":"d0R9Y","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2F824":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "queryAssignedNodes", ()=>n);
+var _baseJs = require("./base.js");
+/**
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: BSD-3-Clause
+ */ function n(n) {
+    return (o, r)=>{
+        const { slot: e } = n ?? {}, s = "slot" + (e ? `[name=${e}]` : ":not([name])");
+        return (0, _baseJs.desc)(o, r, {
+            get () {
+                const t = this.renderRoot?.querySelector(s);
+                return t?.assignedNodes(n) ?? [];
+            }
+        });
+    };
+}
+
+},{"./base.js":"d0R9Y","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"567XO":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "ResizeController", ()=>s);
+class s {
+    constructor(s, { target: t, config: i, callback: h, skipInitial: e }){
+        this.t = new Set, this.o = !1, this.i = !1, this.h = s, null !== t && this.t.add(t ?? s), this.l = i, this.o = e ?? this.o, this.callback = h, window.ResizeObserver ? (this.u = new ResizeObserver((s)=>{
+            this.handleChanges(s), this.h.requestUpdate();
+        }), s.addController(this)) : console.warn("ResizeController error: browser does not support ResizeObserver.");
+    }
+    handleChanges(s) {
+        this.value = this.callback?.(s, this.u);
+    }
+    hostConnected() {
+        for (const s of this.t)this.observe(s);
+    }
+    hostDisconnected() {
+        this.disconnect();
+    }
+    async hostUpdated() {
+        !this.o && this.i && this.handleChanges([]), this.i = !1;
+    }
+    observe(s) {
+        this.t.add(s), this.u.observe(s, this.l), this.i = !0, this.h.requestUpdate();
+    }
+    unobserve(s) {
+        this.t.delete(s), this.u.unobserve(s);
+    }
+    disconnect() {
+        this.u.disconnect();
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aerWx":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "bisect", ()=>(0, _bisectJsDefault.default));
+parcelHelpers.export(exports, "bisectRight", ()=>(0, _bisectJs.bisectRight));
+parcelHelpers.export(exports, "bisectLeft", ()=>(0, _bisectJs.bisectLeft));
+parcelHelpers.export(exports, "bisectCenter", ()=>(0, _bisectJs.bisectCenter));
+parcelHelpers.export(exports, "ascending", ()=>(0, _ascendingJsDefault.default));
+parcelHelpers.export(exports, "bisector", ()=>(0, _bisectorJsDefault.default));
+parcelHelpers.export(exports, "blur", ()=>(0, _blurJs.blur));
+parcelHelpers.export(exports, "blur2", ()=>(0, _blurJs.blur2));
+parcelHelpers.export(exports, "blurImage", ()=>(0, _blurJs.blurImage));
+parcelHelpers.export(exports, "count", ()=>(0, _countJsDefault.default));
+parcelHelpers.export(exports, "cross", ()=>(0, _crossJsDefault.default));
+parcelHelpers.export(exports, "cumsum", ()=>(0, _cumsumJsDefault.default));
+parcelHelpers.export(exports, "descending", ()=>(0, _descendingJsDefault.default));
+parcelHelpers.export(exports, "deviation", ()=>(0, _deviationJsDefault.default));
+parcelHelpers.export(exports, "extent", ()=>(0, _extentJsDefault.default));
+parcelHelpers.export(exports, "Adder", ()=>(0, _fsumJs.Adder));
+parcelHelpers.export(exports, "fsum", ()=>(0, _fsumJs.fsum));
+parcelHelpers.export(exports, "fcumsum", ()=>(0, _fsumJs.fcumsum));
+parcelHelpers.export(exports, "group", ()=>(0, _groupJsDefault.default));
+parcelHelpers.export(exports, "flatGroup", ()=>(0, _groupJs.flatGroup));
+parcelHelpers.export(exports, "flatRollup", ()=>(0, _groupJs.flatRollup));
+parcelHelpers.export(exports, "groups", ()=>(0, _groupJs.groups));
+parcelHelpers.export(exports, "index", ()=>(0, _groupJs.index));
+parcelHelpers.export(exports, "indexes", ()=>(0, _groupJs.indexes));
+parcelHelpers.export(exports, "rollup", ()=>(0, _groupJs.rollup));
+parcelHelpers.export(exports, "rollups", ()=>(0, _groupJs.rollups));
+parcelHelpers.export(exports, "groupSort", ()=>(0, _groupSortJsDefault.default));
+parcelHelpers.export(exports, "bin", ()=>(0, _binJsDefault.default)) // Deprecated; use bin.
+;
+parcelHelpers.export(exports, "histogram", ()=>(0, _binJsDefault.default));
+parcelHelpers.export(exports, "thresholdFreedmanDiaconis", ()=>(0, _freedmanDiaconisJsDefault.default));
+parcelHelpers.export(exports, "thresholdScott", ()=>(0, _scottJsDefault.default));
+parcelHelpers.export(exports, "thresholdSturges", ()=>(0, _sturgesJsDefault.default));
+parcelHelpers.export(exports, "max", ()=>(0, _maxJsDefault.default));
+parcelHelpers.export(exports, "maxIndex", ()=>(0, _maxIndexJsDefault.default));
+parcelHelpers.export(exports, "mean", ()=>(0, _meanJsDefault.default));
+parcelHelpers.export(exports, "median", ()=>(0, _medianJsDefault.default));
+parcelHelpers.export(exports, "medianIndex", ()=>(0, _medianJs.medianIndex));
+parcelHelpers.export(exports, "merge", ()=>(0, _mergeJsDefault.default));
+parcelHelpers.export(exports, "min", ()=>(0, _minJsDefault.default));
+parcelHelpers.export(exports, "minIndex", ()=>(0, _minIndexJsDefault.default));
+parcelHelpers.export(exports, "mode", ()=>(0, _modeJsDefault.default));
+parcelHelpers.export(exports, "nice", ()=>(0, _niceJsDefault.default));
+parcelHelpers.export(exports, "pairs", ()=>(0, _pairsJsDefault.default));
+parcelHelpers.export(exports, "permute", ()=>(0, _permuteJsDefault.default));
+parcelHelpers.export(exports, "quantile", ()=>(0, _quantileJsDefault.default));
+parcelHelpers.export(exports, "quantileIndex", ()=>(0, _quantileJs.quantileIndex));
+parcelHelpers.export(exports, "quantileSorted", ()=>(0, _quantileJs.quantileSorted));
+parcelHelpers.export(exports, "quickselect", ()=>(0, _quickselectJsDefault.default));
+parcelHelpers.export(exports, "range", ()=>(0, _rangeJsDefault.default));
+parcelHelpers.export(exports, "rank", ()=>(0, _rankJsDefault.default));
+parcelHelpers.export(exports, "least", ()=>(0, _leastJsDefault.default));
+parcelHelpers.export(exports, "leastIndex", ()=>(0, _leastIndexJsDefault.default));
+parcelHelpers.export(exports, "greatest", ()=>(0, _greatestJsDefault.default));
+parcelHelpers.export(exports, "greatestIndex", ()=>(0, _greatestIndexJsDefault.default));
+parcelHelpers.export(exports, "scan", ()=>(0, _scanJsDefault.default)) // Deprecated; use leastIndex.
+;
+parcelHelpers.export(exports, "shuffle", ()=>(0, _shuffleJsDefault.default));
+parcelHelpers.export(exports, "shuffler", ()=>(0, _shuffleJs.shuffler));
+parcelHelpers.export(exports, "sum", ()=>(0, _sumJsDefault.default));
+parcelHelpers.export(exports, "ticks", ()=>(0, _ticksJsDefault.default));
+parcelHelpers.export(exports, "tickIncrement", ()=>(0, _ticksJs.tickIncrement));
+parcelHelpers.export(exports, "tickStep", ()=>(0, _ticksJs.tickStep));
+parcelHelpers.export(exports, "transpose", ()=>(0, _transposeJsDefault.default));
+parcelHelpers.export(exports, "variance", ()=>(0, _varianceJsDefault.default));
+parcelHelpers.export(exports, "zip", ()=>(0, _zipJsDefault.default));
+parcelHelpers.export(exports, "every", ()=>(0, _everyJsDefault.default));
+parcelHelpers.export(exports, "some", ()=>(0, _someJsDefault.default));
+parcelHelpers.export(exports, "filter", ()=>(0, _filterJsDefault.default));
+parcelHelpers.export(exports, "map", ()=>(0, _mapJsDefault.default));
+parcelHelpers.export(exports, "reduce", ()=>(0, _reduceJsDefault.default));
+parcelHelpers.export(exports, "reverse", ()=>(0, _reverseJsDefault.default));
+parcelHelpers.export(exports, "sort", ()=>(0, _sortJsDefault.default));
+parcelHelpers.export(exports, "difference", ()=>(0, _differenceJsDefault.default));
+parcelHelpers.export(exports, "disjoint", ()=>(0, _disjointJsDefault.default));
+parcelHelpers.export(exports, "intersection", ()=>(0, _intersectionJsDefault.default));
+parcelHelpers.export(exports, "subset", ()=>(0, _subsetJsDefault.default));
+parcelHelpers.export(exports, "superset", ()=>(0, _supersetJsDefault.default));
+parcelHelpers.export(exports, "union", ()=>(0, _unionJsDefault.default));
+parcelHelpers.export(exports, "InternMap", ()=>(0, _internmap.InternMap));
+parcelHelpers.export(exports, "InternSet", ()=>(0, _internmap.InternSet));
+var _bisectJs = require("./bisect.js");
+var _bisectJsDefault = parcelHelpers.interopDefault(_bisectJs);
+var _ascendingJs = require("./ascending.js");
+var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
+var _bisectorJs = require("./bisector.js");
+var _bisectorJsDefault = parcelHelpers.interopDefault(_bisectorJs);
+var _blurJs = require("./blur.js");
+var _countJs = require("./count.js");
+var _countJsDefault = parcelHelpers.interopDefault(_countJs);
+var _crossJs = require("./cross.js");
+var _crossJsDefault = parcelHelpers.interopDefault(_crossJs);
+var _cumsumJs = require("./cumsum.js");
+var _cumsumJsDefault = parcelHelpers.interopDefault(_cumsumJs);
+var _descendingJs = require("./descending.js");
+var _descendingJsDefault = parcelHelpers.interopDefault(_descendingJs);
+var _deviationJs = require("./deviation.js");
+var _deviationJsDefault = parcelHelpers.interopDefault(_deviationJs);
+var _extentJs = require("./extent.js");
+var _extentJsDefault = parcelHelpers.interopDefault(_extentJs);
+var _fsumJs = require("./fsum.js");
+var _groupJs = require("./group.js");
+var _groupJsDefault = parcelHelpers.interopDefault(_groupJs);
+var _groupSortJs = require("./groupSort.js");
+var _groupSortJsDefault = parcelHelpers.interopDefault(_groupSortJs);
+var _binJs = require("./bin.js");
+var _binJsDefault = parcelHelpers.interopDefault(_binJs);
+var _freedmanDiaconisJs = require("./threshold/freedmanDiaconis.js");
+var _freedmanDiaconisJsDefault = parcelHelpers.interopDefault(_freedmanDiaconisJs);
+var _scottJs = require("./threshold/scott.js");
+var _scottJsDefault = parcelHelpers.interopDefault(_scottJs);
+var _sturgesJs = require("./threshold/sturges.js");
+var _sturgesJsDefault = parcelHelpers.interopDefault(_sturgesJs);
+var _maxJs = require("./max.js");
+var _maxJsDefault = parcelHelpers.interopDefault(_maxJs);
+var _maxIndexJs = require("./maxIndex.js");
+var _maxIndexJsDefault = parcelHelpers.interopDefault(_maxIndexJs);
+var _meanJs = require("./mean.js");
+var _meanJsDefault = parcelHelpers.interopDefault(_meanJs);
+var _medianJs = require("./median.js");
+var _medianJsDefault = parcelHelpers.interopDefault(_medianJs);
 var _mergeJs = require("./merge.js");
 var _mergeJsDefault = parcelHelpers.interopDefault(_mergeJs);
-var _onJs = require("./on.js");
-var _onJsDefault = parcelHelpers.interopDefault(_onJs);
-var _removeJs = require("./remove.js");
-var _removeJsDefault = parcelHelpers.interopDefault(_removeJs);
-var _selectJs = require("./select.js");
-var _selectJsDefault = parcelHelpers.interopDefault(_selectJs);
-var _selectAllJs = require("./selectAll.js");
-var _selectAllJsDefault = parcelHelpers.interopDefault(_selectAllJs);
-var _selectionJs = require("./selection.js");
-var _selectionJsDefault = parcelHelpers.interopDefault(_selectionJs);
-var _styleJs = require("./style.js");
-var _styleJsDefault = parcelHelpers.interopDefault(_styleJs);
-var _styleTweenJs = require("./styleTween.js");
-var _styleTweenJsDefault = parcelHelpers.interopDefault(_styleTweenJs);
-var _textJs = require("./text.js");
-var _textJsDefault = parcelHelpers.interopDefault(_textJs);
-var _textTweenJs = require("./textTween.js");
-var _textTweenJsDefault = parcelHelpers.interopDefault(_textTweenJs);
-var _transitionJs = require("./transition.js");
-var _transitionJsDefault = parcelHelpers.interopDefault(_transitionJs);
-var _tweenJs = require("./tween.js");
-var _tweenJsDefault = parcelHelpers.interopDefault(_tweenJs);
-var _endJs = require("./end.js");
-var _endJsDefault = parcelHelpers.interopDefault(_endJs);
-var id = 0;
-function Transition(groups, parents, name, id) {
-    this._groups = groups;
-    this._parents = parents;
-    this._name = name;
-    this._id = id;
-}
-function transition(name) {
-    return (0, _d3Selection.selection)().transition(name);
-}
-function newId() {
-    return ++id;
-}
-var selection_prototype = (0, _d3Selection.selection).prototype;
-Transition.prototype = transition.prototype = {
-    constructor: Transition,
-    select: (0, _selectJsDefault.default),
-    selectAll: (0, _selectAllJsDefault.default),
-    filter: (0, _filterJsDefault.default),
-    merge: (0, _mergeJsDefault.default),
-    selection: (0, _selectionJsDefault.default),
-    transition: (0, _transitionJsDefault.default),
-    call: selection_prototype.call,
-    nodes: selection_prototype.nodes,
-    node: selection_prototype.node,
-    size: selection_prototype.size,
-    empty: selection_prototype.empty,
-    each: selection_prototype.each,
-    on: (0, _onJsDefault.default),
-    attr: (0, _attrJsDefault.default),
-    attrTween: (0, _attrTweenJsDefault.default),
-    style: (0, _styleJsDefault.default),
-    styleTween: (0, _styleTweenJsDefault.default),
-    text: (0, _textJsDefault.default),
-    textTween: (0, _textTweenJsDefault.default),
-    remove: (0, _removeJsDefault.default),
-    tween: (0, _tweenJsDefault.default),
-    delay: (0, _delayJsDefault.default),
-    duration: (0, _durationJsDefault.default),
-    ease: (0, _easeJsDefault.default),
-    end: (0, _endJsDefault.default)
-};
+var _minJs = require("./min.js");
+var _minJsDefault = parcelHelpers.interopDefault(_minJs);
+var _minIndexJs = require("./minIndex.js");
+var _minIndexJsDefault = parcelHelpers.interopDefault(_minIndexJs);
+var _modeJs = require("./mode.js");
+var _modeJsDefault = parcelHelpers.interopDefault(_modeJs);
+var _niceJs = require("./nice.js");
+var _niceJsDefault = parcelHelpers.interopDefault(_niceJs);
+var _pairsJs = require("./pairs.js");
+var _pairsJsDefault = parcelHelpers.interopDefault(_pairsJs);
+var _permuteJs = require("./permute.js");
+var _permuteJsDefault = parcelHelpers.interopDefault(_permuteJs);
+var _quantileJs = require("./quantile.js");
+var _quantileJsDefault = parcelHelpers.interopDefault(_quantileJs);
+var _quickselectJs = require("./quickselect.js");
+var _quickselectJsDefault = parcelHelpers.interopDefault(_quickselectJs);
+var _rangeJs = require("./range.js");
+var _rangeJsDefault = parcelHelpers.interopDefault(_rangeJs);
+var _rankJs = require("./rank.js");
+var _rankJsDefault = parcelHelpers.interopDefault(_rankJs);
+var _leastJs = require("./least.js");
+var _leastJsDefault = parcelHelpers.interopDefault(_leastJs);
+var _leastIndexJs = require("./leastIndex.js");
+var _leastIndexJsDefault = parcelHelpers.interopDefault(_leastIndexJs);
+var _greatestJs = require("./greatest.js");
+var _greatestJsDefault = parcelHelpers.interopDefault(_greatestJs);
+var _greatestIndexJs = require("./greatestIndex.js");
+var _greatestIndexJsDefault = parcelHelpers.interopDefault(_greatestIndexJs);
+var _scanJs = require("./scan.js");
+var _scanJsDefault = parcelHelpers.interopDefault(_scanJs);
+var _shuffleJs = require("./shuffle.js");
+var _shuffleJsDefault = parcelHelpers.interopDefault(_shuffleJs);
+var _sumJs = require("./sum.js");
+var _sumJsDefault = parcelHelpers.interopDefault(_sumJs);
+var _ticksJs = require("./ticks.js");
+var _ticksJsDefault = parcelHelpers.interopDefault(_ticksJs);
+var _transposeJs = require("./transpose.js");
+var _transposeJsDefault = parcelHelpers.interopDefault(_transposeJs);
+var _varianceJs = require("./variance.js");
+var _varianceJsDefault = parcelHelpers.interopDefault(_varianceJs);
+var _zipJs = require("./zip.js");
+var _zipJsDefault = parcelHelpers.interopDefault(_zipJs);
+var _everyJs = require("./every.js");
+var _everyJsDefault = parcelHelpers.interopDefault(_everyJs);
+var _someJs = require("./some.js");
+var _someJsDefault = parcelHelpers.interopDefault(_someJs);
+var _filterJs = require("./filter.js");
+var _filterJsDefault = parcelHelpers.interopDefault(_filterJs);
+var _mapJs = require("./map.js");
+var _mapJsDefault = parcelHelpers.interopDefault(_mapJs);
+var _reduceJs = require("./reduce.js");
+var _reduceJsDefault = parcelHelpers.interopDefault(_reduceJs);
+var _reverseJs = require("./reverse.js");
+var _reverseJsDefault = parcelHelpers.interopDefault(_reverseJs);
+var _sortJs = require("./sort.js");
+var _sortJsDefault = parcelHelpers.interopDefault(_sortJs);
+var _differenceJs = require("./difference.js");
+var _differenceJsDefault = parcelHelpers.interopDefault(_differenceJs);
+var _disjointJs = require("./disjoint.js");
+var _disjointJsDefault = parcelHelpers.interopDefault(_disjointJs);
+var _intersectionJs = require("./intersection.js");
+var _intersectionJsDefault = parcelHelpers.interopDefault(_intersectionJs);
+var _subsetJs = require("./subset.js");
+var _subsetJsDefault = parcelHelpers.interopDefault(_subsetJs);
+var _supersetJs = require("./superset.js");
+var _supersetJsDefault = parcelHelpers.interopDefault(_supersetJs);
+var _unionJs = require("./union.js");
+var _unionJsDefault = parcelHelpers.interopDefault(_unionJs);
+var _internmap = require("internmap");
 
-},{"d3-selection":"gn9gd","./attr.js":"9UgA3","./attrTween.js":"1hMpn","./delay.js":"2BzOF","./duration.js":"ei298","./ease.js":"lCGHM","./filter.js":"d3Uia","./merge.js":"9odBi","./on.js":"3XrBC","./remove.js":"aZLkz","./select.js":"bgUUX","./selectAll.js":"lqPi4","./selection.js":"iWTRA","./style.js":"44QDP","./styleTween.js":"42AvL","./text.js":"6mGEx","./textTween.js":"kqC5z","./transition.js":"50tVR","./tween.js":"1Kbbg","./end.js":"ev0ir","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9UgA3":[function(require,module,exports) {
+},{"./bisect.js":"j8xa8","./ascending.js":false,"./bisector.js":"iGdKY","./blur.js":false,"./count.js":false,"./cross.js":false,"./cumsum.js":false,"./descending.js":false,"./deviation.js":false,"./extent.js":"6j9dC","./fsum.js":false,"./group.js":false,"./groupSort.js":false,"./bin.js":false,"./threshold/freedmanDiaconis.js":false,"./threshold/scott.js":false,"./threshold/sturges.js":false,"./max.js":false,"./maxIndex.js":false,"./mean.js":false,"./median.js":false,"./merge.js":false,"./min.js":false,"./minIndex.js":false,"./mode.js":false,"./nice.js":false,"./pairs.js":false,"./permute.js":false,"./quantile.js":false,"./quickselect.js":false,"./range.js":false,"./rank.js":false,"./least.js":false,"./leastIndex.js":false,"./greatest.js":false,"./greatestIndex.js":false,"./scan.js":false,"./shuffle.js":false,"./sum.js":false,"./ticks.js":"4mcdF","./transpose.js":false,"./variance.js":false,"./zip.js":false,"./every.js":false,"./some.js":false,"./filter.js":false,"./map.js":false,"./reduce.js":false,"./reverse.js":false,"./sort.js":false,"./difference.js":false,"./disjoint.js":false,"./intersection.js":false,"./subset.js":false,"./superset.js":false,"./union.js":false,"internmap":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"j8xa8":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value) {
-        var fullname = (0, _d3Selection.namespace)(name), i = fullname === "transform" ? (0, _d3Interpolate.interpolateTransformSvg) : (0, _interpolateJsDefault.default);
-        return this.attrTween(name, typeof value === "function" ? (fullname.local ? attrFunctionNS : attrFunction)(fullname, i, (0, _tweenJs.tweenValue)(this, "attr." + name, value)) : value == null ? (fullname.local ? attrRemoveNS : attrRemove)(fullname) : (fullname.local ? attrConstantNS : attrConstant)(fullname, i, value));
-    });
-var _d3Interpolate = require("d3-interpolate");
-var _d3Selection = require("d3-selection");
-var _tweenJs = require("./tween.js");
-var _interpolateJs = require("./interpolate.js");
-var _interpolateJsDefault = parcelHelpers.interopDefault(_interpolateJs);
-function attrRemove(name) {
-    return function() {
-        this.removeAttribute(name);
-    };
-}
-function attrRemoveNS(fullname) {
-    return function() {
-        this.removeAttributeNS(fullname.space, fullname.local);
-    };
-}
-function attrConstant(name, interpolate, value1) {
-    var string00, string1 = value1 + "", interpolate0;
-    return function() {
-        var string0 = this.getAttribute(name);
-        return string0 === string1 ? null : string0 === string00 ? interpolate0 : interpolate0 = interpolate(string00 = string0, value1);
-    };
-}
-function attrConstantNS(fullname, interpolate, value1) {
-    var string00, string1 = value1 + "", interpolate0;
-    return function() {
-        var string0 = this.getAttributeNS(fullname.space, fullname.local);
-        return string0 === string1 ? null : string0 === string00 ? interpolate0 : interpolate0 = interpolate(string00 = string0, value1);
-    };
-}
-function attrFunction(name, interpolate, value) {
-    var string00, string10, interpolate0;
-    return function() {
-        var string0, value1 = value(this), string1;
-        if (value1 == null) return void this.removeAttribute(name);
-        string0 = this.getAttribute(name);
-        string1 = value1 + "";
-        return string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : (string10 = string1, interpolate0 = interpolate(string00 = string0, value1));
-    };
-}
-function attrFunctionNS(fullname, interpolate, value) {
-    var string00, string10, interpolate0;
-    return function() {
-        var string0, value1 = value(this), string1;
-        if (value1 == null) return void this.removeAttributeNS(fullname.space, fullname.local);
-        string0 = this.getAttributeNS(fullname.space, fullname.local);
-        string1 = value1 + "";
-        return string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : (string10 = string1, interpolate0 = interpolate(string00 = string0, value1));
-    };
+parcelHelpers.export(exports, "bisectRight", ()=>bisectRight);
+parcelHelpers.export(exports, "bisectLeft", ()=>bisectLeft);
+parcelHelpers.export(exports, "bisectCenter", ()=>bisectCenter);
+var _ascendingJs = require("./ascending.js");
+var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
+var _bisectorJs = require("./bisector.js");
+var _bisectorJsDefault = parcelHelpers.interopDefault(_bisectorJs);
+var _numberJs = require("./number.js");
+var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
+const ascendingBisect = (0, _bisectorJsDefault.default)((0, _ascendingJsDefault.default));
+const bisectRight = ascendingBisect.right;
+const bisectLeft = ascendingBisect.left;
+const bisectCenter = (0, _bisectorJsDefault.default)((0, _numberJsDefault.default)).center;
+exports.default = bisectRight;
+
+},{"./ascending.js":"97wsw","./bisector.js":"iGdKY","./number.js":"6GA1X","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"97wsw":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>ascending);
+function ascending(a, b) {
+    return a == null || b == null ? NaN : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
 
-},{"d3-interpolate":"6jJyi","d3-selection":"gn9gd","./tween.js":"1Kbbg","./interpolate.js":"69lgs","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6jJyi":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iGdKY":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>bisector);
+var _ascendingJs = require("./ascending.js");
+var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
+var _descendingJs = require("./descending.js");
+var _descendingJsDefault = parcelHelpers.interopDefault(_descendingJs);
+function bisector(f) {
+    let compare1, compare2, delta;
+    // If an accessor is specified, promote it to a comparator. In this case we
+    // can test whether the search value is (self-) comparable. We can’t do this
+    // for a comparator (except for specific, known comparators) because we can’t
+    // tell if the comparator is symmetric, and an asymmetric comparator can’t be
+    // used to test whether a single value is comparable.
+    if (f.length !== 2) {
+        compare1 = (0, _ascendingJsDefault.default);
+        compare2 = (d, x)=>(0, _ascendingJsDefault.default)(f(d), x);
+        delta = (d, x)=>f(d) - x;
+    } else {
+        compare1 = f === (0, _ascendingJsDefault.default) || f === (0, _descendingJsDefault.default) ? f : zero;
+        compare2 = f;
+        delta = f;
+    }
+    function left(a, x, lo = 0, hi = a.length) {
+        if (lo < hi) {
+            if (compare1(x, x) !== 0) return hi;
+            do {
+                const mid = lo + hi >>> 1;
+                if (compare2(a[mid], x) < 0) lo = mid + 1;
+                else hi = mid;
+            }while (lo < hi);
+        }
+        return lo;
+    }
+    function right(a, x, lo = 0, hi = a.length) {
+        if (lo < hi) {
+            if (compare1(x, x) !== 0) return hi;
+            do {
+                const mid = lo + hi >>> 1;
+                if (compare2(a[mid], x) <= 0) lo = mid + 1;
+                else hi = mid;
+            }while (lo < hi);
+        }
+        return lo;
+    }
+    function center(a, x, lo = 0, hi = a.length) {
+        const i = left(a, x, lo, hi - 1);
+        return i > lo && delta(a[i - 1], x) > -delta(a[i], x) ? i - 1 : i;
+    }
+    return {
+        left,
+        center,
+        right
+    };
+}
+function zero() {
+    return 0;
+}
+
+},{"./ascending.js":"97wsw","./descending.js":"9cuqQ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9cuqQ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>descending);
+function descending(a, b) {
+    return a == null || b == null ? NaN : b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6GA1X":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>number);
+parcelHelpers.export(exports, "numbers", ()=>numbers);
+function number(x) {
+    return x === null ? NaN : +x;
+}
+function* numbers(values, valueof) {
+    if (valueof === undefined) {
+        for (let value of values)if (value != null && (value = +value) >= value) yield value;
+    } else {
+        let index = -1;
+        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) yield value;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6j9dC":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>extent);
+function extent(values, valueof) {
+    let min;
+    let max;
+    if (valueof === undefined) {
+        for (const value of values)if (value != null) {
+            if (min === undefined) {
+                if (value >= value) min = max = value;
+            } else {
+                if (min > value) min = value;
+                if (max < value) max = value;
+            }
+        }
+    } else {
+        let index = -1;
+        for (let value of values)if ((value = valueof(value, ++index, values)) != null) {
+            if (min === undefined) {
+                if (value >= value) min = max = value;
+            } else {
+                if (min > value) min = value;
+                if (max < value) max = value;
+            }
+        }
+    }
+    return [
+        min,
+        max
+    ];
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4mcdF":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>ticks);
+parcelHelpers.export(exports, "tickIncrement", ()=>tickIncrement);
+parcelHelpers.export(exports, "tickStep", ()=>tickStep);
+const e10 = Math.sqrt(50), e5 = Math.sqrt(10), e2 = Math.sqrt(2);
+function tickSpec(start, stop, count) {
+    const step = (stop - start) / Math.max(0, count), power = Math.floor(Math.log10(step)), error = step / Math.pow(10, power), factor = error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1;
+    let i1, i2, inc;
+    if (power < 0) {
+        inc = Math.pow(10, -power) / factor;
+        i1 = Math.round(start * inc);
+        i2 = Math.round(stop * inc);
+        if (i1 / inc < start) ++i1;
+        if (i2 / inc > stop) --i2;
+        inc = -inc;
+    } else {
+        inc = Math.pow(10, power) * factor;
+        i1 = Math.round(start / inc);
+        i2 = Math.round(stop / inc);
+        if (i1 * inc < start) ++i1;
+        if (i2 * inc > stop) --i2;
+    }
+    if (i2 < i1 && 0.5 <= count && count < 2) return tickSpec(start, stop, count * 2);
+    return [
+        i1,
+        i2,
+        inc
+    ];
+}
+function ticks(start, stop, count) {
+    stop = +stop, start = +start, count = +count;
+    if (!(count > 0)) return [];
+    if (start === stop) return [
+        start
+    ];
+    const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec(stop, start, count) : tickSpec(start, stop, count);
+    if (!(i2 >= i1)) return [];
+    const n = i2 - i1 + 1, ticks = new Array(n);
+    if (reverse) {
+        if (inc < 0) for(let i = 0; i < n; ++i)ticks[i] = (i2 - i) / -inc;
+        else for(let i = 0; i < n; ++i)ticks[i] = (i2 - i) * inc;
+    } else {
+        if (inc < 0) for(let i = 0; i < n; ++i)ticks[i] = (i1 + i) / -inc;
+        else for(let i = 0; i < n; ++i)ticks[i] = (i1 + i) * inc;
+    }
+    return ticks;
+}
+function tickIncrement(start, stop, count) {
+    stop = +stop, start = +start, count = +count;
+    return tickSpec(start, stop, count)[2];
+}
+function tickStep(start, stop, count) {
+    stop = +stop, start = +start, count = +count;
+    const reverse = stop < start, inc = reverse ? tickIncrement(stop, start, count) : tickIncrement(start, stop, count);
+    return (reverse ? -1 : 1) * (inc < 0 ? 1 / -inc : inc);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3mOB2":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "scaleBand", ()=>(0, _bandJsDefault.default));
+parcelHelpers.export(exports, "scalePoint", ()=>(0, _bandJs.point));
+parcelHelpers.export(exports, "scaleIdentity", ()=>(0, _identityJsDefault.default));
+parcelHelpers.export(exports, "scaleLinear", ()=>(0, _linearJsDefault.default));
+parcelHelpers.export(exports, "scaleLog", ()=>(0, _logJsDefault.default));
+parcelHelpers.export(exports, "scaleSymlog", ()=>(0, _symlogJsDefault.default));
+parcelHelpers.export(exports, "scaleOrdinal", ()=>(0, _ordinalJsDefault.default));
+parcelHelpers.export(exports, "scaleImplicit", ()=>(0, _ordinalJs.implicit));
+parcelHelpers.export(exports, "scalePow", ()=>(0, _powJsDefault.default));
+parcelHelpers.export(exports, "scaleSqrt", ()=>(0, _powJs.sqrt));
+parcelHelpers.export(exports, "scaleRadial", ()=>(0, _radialJsDefault.default));
+parcelHelpers.export(exports, "scaleQuantile", ()=>(0, _quantileJsDefault.default));
+parcelHelpers.export(exports, "scaleQuantize", ()=>(0, _quantizeJsDefault.default));
+parcelHelpers.export(exports, "scaleThreshold", ()=>(0, _thresholdJsDefault.default));
+parcelHelpers.export(exports, "scaleTime", ()=>(0, _timeJsDefault.default));
+parcelHelpers.export(exports, "scaleUtc", ()=>(0, _utcTimeJsDefault.default));
+parcelHelpers.export(exports, "scaleSequential", ()=>(0, _sequentialJsDefault.default));
+parcelHelpers.export(exports, "scaleSequentialLog", ()=>(0, _sequentialJs.sequentialLog));
+parcelHelpers.export(exports, "scaleSequentialPow", ()=>(0, _sequentialJs.sequentialPow));
+parcelHelpers.export(exports, "scaleSequentialSqrt", ()=>(0, _sequentialJs.sequentialSqrt));
+parcelHelpers.export(exports, "scaleSequentialSymlog", ()=>(0, _sequentialJs.sequentialSymlog));
+parcelHelpers.export(exports, "scaleSequentialQuantile", ()=>(0, _sequentialQuantileJsDefault.default));
+parcelHelpers.export(exports, "scaleDiverging", ()=>(0, _divergingJsDefault.default));
+parcelHelpers.export(exports, "scaleDivergingLog", ()=>(0, _divergingJs.divergingLog));
+parcelHelpers.export(exports, "scaleDivergingPow", ()=>(0, _divergingJs.divergingPow));
+parcelHelpers.export(exports, "scaleDivergingSqrt", ()=>(0, _divergingJs.divergingSqrt));
+parcelHelpers.export(exports, "scaleDivergingSymlog", ()=>(0, _divergingJs.divergingSymlog));
+parcelHelpers.export(exports, "tickFormat", ()=>(0, _tickFormatJsDefault.default));
+var _bandJs = require("./band.js");
+var _bandJsDefault = parcelHelpers.interopDefault(_bandJs);
+var _identityJs = require("./identity.js");
+var _identityJsDefault = parcelHelpers.interopDefault(_identityJs);
+var _linearJs = require("./linear.js");
+var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
+var _logJs = require("./log.js");
+var _logJsDefault = parcelHelpers.interopDefault(_logJs);
+var _symlogJs = require("./symlog.js");
+var _symlogJsDefault = parcelHelpers.interopDefault(_symlogJs);
+var _ordinalJs = require("./ordinal.js");
+var _ordinalJsDefault = parcelHelpers.interopDefault(_ordinalJs);
+var _powJs = require("./pow.js");
+var _powJsDefault = parcelHelpers.interopDefault(_powJs);
+var _radialJs = require("./radial.js");
+var _radialJsDefault = parcelHelpers.interopDefault(_radialJs);
+var _quantileJs = require("./quantile.js");
+var _quantileJsDefault = parcelHelpers.interopDefault(_quantileJs);
+var _quantizeJs = require("./quantize.js");
+var _quantizeJsDefault = parcelHelpers.interopDefault(_quantizeJs);
+var _thresholdJs = require("./threshold.js");
+var _thresholdJsDefault = parcelHelpers.interopDefault(_thresholdJs);
+var _timeJs = require("./time.js");
+var _timeJsDefault = parcelHelpers.interopDefault(_timeJs);
+var _utcTimeJs = require("./utcTime.js");
+var _utcTimeJsDefault = parcelHelpers.interopDefault(_utcTimeJs);
+var _sequentialJs = require("./sequential.js");
+var _sequentialJsDefault = parcelHelpers.interopDefault(_sequentialJs);
+var _sequentialQuantileJs = require("./sequentialQuantile.js");
+var _sequentialQuantileJsDefault = parcelHelpers.interopDefault(_sequentialQuantileJs);
+var _divergingJs = require("./diverging.js");
+var _divergingJsDefault = parcelHelpers.interopDefault(_divergingJs);
+var _tickFormatJs = require("./tickFormat.js");
+var _tickFormatJsDefault = parcelHelpers.interopDefault(_tickFormatJs);
+
+},{"./band.js":false,"./identity.js":false,"./linear.js":"aBa5M","./log.js":false,"./symlog.js":false,"./ordinal.js":false,"./pow.js":false,"./radial.js":false,"./quantile.js":false,"./quantize.js":false,"./threshold.js":false,"./time.js":false,"./utcTime.js":false,"./sequential.js":false,"./sequentialQuantile.js":false,"./diverging.js":false,"./tickFormat.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aBa5M":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "linearish", ()=>linearish);
+parcelHelpers.export(exports, "default", ()=>linear);
+var _d3Array = require("d3-array");
+var _continuousJs = require("./continuous.js");
+var _continuousJsDefault = parcelHelpers.interopDefault(_continuousJs);
+var _initJs = require("./init.js");
+var _tickFormatJs = require("./tickFormat.js");
+var _tickFormatJsDefault = parcelHelpers.interopDefault(_tickFormatJs);
+function linearish(scale) {
+    var domain = scale.domain;
+    scale.ticks = function(count) {
+        var d = domain();
+        return (0, _d3Array.ticks)(d[0], d[d.length - 1], count == null ? 10 : count);
+    };
+    scale.tickFormat = function(count, specifier) {
+        var d = domain();
+        return (0, _tickFormatJsDefault.default)(d[0], d[d.length - 1], count == null ? 10 : count, specifier);
+    };
+    scale.nice = function(count) {
+        if (count == null) count = 10;
+        var d = domain();
+        var i0 = 0;
+        var i1 = d.length - 1;
+        var start = d[i0];
+        var stop = d[i1];
+        var prestep;
+        var step;
+        var maxIter = 10;
+        if (stop < start) {
+            step = start, start = stop, stop = step;
+            step = i0, i0 = i1, i1 = step;
+        }
+        while(maxIter-- > 0){
+            step = (0, _d3Array.tickIncrement)(start, stop, count);
+            if (step === prestep) {
+                d[i0] = start;
+                d[i1] = stop;
+                return domain(d);
+            } else if (step > 0) {
+                start = Math.floor(start / step) * step;
+                stop = Math.ceil(stop / step) * step;
+            } else if (step < 0) {
+                start = Math.ceil(start * step) / step;
+                stop = Math.floor(stop * step) / step;
+            } else break;
+            prestep = step;
+        }
+        return scale;
+    };
+    return scale;
+}
+function linear() {
+    var scale = (0, _continuousJsDefault.default)();
+    scale.copy = function() {
+        return (0, _continuousJs.copy)(scale, linear());
+    };
+    (0, _initJs.initRange).apply(scale, arguments);
+    return linearish(scale);
+}
+
+},{"d3-array":"aerWx","./continuous.js":"lAXcf","./init.js":"5bjmJ","./tickFormat.js":"agHUz","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lAXcf":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "identity", ()=>identity);
+parcelHelpers.export(exports, "copy", ()=>copy);
+parcelHelpers.export(exports, "transformer", ()=>transformer);
+parcelHelpers.export(exports, "default", ()=>continuous);
+var _d3Array = require("d3-array");
+var _d3Interpolate = require("d3-interpolate");
+var _constantJs = require("./constant.js");
+var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
+var _numberJs = require("./number.js");
+var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
+var unit = [
+    0,
+    1
+];
+function identity(x) {
+    return x;
+}
+function normalize(a, b) {
+    return (b -= a = +a) ? function(x) {
+        return (x - a) / b;
+    } : (0, _constantJsDefault.default)(isNaN(b) ? NaN : 0.5);
+}
+function clamper(a, b) {
+    var t;
+    if (a > b) t = a, a = b, b = t;
+    return function(x) {
+        return Math.max(a, Math.min(b, x));
+    };
+}
+// normalize(a, b)(x) takes a domain value x in [a,b] and returns the corresponding parameter t in [0,1].
+// interpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding range value x in [a,b].
+function bimap(domain, range, interpolate) {
+    var d0 = domain[0], d1 = domain[1], r0 = range[0], r1 = range[1];
+    if (d1 < d0) d0 = normalize(d1, d0), r0 = interpolate(r1, r0);
+    else d0 = normalize(d0, d1), r0 = interpolate(r0, r1);
+    return function(x) {
+        return r0(d0(x));
+    };
+}
+function polymap(domain, range, interpolate) {
+    var j = Math.min(domain.length, range.length) - 1, d = new Array(j), r = new Array(j), i = -1;
+    // Reverse descending domains.
+    if (domain[j] < domain[0]) {
+        domain = domain.slice().reverse();
+        range = range.slice().reverse();
+    }
+    while(++i < j){
+        d[i] = normalize(domain[i], domain[i + 1]);
+        r[i] = interpolate(range[i], range[i + 1]);
+    }
+    return function(x) {
+        var i = (0, _d3Array.bisect)(domain, x, 1, j) - 1;
+        return r[i](d[i](x));
+    };
+}
+function copy(source, target) {
+    return target.domain(source.domain()).range(source.range()).interpolate(source.interpolate()).clamp(source.clamp()).unknown(source.unknown());
+}
+function transformer() {
+    var domain = unit, range = unit, interpolate = (0, _d3Interpolate.interpolate), transform, untransform, unknown, clamp = identity, piecewise, output, input;
+    function rescale() {
+        var n = Math.min(domain.length, range.length);
+        if (clamp !== identity) clamp = clamper(domain[0], domain[n - 1]);
+        piecewise = n > 2 ? polymap : bimap;
+        output = input = null;
+        return scale;
+    }
+    function scale(x) {
+        return x == null || isNaN(x = +x) ? unknown : (output || (output = piecewise(domain.map(transform), range, interpolate)))(transform(clamp(x)));
+    }
+    scale.invert = function(y) {
+        return clamp(untransform((input || (input = piecewise(range, domain.map(transform), (0, _d3Interpolate.interpolateNumber))))(y)));
+    };
+    scale.domain = function(_) {
+        return arguments.length ? (domain = Array.from(_, (0, _numberJsDefault.default)), rescale()) : domain.slice();
+    };
+    scale.range = function(_) {
+        return arguments.length ? (range = Array.from(_), rescale()) : range.slice();
+    };
+    scale.rangeRound = function(_) {
+        return range = Array.from(_), interpolate = (0, _d3Interpolate.interpolateRound), rescale();
+    };
+    scale.clamp = function(_) {
+        return arguments.length ? (clamp = _ ? true : identity, rescale()) : clamp !== identity;
+    };
+    scale.interpolate = function(_) {
+        return arguments.length ? (interpolate = _, rescale()) : interpolate;
+    };
+    scale.unknown = function(_) {
+        return arguments.length ? (unknown = _, scale) : unknown;
+    };
+    return function(t, u) {
+        transform = t, untransform = u;
+        return rescale();
+    };
+}
+function continuous() {
+    return transformer()(identity, identity);
+}
+
+},{"d3-array":"aerWx","d3-interpolate":"6jJyi","./constant.js":"5NUS4","./number.js":"4dxeq","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6jJyi":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "interpolate", ()=>(0, _valueJsDefault.default));
@@ -2976,7 +3111,7 @@ var _piecewiseJsDefault = parcelHelpers.interopDefault(_piecewiseJs);
 var _quantizeJs = require("./quantize.js");
 var _quantizeJsDefault = parcelHelpers.interopDefault(_quantizeJs);
 
-},{"./value.js":"2GpMq","./array.js":false,"./basis.js":false,"./basisClosed.js":false,"./date.js":false,"./discrete.js":false,"./hue.js":false,"./number.js":"fZAq5","./numberArray.js":false,"./object.js":false,"./round.js":"8lHW7","./string.js":"Qre8m","./transform/index.js":"jDBQO","./zoom.js":false,"./rgb.js":"gHrgo","./hsl.js":false,"./lab.js":false,"./hcl.js":false,"./cubehelix.js":false,"./piecewise.js":false,"./quantize.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2GpMq":[function(require,module,exports) {
+},{"./value.js":"2GpMq","./array.js":false,"./basis.js":false,"./basisClosed.js":false,"./date.js":false,"./discrete.js":false,"./hue.js":false,"./number.js":"fZAq5","./numberArray.js":false,"./object.js":false,"./round.js":"8lHW7","./string.js":false,"./transform/index.js":false,"./zoom.js":false,"./rgb.js":false,"./hsl.js":false,"./lab.js":false,"./hcl.js":false,"./cubehelix.js":false,"./piecewise.js":false,"./quantize.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2GpMq":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(a, b) {
@@ -3632,1397 +3767,7 @@ parcelHelpers.export(exports, "default", ()=>function(a, b) {
         };
     });
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jDBQO":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "interpolateTransformCss", ()=>interpolateTransformCss);
-parcelHelpers.export(exports, "interpolateTransformSvg", ()=>interpolateTransformSvg);
-var _numberJs = require("../number.js");
-var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
-var _parseJs = require("./parse.js");
-function interpolateTransform(parse, pxComma, pxParen, degParen) {
-    function pop(s) {
-        return s.length ? s.pop() + " " : "";
-    }
-    function translate(xa, ya, xb, yb, s, q) {
-        if (xa !== xb || ya !== yb) {
-            var i = s.push("translate(", null, pxComma, null, pxParen);
-            q.push({
-                i: i - 4,
-                x: (0, _numberJsDefault.default)(xa, xb)
-            }, {
-                i: i - 2,
-                x: (0, _numberJsDefault.default)(ya, yb)
-            });
-        } else if (xb || yb) s.push("translate(" + xb + pxComma + yb + pxParen);
-    }
-    function rotate(a, b, s, q) {
-        if (a !== b) {
-            if (a - b > 180) b += 360;
-            else if (b - a > 180) a += 360; // shortest path
-            q.push({
-                i: s.push(pop(s) + "rotate(", null, degParen) - 2,
-                x: (0, _numberJsDefault.default)(a, b)
-            });
-        } else if (b) s.push(pop(s) + "rotate(" + b + degParen);
-    }
-    function skewX(a, b, s, q) {
-        if (a !== b) q.push({
-            i: s.push(pop(s) + "skewX(", null, degParen) - 2,
-            x: (0, _numberJsDefault.default)(a, b)
-        });
-        else if (b) s.push(pop(s) + "skewX(" + b + degParen);
-    }
-    function scale(xa, ya, xb, yb, s, q) {
-        if (xa !== xb || ya !== yb) {
-            var i = s.push(pop(s) + "scale(", null, ",", null, ")");
-            q.push({
-                i: i - 4,
-                x: (0, _numberJsDefault.default)(xa, xb)
-            }, {
-                i: i - 2,
-                x: (0, _numberJsDefault.default)(ya, yb)
-            });
-        } else if (xb !== 1 || yb !== 1) s.push(pop(s) + "scale(" + xb + "," + yb + ")");
-    }
-    return function(a, b) {
-        var s = [], q = []; // number interpolators
-        a = parse(a), b = parse(b);
-        translate(a.translateX, a.translateY, b.translateX, b.translateY, s, q);
-        rotate(a.rotate, b.rotate, s, q);
-        skewX(a.skewX, b.skewX, s, q);
-        scale(a.scaleX, a.scaleY, b.scaleX, b.scaleY, s, q);
-        a = b = null; // gc
-        return function(t) {
-            var i = -1, n = q.length, o;
-            while(++i < n)s[(o = q[i]).i] = o.x(t);
-            return s.join("");
-        };
-    };
-}
-var interpolateTransformCss = interpolateTransform((0, _parseJs.parseCss), "px, ", "px)", "deg)");
-var interpolateTransformSvg = interpolateTransform((0, _parseJs.parseSvg), ", ", ")", ")");
-
-},{"../number.js":"fZAq5","./parse.js":"dwvtF","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dwvtF":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "parseCss", ()=>parseCss);
-parcelHelpers.export(exports, "parseSvg", ()=>parseSvg);
-var _decomposeJs = require("./decompose.js");
-var _decomposeJsDefault = parcelHelpers.interopDefault(_decomposeJs);
-var cssNode, cssRoot, cssView, svgNode;
-function parseCss(value) {
-    if (value === "none") return 0, _decomposeJs.identity;
-    if (!cssNode) cssNode = document.createElement("DIV"), cssRoot = document.documentElement, cssView = document.defaultView;
-    cssNode.style.transform = value;
-    value = cssView.getComputedStyle(cssRoot.appendChild(cssNode), null).getPropertyValue("transform");
-    cssRoot.removeChild(cssNode);
-    value = value.slice(7, -1).split(",");
-    return (0, _decomposeJsDefault.default)(+value[0], +value[1], +value[2], +value[3], +value[4], +value[5]);
-}
-function parseSvg(value) {
-    if (value == null) return 0, _decomposeJs.identity;
-    if (!svgNode) svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    svgNode.setAttribute("transform", value);
-    if (!(value = svgNode.transform.baseVal.consolidate())) return 0, _decomposeJs.identity;
-    value = value.matrix;
-    return (0, _decomposeJsDefault.default)(value.a, value.b, value.c, value.d, value.e, value.f);
-}
-
-},{"./decompose.js":"7Ejbr","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7Ejbr":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "identity", ()=>identity);
-parcelHelpers.export(exports, "default", ()=>function(a, b, c, d, e, f) {
-        var scaleX, scaleY, skewX;
-        if (scaleX = Math.sqrt(a * a + b * b)) a /= scaleX, b /= scaleX;
-        if (skewX = a * c + b * d) c -= a * skewX, d -= b * skewX;
-        if (scaleY = Math.sqrt(c * c + d * d)) c /= scaleY, d /= scaleY, skewX /= scaleY;
-        if (a * d < b * c) a = -a, b = -b, skewX = -skewX, scaleX = -scaleX;
-        return {
-            translateX: e,
-            translateY: f,
-            rotate: Math.atan2(b, a) * degrees,
-            skewX: Math.atan(skewX) * degrees,
-            scaleX: scaleX,
-            scaleY: scaleY
-        };
-    });
-var degrees = 180 / Math.PI;
-var identity = {
-    translateX: 0,
-    translateY: 0,
-    rotate: 0,
-    skewX: 0,
-    scaleX: 1,
-    scaleY: 1
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1Kbbg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value) {
-        var id = this._id;
-        name += "";
-        if (arguments.length < 2) {
-            var tween = (0, _scheduleJs.get)(this.node(), id).tween;
-            for(var i = 0, n = tween.length, t; i < n; ++i){
-                if ((t = tween[i]).name === name) return t.value;
-            }
-            return null;
-        }
-        return this.each((value == null ? tweenRemove : tweenFunction)(id, name, value));
-    });
-parcelHelpers.export(exports, "tweenValue", ()=>tweenValue);
-var _scheduleJs = require("./schedule.js");
-function tweenRemove(id, name) {
-    var tween0, tween1;
-    return function() {
-        var schedule = (0, _scheduleJs.set)(this, id), tween = schedule.tween;
-        // If this node shared tween with the previous node,
-        // just assign the updated shared tween and we’re done!
-        // Otherwise, copy-on-write.
-        if (tween !== tween0) {
-            tween1 = tween0 = tween;
-            for(var i = 0, n = tween1.length; i < n; ++i)if (tween1[i].name === name) {
-                tween1 = tween1.slice();
-                tween1.splice(i, 1);
-                break;
-            }
-        }
-        schedule.tween = tween1;
-    };
-}
-function tweenFunction(id, name, value) {
-    var tween0, tween1;
-    if (typeof value !== "function") throw new Error;
-    return function() {
-        var schedule = (0, _scheduleJs.set)(this, id), tween = schedule.tween;
-        // If this node shared tween with the previous node,
-        // just assign the updated shared tween and we’re done!
-        // Otherwise, copy-on-write.
-        if (tween !== tween0) {
-            tween1 = (tween0 = tween).slice();
-            for(var t = {
-                name: name,
-                value: value
-            }, i = 0, n = tween1.length; i < n; ++i)if (tween1[i].name === name) {
-                tween1[i] = t;
-                break;
-            }
-            if (i === n) tween1.push(t);
-        }
-        schedule.tween = tween1;
-    };
-}
-function tweenValue(transition, name, value) {
-    var id = transition._id;
-    transition.each(function() {
-        var schedule = (0, _scheduleJs.set)(this, id);
-        (schedule.value || (schedule.value = {}))[name] = value.apply(this, arguments);
-    });
-    return function(node) {
-        return (0, _scheduleJs.get)(node, id).value[name];
-    };
-}
-
-},{"./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"69lgs":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(a, b) {
-        var c;
-        return (typeof b === "number" ? (0, _d3Interpolate.interpolateNumber) : b instanceof (0, _d3Color.color) ? (0, _d3Interpolate.interpolateRgb) : (c = (0, _d3Color.color)(b)) ? (b = c, _d3Interpolate.interpolateRgb) : (0, _d3Interpolate.interpolateString))(a, b);
-    });
-var _d3Color = require("d3-color");
-var _d3Interpolate = require("d3-interpolate");
-
-},{"d3-color":"grhaa","d3-interpolate":"6jJyi","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1hMpn":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value) {
-        var key = "attr." + name;
-        if (arguments.length < 2) return (key = this.tween(key)) && key._value;
-        if (value == null) return this.tween(key, null);
-        if (typeof value !== "function") throw new Error;
-        var fullname = (0, _d3Selection.namespace)(name);
-        return this.tween(key, (fullname.local ? attrTweenNS : attrTween)(fullname, value));
-    });
-var _d3Selection = require("d3-selection");
-function attrInterpolate(name, i) {
-    return function(t) {
-        this.setAttribute(name, i.call(this, t));
-    };
-}
-function attrInterpolateNS(fullname, i) {
-    return function(t) {
-        this.setAttributeNS(fullname.space, fullname.local, i.call(this, t));
-    };
-}
-function attrTweenNS(fullname, value) {
-    var t0, i0;
-    function tween() {
-        var i = value.apply(this, arguments);
-        if (i !== i0) t0 = (i0 = i) && attrInterpolateNS(fullname, i);
-        return t0;
-    }
-    tween._value = value;
-    return tween;
-}
-function attrTween(name, value) {
-    var t0, i0;
-    function tween() {
-        var i = value.apply(this, arguments);
-        if (i !== i0) t0 = (i0 = i) && attrInterpolate(name, i);
-        return t0;
-    }
-    tween._value = value;
-    return tween;
-}
-
-},{"d3-selection":"gn9gd","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2BzOF":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        var id = this._id;
-        return arguments.length ? this.each((typeof value === "function" ? delayFunction : delayConstant)(id, value)) : (0, _scheduleJs.get)(this.node(), id).delay;
-    });
-var _scheduleJs = require("./schedule.js");
-function delayFunction(id, value) {
-    return function() {
-        (0, _scheduleJs.init)(this, id).delay = +value.apply(this, arguments);
-    };
-}
-function delayConstant(id, value) {
-    return value = +value, function() {
-        (0, _scheduleJs.init)(this, id).delay = value;
-    };
-}
-
-},{"./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ei298":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        var id = this._id;
-        return arguments.length ? this.each((typeof value === "function" ? durationFunction : durationConstant)(id, value)) : (0, _scheduleJs.get)(this.node(), id).duration;
-    });
-var _scheduleJs = require("./schedule.js");
-function durationFunction(id, value) {
-    return function() {
-        (0, _scheduleJs.set)(this, id).duration = +value.apply(this, arguments);
-    };
-}
-function durationConstant(id, value) {
-    return value = +value, function() {
-        (0, _scheduleJs.set)(this, id).duration = value;
-    };
-}
-
-},{"./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lCGHM":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        var id = this._id;
-        return arguments.length ? this.each(easeConstant(id, value)) : (0, _scheduleJs.get)(this.node(), id).ease;
-    });
-var _scheduleJs = require("./schedule.js");
-function easeConstant(id, value) {
-    if (typeof value !== "function") throw new Error;
-    return function() {
-        (0, _scheduleJs.set)(this, id).ease = value;
-    };
-}
-
-},{"./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"d3Uia":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(match) {
-        if (typeof match !== "function") match = (0, _d3Selection.matcher)(match);
-        for(var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i)if ((node = group[i]) && match.call(node, node.__data__, i, group)) subgroup.push(node);
-        }
-        return new (0, _indexJs.Transition)(subgroups, this._parents, this._name, this._id);
-    });
-var _d3Selection = require("d3-selection");
-var _indexJs = require("./index.js");
-
-},{"d3-selection":"gn9gd","./index.js":"h2Srb","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9odBi":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(transition) {
-        if (transition._id !== this._id) throw new Error;
-        for(var groups0 = this._groups, groups1 = transition._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j){
-            for(var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i)if (node = group0[i] || group1[i]) merge[i] = node;
-        }
-        for(; j < m0; ++j)merges[j] = groups0[j];
-        return new (0, _indexJs.Transition)(merges, this._parents, this._name, this._id);
-    });
-var _indexJs = require("./index.js");
-
-},{"./index.js":"h2Srb","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3XrBC":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, listener) {
-        var id = this._id;
-        return arguments.length < 2 ? (0, _scheduleJs.get)(this.node(), id).on.on(name) : this.each(onFunction(id, name, listener));
-    });
-var _scheduleJs = require("./schedule.js");
-function start(name) {
-    return (name + "").trim().split(/^|\s+/).every(function(t) {
-        var i = t.indexOf(".");
-        if (i >= 0) t = t.slice(0, i);
-        return !t || t === "start";
-    });
-}
-function onFunction(id, name, listener) {
-    var on0, on1, sit = start(name) ? (0, _scheduleJs.init) : (0, _scheduleJs.set);
-    return function() {
-        var schedule = sit(this, id), on = schedule.on;
-        // If this node shared a dispatch with the previous node,
-        // just assign the updated shared dispatch and we’re done!
-        // Otherwise, copy-on-write.
-        if (on !== on0) (on1 = (on0 = on).copy()).on(name, listener);
-        schedule.on = on1;
-    };
-}
-
-},{"./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aZLkz":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return this.on("end.remove", removeFunction(this._id));
-    });
-function removeFunction(id) {
-    return function() {
-        var parent = this.parentNode;
-        for(var i in this.__transition)if (+i !== id) return;
-        if (parent) parent.removeChild(this);
-    };
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bgUUX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(select) {
-        var name = this._name, id = this._id;
-        if (typeof select !== "function") select = (0, _d3Selection.selector)(select);
-        for(var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i)if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
-                if ("__data__" in node) subnode.__data__ = node.__data__;
-                subgroup[i] = subnode;
-                (0, _scheduleJsDefault.default)(subgroup[i], name, id, i, subgroup, (0, _scheduleJs.get)(node, id));
-            }
-        }
-        return new (0, _indexJs.Transition)(subgroups, this._parents, name, id);
-    });
-var _d3Selection = require("d3-selection");
-var _indexJs = require("./index.js");
-var _scheduleJs = require("./schedule.js");
-var _scheduleJsDefault = parcelHelpers.interopDefault(_scheduleJs);
-
-},{"d3-selection":"gn9gd","./index.js":"h2Srb","./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lqPi4":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(select) {
-        var name = this._name, id = this._id;
-        if (typeof select !== "function") select = (0, _d3Selection.selectorAll)(select);
-        for(var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, node, i = 0; i < n; ++i)if (node = group[i]) {
-                for(var children = select.call(node, node.__data__, i, group), child, inherit = (0, _scheduleJs.get)(node, id), k = 0, l = children.length; k < l; ++k)if (child = children[k]) (0, _scheduleJsDefault.default)(child, name, id, k, children, inherit);
-                subgroups.push(children);
-                parents.push(node);
-            }
-        }
-        return new (0, _indexJs.Transition)(subgroups, parents, name, id);
-    });
-var _d3Selection = require("d3-selection");
-var _indexJs = require("./index.js");
-var _scheduleJs = require("./schedule.js");
-var _scheduleJsDefault = parcelHelpers.interopDefault(_scheduleJs);
-
-},{"d3-selection":"gn9gd","./index.js":"h2Srb","./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iWTRA":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        return new Selection(this._groups, this._parents);
-    });
-var _d3Selection = require("d3-selection");
-var Selection = (0, _d3Selection.selection).prototype.constructor;
-
-},{"d3-selection":"gn9gd","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"44QDP":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value, priority) {
-        var i = (name += "") === "transform" ? (0, _d3Interpolate.interpolateTransformCss) : (0, _interpolateJsDefault.default);
-        return value == null ? this.styleTween(name, styleNull(name, i)).on("end.style." + name, styleRemove(name)) : typeof value === "function" ? this.styleTween(name, styleFunction(name, i, (0, _tweenJs.tweenValue)(this, "style." + name, value))).each(styleMaybeRemove(this._id, name)) : this.styleTween(name, styleConstant(name, i, value), priority).on("end.style." + name, null);
-    });
-var _d3Interpolate = require("d3-interpolate");
-var _d3Selection = require("d3-selection");
-var _scheduleJs = require("./schedule.js");
-var _tweenJs = require("./tween.js");
-var _interpolateJs = require("./interpolate.js");
-var _interpolateJsDefault = parcelHelpers.interopDefault(_interpolateJs);
-function styleNull(name, interpolate) {
-    var string00, string10, interpolate0;
-    return function() {
-        var string0 = (0, _d3Selection.style)(this, name), string1 = (this.style.removeProperty(name), (0, _d3Selection.style)(this, name));
-        return string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : interpolate0 = interpolate(string00 = string0, string10 = string1);
-    };
-}
-function styleRemove(name) {
-    return function() {
-        this.style.removeProperty(name);
-    };
-}
-function styleConstant(name, interpolate, value1) {
-    var string00, string1 = value1 + "", interpolate0;
-    return function() {
-        var string0 = (0, _d3Selection.style)(this, name);
-        return string0 === string1 ? null : string0 === string00 ? interpolate0 : interpolate0 = interpolate(string00 = string0, value1);
-    };
-}
-function styleFunction(name, interpolate, value) {
-    var string00, string10, interpolate0;
-    return function() {
-        var string0 = (0, _d3Selection.style)(this, name), value1 = value(this), string1 = value1 + "";
-        if (value1 == null) string1 = value1 = (this.style.removeProperty(name), (0, _d3Selection.style)(this, name));
-        return string0 === string1 ? null : string0 === string00 && string1 === string10 ? interpolate0 : (string10 = string1, interpolate0 = interpolate(string00 = string0, value1));
-    };
-}
-function styleMaybeRemove(id, name) {
-    var on0, on1, listener0, key = "style." + name, event = "end." + key, remove;
-    return function() {
-        var schedule = (0, _scheduleJs.set)(this, id), on = schedule.on, listener = schedule.value[key] == null ? remove || (remove = styleRemove(name)) : undefined;
-        // If this node shared a dispatch with the previous node,
-        // just assign the updated shared dispatch and we’re done!
-        // Otherwise, copy-on-write.
-        if (on !== on0 || listener0 !== listener) (on1 = (on0 = on).copy()).on(event, listener0 = listener);
-        schedule.on = on1;
-    };
-}
-
-},{"d3-interpolate":"6jJyi","d3-selection":"gn9gd","./schedule.js":"de74c","./tween.js":"1Kbbg","./interpolate.js":"69lgs","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"42AvL":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(name, value, priority) {
-        var key = "style." + (name += "");
-        if (arguments.length < 2) return (key = this.tween(key)) && key._value;
-        if (value == null) return this.tween(key, null);
-        if (typeof value !== "function") throw new Error;
-        return this.tween(key, styleTween(name, value, priority == null ? "" : priority));
-    });
-function styleInterpolate(name, i, priority) {
-    return function(t) {
-        this.style.setProperty(name, i.call(this, t), priority);
-    };
-}
-function styleTween(name, value, priority) {
-    var t, i0;
-    function tween() {
-        var i = value.apply(this, arguments);
-        if (i !== i0) t = (i0 = i) && styleInterpolate(name, i, priority);
-        return t;
-    }
-    tween._value = value;
-    return tween;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6mGEx":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        return this.tween("text", typeof value === "function" ? textFunction((0, _tweenJs.tweenValue)(this, "text", value)) : textConstant(value == null ? "" : value + ""));
-    });
-var _tweenJs = require("./tween.js");
-function textConstant(value) {
-    return function() {
-        this.textContent = value;
-    };
-}
-function textFunction(value) {
-    return function() {
-        var value1 = value(this);
-        this.textContent = value1 == null ? "" : value1;
-    };
-}
-
-},{"./tween.js":"1Kbbg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kqC5z":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(value) {
-        var key = "text";
-        if (arguments.length < 1) return (key = this.tween(key)) && key._value;
-        if (value == null) return this.tween(key, null);
-        if (typeof value !== "function") throw new Error;
-        return this.tween(key, textTween(value));
-    });
-function textInterpolate(i) {
-    return function(t) {
-        this.textContent = i.call(this, t);
-    };
-}
-function textTween(value) {
-    var t0, i0;
-    function tween() {
-        var i = value.apply(this, arguments);
-        if (i !== i0) t0 = (i0 = i) && textInterpolate(i);
-        return t0;
-    }
-    tween._value = value;
-    return tween;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"50tVR":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var name = this._name, id0 = this._id, id1 = (0, _indexJs.newId)();
-        for(var groups = this._groups, m = groups.length, j = 0; j < m; ++j){
-            for(var group = groups[j], n = group.length, node, i = 0; i < n; ++i)if (node = group[i]) {
-                var inherit = (0, _scheduleJs.get)(node, id0);
-                (0, _scheduleJsDefault.default)(node, name, id1, i, group, {
-                    time: inherit.time + inherit.delay + inherit.duration,
-                    delay: 0,
-                    duration: inherit.duration,
-                    ease: inherit.ease
-                });
-            }
-        }
-        return new (0, _indexJs.Transition)(groups, this._parents, name, id1);
-    });
-var _indexJs = require("./index.js");
-var _scheduleJs = require("./schedule.js");
-var _scheduleJsDefault = parcelHelpers.interopDefault(_scheduleJs);
-
-},{"./index.js":"h2Srb","./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ev0ir":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var on0, on1, that = this, id = that._id, size = that.size();
-        return new Promise(function(resolve, reject) {
-            var cancel = {
-                value: reject
-            }, end = {
-                value: function() {
-                    if (--size === 0) resolve();
-                }
-            };
-            that.each(function() {
-                var schedule = (0, _scheduleJs.set)(this, id), on = schedule.on;
-                // If this node shared a dispatch with the previous node,
-                // just assign the updated shared dispatch and we’re done!
-                // Otherwise, copy-on-write.
-                if (on !== on0) {
-                    on1 = (on0 = on).copy();
-                    on1._.cancel.push(cancel);
-                    on1._.interrupt.push(cancel);
-                    on1._.end.push(end);
-                }
-                schedule.on = on1;
-            });
-        });
-    });
-var _scheduleJs = require("./schedule.js");
-
-},{"./schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8sCNl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "easeLinear", ()=>(0, _linearJs.linear));
-parcelHelpers.export(exports, "easeQuad", ()=>(0, _quadJs.quadInOut));
-parcelHelpers.export(exports, "easeQuadIn", ()=>(0, _quadJs.quadIn));
-parcelHelpers.export(exports, "easeQuadOut", ()=>(0, _quadJs.quadOut));
-parcelHelpers.export(exports, "easeQuadInOut", ()=>(0, _quadJs.quadInOut));
-parcelHelpers.export(exports, "easeCubic", ()=>(0, _cubicJs.cubicInOut));
-parcelHelpers.export(exports, "easeCubicIn", ()=>(0, _cubicJs.cubicIn));
-parcelHelpers.export(exports, "easeCubicOut", ()=>(0, _cubicJs.cubicOut));
-parcelHelpers.export(exports, "easeCubicInOut", ()=>(0, _cubicJs.cubicInOut));
-parcelHelpers.export(exports, "easePoly", ()=>(0, _polyJs.polyInOut));
-parcelHelpers.export(exports, "easePolyIn", ()=>(0, _polyJs.polyIn));
-parcelHelpers.export(exports, "easePolyOut", ()=>(0, _polyJs.polyOut));
-parcelHelpers.export(exports, "easePolyInOut", ()=>(0, _polyJs.polyInOut));
-parcelHelpers.export(exports, "easeSin", ()=>(0, _sinJs.sinInOut));
-parcelHelpers.export(exports, "easeSinIn", ()=>(0, _sinJs.sinIn));
-parcelHelpers.export(exports, "easeSinOut", ()=>(0, _sinJs.sinOut));
-parcelHelpers.export(exports, "easeSinInOut", ()=>(0, _sinJs.sinInOut));
-parcelHelpers.export(exports, "easeExp", ()=>(0, _expJs.expInOut));
-parcelHelpers.export(exports, "easeExpIn", ()=>(0, _expJs.expIn));
-parcelHelpers.export(exports, "easeExpOut", ()=>(0, _expJs.expOut));
-parcelHelpers.export(exports, "easeExpInOut", ()=>(0, _expJs.expInOut));
-parcelHelpers.export(exports, "easeCircle", ()=>(0, _circleJs.circleInOut));
-parcelHelpers.export(exports, "easeCircleIn", ()=>(0, _circleJs.circleIn));
-parcelHelpers.export(exports, "easeCircleOut", ()=>(0, _circleJs.circleOut));
-parcelHelpers.export(exports, "easeCircleInOut", ()=>(0, _circleJs.circleInOut));
-parcelHelpers.export(exports, "easeBounce", ()=>(0, _bounceJs.bounceOut));
-parcelHelpers.export(exports, "easeBounceIn", ()=>(0, _bounceJs.bounceIn));
-parcelHelpers.export(exports, "easeBounceOut", ()=>(0, _bounceJs.bounceOut));
-parcelHelpers.export(exports, "easeBounceInOut", ()=>(0, _bounceJs.bounceInOut));
-parcelHelpers.export(exports, "easeBack", ()=>(0, _backJs.backInOut));
-parcelHelpers.export(exports, "easeBackIn", ()=>(0, _backJs.backIn));
-parcelHelpers.export(exports, "easeBackOut", ()=>(0, _backJs.backOut));
-parcelHelpers.export(exports, "easeBackInOut", ()=>(0, _backJs.backInOut));
-parcelHelpers.export(exports, "easeElastic", ()=>(0, _elasticJs.elasticOut));
-parcelHelpers.export(exports, "easeElasticIn", ()=>(0, _elasticJs.elasticIn));
-parcelHelpers.export(exports, "easeElasticOut", ()=>(0, _elasticJs.elasticOut));
-parcelHelpers.export(exports, "easeElasticInOut", ()=>(0, _elasticJs.elasticInOut));
-var _linearJs = require("./linear.js");
-var _quadJs = require("./quad.js");
-var _cubicJs = require("./cubic.js");
-var _polyJs = require("./poly.js");
-var _sinJs = require("./sin.js");
-var _expJs = require("./exp.js");
-var _circleJs = require("./circle.js");
-var _bounceJs = require("./bounce.js");
-var _backJs = require("./back.js");
-var _elasticJs = require("./elastic.js");
-
-},{"./linear.js":false,"./quad.js":false,"./cubic.js":"cGjk7","./poly.js":false,"./sin.js":false,"./exp.js":false,"./circle.js":false,"./bounce.js":false,"./back.js":false,"./elastic.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cGjk7":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "cubicIn", ()=>cubicIn);
-parcelHelpers.export(exports, "cubicOut", ()=>cubicOut);
-parcelHelpers.export(exports, "cubicInOut", ()=>cubicInOut);
-function cubicIn(t) {
-    return t * t * t;
-}
-function cubicOut(t) {
-    return --t * t * t + 1;
-}
-function cubicInOut(t) {
-    return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"a4qOn":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(node, name) {
-        var schedules = node.__transition, schedule, i;
-        if (schedules) {
-            name = name == null ? null : name + "";
-            for(i in schedules){
-                if ((schedule = schedules[i]).state > (0, _scheduleJs.SCHEDULED) && schedule.name === name) return new (0, _indexJs.Transition)([
-                    [
-                        node
-                    ]
-                ], root, name, +i);
-            }
-        }
-        return null;
-    });
-var _indexJs = require("./transition/index.js");
-var _scheduleJs = require("./transition/schedule.js");
-var root = [
-    null
-];
-
-},{"./transition/index.js":"h2Srb","./transition/schedule.js":"de74c","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1yX2W":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "bisect", ()=>(0, _bisectJsDefault.default));
-parcelHelpers.export(exports, "bisectRight", ()=>(0, _bisectJs.bisectRight));
-parcelHelpers.export(exports, "bisectLeft", ()=>(0, _bisectJs.bisectLeft));
-parcelHelpers.export(exports, "bisectCenter", ()=>(0, _bisectJs.bisectCenter));
-parcelHelpers.export(exports, "ascending", ()=>(0, _ascendingJsDefault.default));
-parcelHelpers.export(exports, "bisector", ()=>(0, _bisectorJsDefault.default));
-parcelHelpers.export(exports, "count", ()=>(0, _countJsDefault.default));
-parcelHelpers.export(exports, "cross", ()=>(0, _crossJsDefault.default));
-parcelHelpers.export(exports, "cumsum", ()=>(0, _cumsumJsDefault.default));
-parcelHelpers.export(exports, "descending", ()=>(0, _descendingJsDefault.default));
-parcelHelpers.export(exports, "deviation", ()=>(0, _deviationJsDefault.default));
-parcelHelpers.export(exports, "extent", ()=>(0, _extentJsDefault.default));
-parcelHelpers.export(exports, "Adder", ()=>(0, _fsumJs.Adder));
-parcelHelpers.export(exports, "fsum", ()=>(0, _fsumJs.fsum));
-parcelHelpers.export(exports, "fcumsum", ()=>(0, _fsumJs.fcumsum));
-parcelHelpers.export(exports, "group", ()=>(0, _groupJsDefault.default));
-parcelHelpers.export(exports, "groups", ()=>(0, _groupJs.groups));
-parcelHelpers.export(exports, "index", ()=>(0, _groupJs.index));
-parcelHelpers.export(exports, "indexes", ()=>(0, _groupJs.indexes));
-parcelHelpers.export(exports, "rollup", ()=>(0, _groupJs.rollup));
-parcelHelpers.export(exports, "rollups", ()=>(0, _groupJs.rollups));
-parcelHelpers.export(exports, "groupSort", ()=>(0, _groupSortJsDefault.default));
-parcelHelpers.export(exports, "bin", ()=>(0, _binJsDefault.default)) // Deprecated; use bin.
-;
-parcelHelpers.export(exports, "histogram", ()=>(0, _binJsDefault.default));
-parcelHelpers.export(exports, "thresholdFreedmanDiaconis", ()=>(0, _freedmanDiaconisJsDefault.default));
-parcelHelpers.export(exports, "thresholdScott", ()=>(0, _scottJsDefault.default));
-parcelHelpers.export(exports, "thresholdSturges", ()=>(0, _sturgesJsDefault.default));
-parcelHelpers.export(exports, "max", ()=>(0, _maxJsDefault.default));
-parcelHelpers.export(exports, "maxIndex", ()=>(0, _maxIndexJsDefault.default));
-parcelHelpers.export(exports, "mean", ()=>(0, _meanJsDefault.default));
-parcelHelpers.export(exports, "median", ()=>(0, _medianJsDefault.default));
-parcelHelpers.export(exports, "merge", ()=>(0, _mergeJsDefault.default));
-parcelHelpers.export(exports, "min", ()=>(0, _minJsDefault.default));
-parcelHelpers.export(exports, "minIndex", ()=>(0, _minIndexJsDefault.default));
-parcelHelpers.export(exports, "nice", ()=>(0, _niceJsDefault.default));
-parcelHelpers.export(exports, "pairs", ()=>(0, _pairsJsDefault.default));
-parcelHelpers.export(exports, "permute", ()=>(0, _permuteJsDefault.default));
-parcelHelpers.export(exports, "quantile", ()=>(0, _quantileJsDefault.default));
-parcelHelpers.export(exports, "quantileSorted", ()=>(0, _quantileJs.quantileSorted));
-parcelHelpers.export(exports, "quickselect", ()=>(0, _quickselectJsDefault.default));
-parcelHelpers.export(exports, "range", ()=>(0, _rangeJsDefault.default));
-parcelHelpers.export(exports, "least", ()=>(0, _leastJsDefault.default));
-parcelHelpers.export(exports, "leastIndex", ()=>(0, _leastIndexJsDefault.default));
-parcelHelpers.export(exports, "greatest", ()=>(0, _greatestJsDefault.default));
-parcelHelpers.export(exports, "greatestIndex", ()=>(0, _greatestIndexJsDefault.default));
-parcelHelpers.export(exports, "scan", ()=>(0, _scanJsDefault.default)) // Deprecated; use leastIndex.
-;
-parcelHelpers.export(exports, "shuffle", ()=>(0, _shuffleJsDefault.default));
-parcelHelpers.export(exports, "shuffler", ()=>(0, _shuffleJs.shuffler));
-parcelHelpers.export(exports, "sum", ()=>(0, _sumJsDefault.default));
-parcelHelpers.export(exports, "ticks", ()=>(0, _ticksJsDefault.default));
-parcelHelpers.export(exports, "tickIncrement", ()=>(0, _ticksJs.tickIncrement));
-parcelHelpers.export(exports, "tickStep", ()=>(0, _ticksJs.tickStep));
-parcelHelpers.export(exports, "transpose", ()=>(0, _transposeJsDefault.default));
-parcelHelpers.export(exports, "variance", ()=>(0, _varianceJsDefault.default));
-parcelHelpers.export(exports, "zip", ()=>(0, _zipJsDefault.default));
-parcelHelpers.export(exports, "every", ()=>(0, _everyJsDefault.default));
-parcelHelpers.export(exports, "some", ()=>(0, _someJsDefault.default));
-parcelHelpers.export(exports, "filter", ()=>(0, _filterJsDefault.default));
-parcelHelpers.export(exports, "map", ()=>(0, _mapJsDefault.default));
-parcelHelpers.export(exports, "reduce", ()=>(0, _reduceJsDefault.default));
-parcelHelpers.export(exports, "reverse", ()=>(0, _reverseJsDefault.default));
-parcelHelpers.export(exports, "sort", ()=>(0, _sortJsDefault.default));
-parcelHelpers.export(exports, "difference", ()=>(0, _differenceJsDefault.default));
-parcelHelpers.export(exports, "disjoint", ()=>(0, _disjointJsDefault.default));
-parcelHelpers.export(exports, "intersection", ()=>(0, _intersectionJsDefault.default));
-parcelHelpers.export(exports, "subset", ()=>(0, _subsetJsDefault.default));
-parcelHelpers.export(exports, "superset", ()=>(0, _supersetJsDefault.default));
-parcelHelpers.export(exports, "union", ()=>(0, _unionJsDefault.default));
-parcelHelpers.export(exports, "InternMap", ()=>(0, _internmap.InternMap));
-parcelHelpers.export(exports, "InternSet", ()=>(0, _internmap.InternSet));
-var _bisectJs = require("./bisect.js");
-var _bisectJsDefault = parcelHelpers.interopDefault(_bisectJs);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-var _bisectorJs = require("./bisector.js");
-var _bisectorJsDefault = parcelHelpers.interopDefault(_bisectorJs);
-var _countJs = require("./count.js");
-var _countJsDefault = parcelHelpers.interopDefault(_countJs);
-var _crossJs = require("./cross.js");
-var _crossJsDefault = parcelHelpers.interopDefault(_crossJs);
-var _cumsumJs = require("./cumsum.js");
-var _cumsumJsDefault = parcelHelpers.interopDefault(_cumsumJs);
-var _descendingJs = require("./descending.js");
-var _descendingJsDefault = parcelHelpers.interopDefault(_descendingJs);
-var _deviationJs = require("./deviation.js");
-var _deviationJsDefault = parcelHelpers.interopDefault(_deviationJs);
-var _extentJs = require("./extent.js");
-var _extentJsDefault = parcelHelpers.interopDefault(_extentJs);
-var _fsumJs = require("./fsum.js");
-var _groupJs = require("./group.js");
-var _groupJsDefault = parcelHelpers.interopDefault(_groupJs);
-var _groupSortJs = require("./groupSort.js");
-var _groupSortJsDefault = parcelHelpers.interopDefault(_groupSortJs);
-var _binJs = require("./bin.js");
-var _binJsDefault = parcelHelpers.interopDefault(_binJs);
-var _freedmanDiaconisJs = require("./threshold/freedmanDiaconis.js");
-var _freedmanDiaconisJsDefault = parcelHelpers.interopDefault(_freedmanDiaconisJs);
-var _scottJs = require("./threshold/scott.js");
-var _scottJsDefault = parcelHelpers.interopDefault(_scottJs);
-var _sturgesJs = require("./threshold/sturges.js");
-var _sturgesJsDefault = parcelHelpers.interopDefault(_sturgesJs);
-var _maxJs = require("./max.js");
-var _maxJsDefault = parcelHelpers.interopDefault(_maxJs);
-var _maxIndexJs = require("./maxIndex.js");
-var _maxIndexJsDefault = parcelHelpers.interopDefault(_maxIndexJs);
-var _meanJs = require("./mean.js");
-var _meanJsDefault = parcelHelpers.interopDefault(_meanJs);
-var _medianJs = require("./median.js");
-var _medianJsDefault = parcelHelpers.interopDefault(_medianJs);
-var _mergeJs = require("./merge.js");
-var _mergeJsDefault = parcelHelpers.interopDefault(_mergeJs);
-var _minJs = require("./min.js");
-var _minJsDefault = parcelHelpers.interopDefault(_minJs);
-var _minIndexJs = require("./minIndex.js");
-var _minIndexJsDefault = parcelHelpers.interopDefault(_minIndexJs);
-var _niceJs = require("./nice.js");
-var _niceJsDefault = parcelHelpers.interopDefault(_niceJs);
-var _pairsJs = require("./pairs.js");
-var _pairsJsDefault = parcelHelpers.interopDefault(_pairsJs);
-var _permuteJs = require("./permute.js");
-var _permuteJsDefault = parcelHelpers.interopDefault(_permuteJs);
-var _quantileJs = require("./quantile.js");
-var _quantileJsDefault = parcelHelpers.interopDefault(_quantileJs);
-var _quickselectJs = require("./quickselect.js");
-var _quickselectJsDefault = parcelHelpers.interopDefault(_quickselectJs);
-var _rangeJs = require("./range.js");
-var _rangeJsDefault = parcelHelpers.interopDefault(_rangeJs);
-var _leastJs = require("./least.js");
-var _leastJsDefault = parcelHelpers.interopDefault(_leastJs);
-var _leastIndexJs = require("./leastIndex.js");
-var _leastIndexJsDefault = parcelHelpers.interopDefault(_leastIndexJs);
-var _greatestJs = require("./greatest.js");
-var _greatestJsDefault = parcelHelpers.interopDefault(_greatestJs);
-var _greatestIndexJs = require("./greatestIndex.js");
-var _greatestIndexJsDefault = parcelHelpers.interopDefault(_greatestIndexJs);
-var _scanJs = require("./scan.js");
-var _scanJsDefault = parcelHelpers.interopDefault(_scanJs);
-var _shuffleJs = require("./shuffle.js");
-var _shuffleJsDefault = parcelHelpers.interopDefault(_shuffleJs);
-var _sumJs = require("./sum.js");
-var _sumJsDefault = parcelHelpers.interopDefault(_sumJs);
-var _ticksJs = require("./ticks.js");
-var _ticksJsDefault = parcelHelpers.interopDefault(_ticksJs);
-var _transposeJs = require("./transpose.js");
-var _transposeJsDefault = parcelHelpers.interopDefault(_transposeJs);
-var _varianceJs = require("./variance.js");
-var _varianceJsDefault = parcelHelpers.interopDefault(_varianceJs);
-var _zipJs = require("./zip.js");
-var _zipJsDefault = parcelHelpers.interopDefault(_zipJs);
-var _everyJs = require("./every.js");
-var _everyJsDefault = parcelHelpers.interopDefault(_everyJs);
-var _someJs = require("./some.js");
-var _someJsDefault = parcelHelpers.interopDefault(_someJs);
-var _filterJs = require("./filter.js");
-var _filterJsDefault = parcelHelpers.interopDefault(_filterJs);
-var _mapJs = require("./map.js");
-var _mapJsDefault = parcelHelpers.interopDefault(_mapJs);
-var _reduceJs = require("./reduce.js");
-var _reduceJsDefault = parcelHelpers.interopDefault(_reduceJs);
-var _reverseJs = require("./reverse.js");
-var _reverseJsDefault = parcelHelpers.interopDefault(_reverseJs);
-var _sortJs = require("./sort.js");
-var _sortJsDefault = parcelHelpers.interopDefault(_sortJs);
-var _differenceJs = require("./difference.js");
-var _differenceJsDefault = parcelHelpers.interopDefault(_differenceJs);
-var _disjointJs = require("./disjoint.js");
-var _disjointJsDefault = parcelHelpers.interopDefault(_disjointJs);
-var _intersectionJs = require("./intersection.js");
-var _intersectionJsDefault = parcelHelpers.interopDefault(_intersectionJs);
-var _subsetJs = require("./subset.js");
-var _subsetJsDefault = parcelHelpers.interopDefault(_subsetJs);
-var _supersetJs = require("./superset.js");
-var _supersetJsDefault = parcelHelpers.interopDefault(_supersetJs);
-var _unionJs = require("./union.js");
-var _unionJsDefault = parcelHelpers.interopDefault(_unionJs);
-var _internmap = require("internmap");
-
-},{"./bisect.js":"2jqf4","./ascending.js":false,"./bisector.js":"1BY0F","./count.js":false,"./cross.js":false,"./cumsum.js":false,"./descending.js":false,"./deviation.js":false,"./extent.js":"bpNTV","./fsum.js":false,"./group.js":false,"./groupSort.js":false,"./bin.js":false,"./threshold/freedmanDiaconis.js":false,"./threshold/scott.js":false,"./threshold/sturges.js":false,"./max.js":false,"./maxIndex.js":false,"./mean.js":false,"./median.js":false,"./merge.js":false,"./min.js":false,"./minIndex.js":false,"./nice.js":false,"./pairs.js":false,"./permute.js":false,"./quantile.js":false,"./quickselect.js":false,"./range.js":false,"./least.js":false,"./leastIndex.js":false,"./greatest.js":false,"./greatestIndex.js":false,"./scan.js":false,"./shuffle.js":false,"./sum.js":false,"./ticks.js":"iDfKX","./transpose.js":false,"./variance.js":false,"./zip.js":false,"./every.js":false,"./some.js":false,"./filter.js":false,"./map.js":false,"./reduce.js":false,"./reverse.js":false,"./sort.js":false,"./difference.js":false,"./disjoint.js":false,"./intersection.js":false,"./subset.js":false,"./superset.js":false,"./union.js":false,"internmap":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2jqf4":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "bisectRight", ()=>bisectRight);
-parcelHelpers.export(exports, "bisectLeft", ()=>bisectLeft);
-parcelHelpers.export(exports, "bisectCenter", ()=>bisectCenter);
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-var _bisectorJs = require("./bisector.js");
-var _bisectorJsDefault = parcelHelpers.interopDefault(_bisectorJs);
-var _numberJs = require("./number.js");
-var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
-const ascendingBisect = (0, _bisectorJsDefault.default)((0, _ascendingJsDefault.default));
-const bisectRight = ascendingBisect.right;
-const bisectLeft = ascendingBisect.left;
-const bisectCenter = (0, _bisectorJsDefault.default)((0, _numberJsDefault.default)).center;
-exports.default = bisectRight;
-
-},{"./ascending.js":"2iZSL","./bisector.js":"1BY0F","./number.js":"imr9T","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2iZSL":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(a, b) {
-        return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1BY0F":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(f) {
-        let delta = f;
-        let compare = f;
-        if (f.length === 1) {
-            delta = (d, x)=>f(d) - x;
-            compare = ascendingComparator(f);
-        }
-        function left(a, x, lo, hi) {
-            if (lo == null) lo = 0;
-            if (hi == null) hi = a.length;
-            while(lo < hi){
-                const mid = lo + hi >>> 1;
-                if (compare(a[mid], x) < 0) lo = mid + 1;
-                else hi = mid;
-            }
-            return lo;
-        }
-        function right(a, x, lo, hi) {
-            if (lo == null) lo = 0;
-            if (hi == null) hi = a.length;
-            while(lo < hi){
-                const mid = lo + hi >>> 1;
-                if (compare(a[mid], x) > 0) hi = mid;
-                else lo = mid + 1;
-            }
-            return lo;
-        }
-        function center(a, x, lo, hi) {
-            if (lo == null) lo = 0;
-            if (hi == null) hi = a.length;
-            const i = left(a, x, lo, hi - 1);
-            return i > lo && delta(a[i - 1], x) > -delta(a[i], x) ? i - 1 : i;
-        }
-        return {
-            left,
-            center,
-            right
-        };
-    });
-var _ascendingJs = require("./ascending.js");
-var _ascendingJsDefault = parcelHelpers.interopDefault(_ascendingJs);
-function ascendingComparator(f) {
-    return (d, x)=>(0, _ascendingJsDefault.default)(f(d), x);
-}
-
-},{"./ascending.js":"2iZSL","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"imr9T":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(x) {
-        return x === null ? NaN : +x;
-    });
-parcelHelpers.export(exports, "numbers", ()=>numbers);
-function* numbers(values, valueof) {
-    if (valueof === undefined) {
-        for (let value of values)if (value != null && (value = +value) >= value) yield value;
-    } else {
-        let index = -1;
-        for (let value of values)if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) yield value;
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bpNTV":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(values, valueof) {
-        let min;
-        let max;
-        if (valueof === undefined) {
-            for (const value of values)if (value != null) {
-                if (min === undefined) {
-                    if (value >= value) min = max = value;
-                } else {
-                    if (min > value) min = value;
-                    if (max < value) max = value;
-                }
-            }
-        } else {
-            let index = -1;
-            for (let value of values)if ((value = valueof(value, ++index, values)) != null) {
-                if (min === undefined) {
-                    if (value >= value) min = max = value;
-                } else {
-                    if (min > value) min = value;
-                    if (max < value) max = value;
-                }
-            }
-        }
-        return [
-            min,
-            max
-        ];
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iDfKX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(start, stop, count) {
-        var reverse, i = -1, n, ticks, step;
-        stop = +stop, start = +start, count = +count;
-        if (start === stop && count > 0) return [
-            start
-        ];
-        if (reverse = stop < start) n = start, start = stop, stop = n;
-        if ((step = tickIncrement(start, stop, count)) === 0 || !isFinite(step)) return [];
-        if (step > 0) {
-            let r0 = Math.round(start / step), r1 = Math.round(stop / step);
-            if (r0 * step < start) ++r0;
-            if (r1 * step > stop) --r1;
-            ticks = new Array(n = r1 - r0 + 1);
-            while(++i < n)ticks[i] = (r0 + i) * step;
-        } else {
-            step = -step;
-            let r0 = Math.round(start * step), r1 = Math.round(stop * step);
-            if (r0 / step < start) ++r0;
-            if (r1 / step > stop) --r1;
-            ticks = new Array(n = r1 - r0 + 1);
-            while(++i < n)ticks[i] = (r0 + i) / step;
-        }
-        if (reverse) ticks.reverse();
-        return ticks;
-    });
-parcelHelpers.export(exports, "tickIncrement", ()=>tickIncrement);
-parcelHelpers.export(exports, "tickStep", ()=>tickStep);
-var e10 = Math.sqrt(50), e5 = Math.sqrt(10), e2 = Math.sqrt(2);
-function tickIncrement(start, stop, count) {
-    var step = (stop - start) / Math.max(0, count), power = Math.floor(Math.log(step) / Math.LN10), error = step / Math.pow(10, power);
-    return power >= 0 ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power) : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
-}
-function tickStep(start, stop, count) {
-    var step0 = Math.abs(stop - start) / Math.max(0, count), step1 = Math.pow(10, Math.floor(Math.log(step0) / Math.LN10)), error = step0 / step1;
-    if (error >= e10) step1 *= 10;
-    else if (error >= e5) step1 *= 5;
-    else if (error >= e2) step1 *= 2;
-    return stop < start ? -step1 : step1;
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2g6gM":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "axisTop", ()=>(0, _axis.axisTop));
-parcelHelpers.export(exports, "axisRight", ()=>(0, _axis.axisRight));
-parcelHelpers.export(exports, "axisBottom", ()=>(0, _axis.axisBottom));
-parcelHelpers.export(exports, "axisLeft", ()=>(0, _axis.axisLeft));
-var _axis = require("./axis");
-
-},{"./axis":"lwARn","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lwARn":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "axisTop", ()=>axisTop);
-parcelHelpers.export(exports, "axisRight", ()=>axisRight);
-parcelHelpers.export(exports, "axisBottom", ()=>axisBottom);
-parcelHelpers.export(exports, "axisLeft", ()=>axisLeft);
-var _array = require("./array");
-var _identity = require("./identity");
-var _identityDefault = parcelHelpers.interopDefault(_identity);
-var top = 1, right = 2, bottom = 3, left = 4, epsilon = 1e-6;
-function translateX(x) {
-    return "translate(" + (x + 0.5) + ",0)";
-}
-function translateY(y) {
-    return "translate(0," + (y + 0.5) + ")";
-}
-function number(scale) {
-    return function(d) {
-        return +scale(d);
-    };
-}
-function center(scale) {
-    var offset = Math.max(0, scale.bandwidth() - 1) / 2; // Adjust for 0.5px offset.
-    if (scale.round()) offset = Math.round(offset);
-    return function(d) {
-        return +scale(d) + offset;
-    };
-}
-function entering() {
-    return !this.__axis;
-}
-function axis(orient, scale) {
-    var tickArguments = [], tickValues = null, tickFormat = null, tickSizeInner = 6, tickSizeOuter = 6, tickPadding = 3, k = orient === top || orient === left ? -1 : 1, x = orient === left || orient === right ? "x" : "y", transform = orient === top || orient === bottom ? translateX : translateY;
-    function axis(context) {
-        var values = tickValues == null ? scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain() : tickValues, format = tickFormat == null ? scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : (0, _identityDefault.default) : tickFormat, spacing = Math.max(tickSizeInner, 0) + tickPadding, range = scale.range(), range0 = +range[0] + 0.5, range1 = +range[range.length - 1] + 0.5, position = (scale.bandwidth ? center : number)(scale.copy()), selection = context.selection ? context.selection() : context, path = selection.selectAll(".domain").data([
-            null
-        ]), tick = selection.selectAll(".tick").data(values, scale).order(), tickExit = tick.exit(), tickEnter = tick.enter().append("g").attr("class", "tick"), line = tick.select("line"), text = tick.select("text");
-        path = path.merge(path.enter().insert("path", ".tick").attr("class", "domain").attr("stroke", "currentColor"));
-        tick = tick.merge(tickEnter);
-        line = line.merge(tickEnter.append("line").attr("stroke", "currentColor").attr(x + "2", k * tickSizeInner));
-        text = text.merge(tickEnter.append("text").attr("fill", "currentColor").attr(x, k * spacing).attr("dy", orient === top ? "0em" : orient === bottom ? "0.71em" : "0.32em"));
-        if (context !== selection) {
-            path = path.transition(context);
-            tick = tick.transition(context);
-            line = line.transition(context);
-            text = text.transition(context);
-            tickExit = tickExit.transition(context).attr("opacity", epsilon).attr("transform", function(d) {
-                return isFinite(d = position(d)) ? transform(d) : this.getAttribute("transform");
-            });
-            tickEnter.attr("opacity", epsilon).attr("transform", function(d) {
-                var p = this.parentNode.__axis;
-                return transform(p && isFinite(p = p(d)) ? p : position(d));
-            });
-        }
-        tickExit.remove();
-        path.attr("d", orient === left || orient == right ? tickSizeOuter ? "M" + k * tickSizeOuter + "," + range0 + "H0.5V" + range1 + "H" + k * tickSizeOuter : "M0.5," + range0 + "V" + range1 : tickSizeOuter ? "M" + range0 + "," + k * tickSizeOuter + "V0.5H" + range1 + "V" + k * tickSizeOuter : "M" + range0 + ",0.5H" + range1);
-        tick.attr("opacity", 1).attr("transform", function(d) {
-            return transform(position(d));
-        });
-        line.attr(x + "2", k * tickSizeInner);
-        text.attr(x, k * spacing).text(format);
-        selection.filter(entering).attr("fill", "none").attr("font-size", 10).attr("font-family", "sans-serif").attr("text-anchor", orient === right ? "start" : orient === left ? "end" : "middle");
-        selection.each(function() {
-            this.__axis = position;
-        });
-    }
-    axis.scale = function(_) {
-        return arguments.length ? (scale = _, axis) : scale;
-    };
-    axis.ticks = function() {
-        return tickArguments = (0, _array.slice).call(arguments), axis;
-    };
-    axis.tickArguments = function(_) {
-        return arguments.length ? (tickArguments = _ == null ? [] : (0, _array.slice).call(_), axis) : tickArguments.slice();
-    };
-    axis.tickValues = function(_) {
-        return arguments.length ? (tickValues = _ == null ? null : (0, _array.slice).call(_), axis) : tickValues && tickValues.slice();
-    };
-    axis.tickFormat = function(_) {
-        return arguments.length ? (tickFormat = _, axis) : tickFormat;
-    };
-    axis.tickSize = function(_) {
-        return arguments.length ? (tickSizeInner = tickSizeOuter = +_, axis) : tickSizeInner;
-    };
-    axis.tickSizeInner = function(_) {
-        return arguments.length ? (tickSizeInner = +_, axis) : tickSizeInner;
-    };
-    axis.tickSizeOuter = function(_) {
-        return arguments.length ? (tickSizeOuter = +_, axis) : tickSizeOuter;
-    };
-    axis.tickPadding = function(_) {
-        return arguments.length ? (tickPadding = +_, axis) : tickPadding;
-    };
-    return axis;
-}
-function axisTop(scale) {
-    return axis(top, scale);
-}
-function axisRight(scale) {
-    return axis(right, scale);
-}
-function axisBottom(scale) {
-    return axis(bottom, scale);
-}
-function axisLeft(scale) {
-    return axis(left, scale);
-}
-
-},{"./array":"kVqvJ","./identity":"aXZUf","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kVqvJ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "slice", ()=>slice);
-var slice = Array.prototype.slice;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"aXZUf":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function(x) {
-        return x;
-    });
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"UQ8g3":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "scaleBand", ()=>(0, _bandJsDefault.default));
-parcelHelpers.export(exports, "scalePoint", ()=>(0, _bandJs.point));
-parcelHelpers.export(exports, "scaleIdentity", ()=>(0, _identityJsDefault.default));
-parcelHelpers.export(exports, "scaleLinear", ()=>(0, _linearJsDefault.default));
-parcelHelpers.export(exports, "scaleLog", ()=>(0, _logJsDefault.default));
-parcelHelpers.export(exports, "scaleSymlog", ()=>(0, _symlogJsDefault.default));
-parcelHelpers.export(exports, "scaleOrdinal", ()=>(0, _ordinalJsDefault.default));
-parcelHelpers.export(exports, "scaleImplicit", ()=>(0, _ordinalJs.implicit));
-parcelHelpers.export(exports, "scalePow", ()=>(0, _powJsDefault.default));
-parcelHelpers.export(exports, "scaleSqrt", ()=>(0, _powJs.sqrt));
-parcelHelpers.export(exports, "scaleRadial", ()=>(0, _radialJsDefault.default));
-parcelHelpers.export(exports, "scaleQuantile", ()=>(0, _quantileJsDefault.default));
-parcelHelpers.export(exports, "scaleQuantize", ()=>(0, _quantizeJsDefault.default));
-parcelHelpers.export(exports, "scaleThreshold", ()=>(0, _thresholdJsDefault.default));
-parcelHelpers.export(exports, "scaleTime", ()=>(0, _timeJsDefault.default));
-parcelHelpers.export(exports, "scaleUtc", ()=>(0, _utcTimeJsDefault.default));
-parcelHelpers.export(exports, "scaleSequential", ()=>(0, _sequentialJsDefault.default));
-parcelHelpers.export(exports, "scaleSequentialLog", ()=>(0, _sequentialJs.sequentialLog));
-parcelHelpers.export(exports, "scaleSequentialPow", ()=>(0, _sequentialJs.sequentialPow));
-parcelHelpers.export(exports, "scaleSequentialSqrt", ()=>(0, _sequentialJs.sequentialSqrt));
-parcelHelpers.export(exports, "scaleSequentialSymlog", ()=>(0, _sequentialJs.sequentialSymlog));
-parcelHelpers.export(exports, "scaleSequentialQuantile", ()=>(0, _sequentialQuantileJsDefault.default));
-parcelHelpers.export(exports, "scaleDiverging", ()=>(0, _divergingJsDefault.default));
-parcelHelpers.export(exports, "scaleDivergingLog", ()=>(0, _divergingJs.divergingLog));
-parcelHelpers.export(exports, "scaleDivergingPow", ()=>(0, _divergingJs.divergingPow));
-parcelHelpers.export(exports, "scaleDivergingSqrt", ()=>(0, _divergingJs.divergingSqrt));
-parcelHelpers.export(exports, "scaleDivergingSymlog", ()=>(0, _divergingJs.divergingSymlog));
-parcelHelpers.export(exports, "tickFormat", ()=>(0, _tickFormatJsDefault.default));
-var _bandJs = require("./band.js");
-var _bandJsDefault = parcelHelpers.interopDefault(_bandJs);
-var _identityJs = require("./identity.js");
-var _identityJsDefault = parcelHelpers.interopDefault(_identityJs);
-var _linearJs = require("./linear.js");
-var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
-var _logJs = require("./log.js");
-var _logJsDefault = parcelHelpers.interopDefault(_logJs);
-var _symlogJs = require("./symlog.js");
-var _symlogJsDefault = parcelHelpers.interopDefault(_symlogJs);
-var _ordinalJs = require("./ordinal.js");
-var _ordinalJsDefault = parcelHelpers.interopDefault(_ordinalJs);
-var _powJs = require("./pow.js");
-var _powJsDefault = parcelHelpers.interopDefault(_powJs);
-var _radialJs = require("./radial.js");
-var _radialJsDefault = parcelHelpers.interopDefault(_radialJs);
-var _quantileJs = require("./quantile.js");
-var _quantileJsDefault = parcelHelpers.interopDefault(_quantileJs);
-var _quantizeJs = require("./quantize.js");
-var _quantizeJsDefault = parcelHelpers.interopDefault(_quantizeJs);
-var _thresholdJs = require("./threshold.js");
-var _thresholdJsDefault = parcelHelpers.interopDefault(_thresholdJs);
-var _timeJs = require("./time.js");
-var _timeJsDefault = parcelHelpers.interopDefault(_timeJs);
-var _utcTimeJs = require("./utcTime.js");
-var _utcTimeJsDefault = parcelHelpers.interopDefault(_utcTimeJs);
-var _sequentialJs = require("./sequential.js");
-var _sequentialJsDefault = parcelHelpers.interopDefault(_sequentialJs);
-var _sequentialQuantileJs = require("./sequentialQuantile.js");
-var _sequentialQuantileJsDefault = parcelHelpers.interopDefault(_sequentialQuantileJs);
-var _divergingJs = require("./diverging.js");
-var _divergingJsDefault = parcelHelpers.interopDefault(_divergingJs);
-var _tickFormatJs = require("./tickFormat.js");
-var _tickFormatJsDefault = parcelHelpers.interopDefault(_tickFormatJs);
-
-},{"./band.js":false,"./identity.js":false,"./linear.js":"lob4K","./log.js":false,"./symlog.js":false,"./ordinal.js":false,"./pow.js":false,"./radial.js":false,"./quantile.js":false,"./quantize.js":false,"./threshold.js":false,"./time.js":false,"./utcTime.js":false,"./sequential.js":false,"./sequentialQuantile.js":false,"./diverging.js":false,"./tickFormat.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lob4K":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "linearish", ()=>linearish);
-parcelHelpers.export(exports, "default", ()=>linear);
-var _d3Array = require("d3-array");
-var _continuousJs = require("./continuous.js");
-var _continuousJsDefault = parcelHelpers.interopDefault(_continuousJs);
-var _initJs = require("./init.js");
-var _tickFormatJs = require("./tickFormat.js");
-var _tickFormatJsDefault = parcelHelpers.interopDefault(_tickFormatJs);
-function linearish(scale) {
-    var domain = scale.domain;
-    scale.ticks = function(count) {
-        var d = domain();
-        return (0, _d3Array.ticks)(d[0], d[d.length - 1], count == null ? 10 : count);
-    };
-    scale.tickFormat = function(count, specifier) {
-        var d = domain();
-        return (0, _tickFormatJsDefault.default)(d[0], d[d.length - 1], count == null ? 10 : count, specifier);
-    };
-    scale.nice = function(count) {
-        if (count == null) count = 10;
-        var d = domain();
-        var i0 = 0;
-        var i1 = d.length - 1;
-        var start = d[i0];
-        var stop = d[i1];
-        var prestep;
-        var step;
-        var maxIter = 10;
-        if (stop < start) {
-            step = start, start = stop, stop = step;
-            step = i0, i0 = i1, i1 = step;
-        }
-        while(maxIter-- > 0){
-            step = (0, _d3Array.tickIncrement)(start, stop, count);
-            if (step === prestep) {
-                d[i0] = start;
-                d[i1] = stop;
-                return domain(d);
-            } else if (step > 0) {
-                start = Math.floor(start / step) * step;
-                stop = Math.ceil(stop / step) * step;
-            } else if (step < 0) {
-                start = Math.ceil(start * step) / step;
-                stop = Math.floor(stop * step) / step;
-            } else break;
-            prestep = step;
-        }
-        return scale;
-    };
-    return scale;
-}
-function linear() {
-    var scale = (0, _continuousJsDefault.default)();
-    scale.copy = function() {
-        return (0, _continuousJs.copy)(scale, linear());
-    };
-    (0, _initJs.initRange).apply(scale, arguments);
-    return linearish(scale);
-}
-
-},{"d3-array":"1yX2W","./continuous.js":"1LsCM","./init.js":"kp8lc","./tickFormat.js":"ahQef","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1LsCM":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "identity", ()=>identity);
-parcelHelpers.export(exports, "copy", ()=>copy);
-parcelHelpers.export(exports, "transformer", ()=>transformer);
-parcelHelpers.export(exports, "default", ()=>continuous);
-var _d3Array = require("d3-array");
-var _d3Interpolate = require("d3-interpolate");
-var _constantJs = require("./constant.js");
-var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
-var _numberJs = require("./number.js");
-var _numberJsDefault = parcelHelpers.interopDefault(_numberJs);
-var unit = [
-    0,
-    1
-];
-function identity(x) {
-    return x;
-}
-function normalize(a, b) {
-    return (b -= a = +a) ? function(x) {
-        return (x - a) / b;
-    } : (0, _constantJsDefault.default)(isNaN(b) ? NaN : 0.5);
-}
-function clamper(a, b) {
-    var t;
-    if (a > b) t = a, a = b, b = t;
-    return function(x) {
-        return Math.max(a, Math.min(b, x));
-    };
-}
-// normalize(a, b)(x) takes a domain value x in [a,b] and returns the corresponding parameter t in [0,1].
-// interpolate(a, b)(t) takes a parameter t in [0,1] and returns the corresponding range value x in [a,b].
-function bimap(domain, range, interpolate) {
-    var d0 = domain[0], d1 = domain[1], r0 = range[0], r1 = range[1];
-    if (d1 < d0) d0 = normalize(d1, d0), r0 = interpolate(r1, r0);
-    else d0 = normalize(d0, d1), r0 = interpolate(r0, r1);
-    return function(x) {
-        return r0(d0(x));
-    };
-}
-function polymap(domain, range, interpolate) {
-    var j = Math.min(domain.length, range.length) - 1, d = new Array(j), r = new Array(j), i = -1;
-    // Reverse descending domains.
-    if (domain[j] < domain[0]) {
-        domain = domain.slice().reverse();
-        range = range.slice().reverse();
-    }
-    while(++i < j){
-        d[i] = normalize(domain[i], domain[i + 1]);
-        r[i] = interpolate(range[i], range[i + 1]);
-    }
-    return function(x) {
-        var i = (0, _d3Array.bisect)(domain, x, 1, j) - 1;
-        return r[i](d[i](x));
-    };
-}
-function copy(source, target) {
-    return target.domain(source.domain()).range(source.range()).interpolate(source.interpolate()).clamp(source.clamp()).unknown(source.unknown());
-}
-function transformer() {
-    var domain = unit, range = unit, interpolate = (0, _d3Interpolate.interpolate), transform, untransform, unknown, clamp = identity, piecewise, output, input;
-    function rescale() {
-        var n = Math.min(domain.length, range.length);
-        if (clamp !== identity) clamp = clamper(domain[0], domain[n - 1]);
-        piecewise = n > 2 ? polymap : bimap;
-        output = input = null;
-        return scale;
-    }
-    function scale(x) {
-        return x == null || isNaN(x = +x) ? unknown : (output || (output = piecewise(domain.map(transform), range, interpolate)))(transform(clamp(x)));
-    }
-    scale.invert = function(y) {
-        return clamp(untransform((input || (input = piecewise(range, domain.map(transform), (0, _d3Interpolate.interpolateNumber))))(y)));
-    };
-    scale.domain = function(_) {
-        return arguments.length ? (domain = Array.from(_, (0, _numberJsDefault.default)), rescale()) : domain.slice();
-    };
-    scale.range = function(_) {
-        return arguments.length ? (range = Array.from(_), rescale()) : range.slice();
-    };
-    scale.rangeRound = function(_) {
-        return range = Array.from(_), interpolate = (0, _d3Interpolate.interpolateRound), rescale();
-    };
-    scale.clamp = function(_) {
-        return arguments.length ? (clamp = _ ? true : identity, rescale()) : clamp !== identity;
-    };
-    scale.interpolate = function(_) {
-        return arguments.length ? (interpolate = _, rescale()) : interpolate;
-    };
-    scale.unknown = function(_) {
-        return arguments.length ? (unknown = _, scale) : unknown;
-    };
-    return function(t, u) {
-        transform = t, untransform = u;
-        return rescale();
-    };
-}
-function continuous() {
-    return transformer()(identity, identity);
-}
-
-},{"d3-array":"1yX2W","d3-interpolate":"6jJyi","./constant.js":"kIv0D","./number.js":"k9Lyx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kIv0D":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5NUS4":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>constants);
@@ -5032,7 +3777,7 @@ function constants(x) {
     };
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"k9Lyx":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4dxeq":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>number);
@@ -5040,7 +3785,7 @@ function number(x) {
     return +x;
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kp8lc":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5bjmJ":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "initRange", ()=>initRange);
@@ -5075,7 +3820,7 @@ function initInterpolator(domain, interpolator) {
     return this;
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ahQef":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"agHUz":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>tickFormat);
@@ -5104,7 +3849,7 @@ function tickFormat(start, stop, count, specifier) {
     return (0, _d3Format.format)(specifier);
 }
 
-},{"d3-array":"1yX2W","d3-format":"4XOv2","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4XOv2":[function(require,module,exports) {
+},{"d3-array":"aerWx","d3-format":"4XOv2","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4XOv2":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "formatDefaultLocale", ()=>(0, _defaultLocaleJsDefault.default));
@@ -5508,7 +4253,7 @@ parcelHelpers.export(exports, "default", ()=>function(step, max) {
 var _exponentJs = require("./exponent.js");
 var _exponentJsDefault = parcelHelpers.interopDefault(_exponentJs);
 
-},{"./exponent.js":"7L05r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"SqrXv":[function(require,module,exports) {
+},{"./exponent.js":"7L05r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lOZb8":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "arc", ()=>(0, _arcJsDefault.default));
@@ -5522,21 +4267,33 @@ parcelHelpers.export(exports, "lineRadial", ()=>(0, _lineRadialJsDefault.default
 ;
 parcelHelpers.export(exports, "radialLine", ()=>(0, _lineRadialJsDefault.default));
 parcelHelpers.export(exports, "pointRadial", ()=>(0, _pointRadialJsDefault.default));
-parcelHelpers.export(exports, "linkHorizontal", ()=>(0, _indexJs.linkHorizontal));
-parcelHelpers.export(exports, "linkVertical", ()=>(0, _indexJs.linkVertical));
-parcelHelpers.export(exports, "linkRadial", ()=>(0, _indexJs.linkRadial));
+parcelHelpers.export(exports, "link", ()=>(0, _linkJs.link));
+parcelHelpers.export(exports, "linkHorizontal", ()=>(0, _linkJs.linkHorizontal));
+parcelHelpers.export(exports, "linkVertical", ()=>(0, _linkJs.linkVertical));
+parcelHelpers.export(exports, "linkRadial", ()=>(0, _linkJs.linkRadial));
 parcelHelpers.export(exports, "symbol", ()=>(0, _symbolJsDefault.default));
-parcelHelpers.export(exports, "symbols", ()=>(0, _symbolJs.symbols));
+parcelHelpers.export(exports, "symbolsStroke", ()=>(0, _symbolJs.symbolsStroke));
+parcelHelpers.export(exports, "symbolsFill", ()=>(0, _symbolJs.symbolsFill));
+parcelHelpers.export(exports, "symbols", ()=>(0, _symbolJs.symbolsFill));
+parcelHelpers.export(exports, "symbolAsterisk", ()=>(0, _asteriskJsDefault.default));
 parcelHelpers.export(exports, "symbolCircle", ()=>(0, _circleJsDefault.default));
 parcelHelpers.export(exports, "symbolCross", ()=>(0, _crossJsDefault.default));
 parcelHelpers.export(exports, "symbolDiamond", ()=>(0, _diamondJsDefault.default));
+parcelHelpers.export(exports, "symbolDiamond2", ()=>(0, _diamond2JsDefault.default));
+parcelHelpers.export(exports, "symbolPlus", ()=>(0, _plusJsDefault.default));
 parcelHelpers.export(exports, "symbolSquare", ()=>(0, _squareJsDefault.default));
+parcelHelpers.export(exports, "symbolSquare2", ()=>(0, _square2JsDefault.default));
 parcelHelpers.export(exports, "symbolStar", ()=>(0, _starJsDefault.default));
 parcelHelpers.export(exports, "symbolTriangle", ()=>(0, _triangleJsDefault.default));
+parcelHelpers.export(exports, "symbolTriangle2", ()=>(0, _triangle2JsDefault.default));
 parcelHelpers.export(exports, "symbolWye", ()=>(0, _wyeJsDefault.default));
+parcelHelpers.export(exports, "symbolTimes", ()=>(0, _timesJsDefault.default));
+parcelHelpers.export(exports, "symbolX", ()=>(0, _timesJsDefault.default));
 parcelHelpers.export(exports, "curveBasisClosed", ()=>(0, _basisClosedJsDefault.default));
 parcelHelpers.export(exports, "curveBasisOpen", ()=>(0, _basisOpenJsDefault.default));
 parcelHelpers.export(exports, "curveBasis", ()=>(0, _basisJsDefault.default));
+parcelHelpers.export(exports, "curveBumpX", ()=>(0, _bumpJs.bumpX));
+parcelHelpers.export(exports, "curveBumpY", ()=>(0, _bumpJs.bumpY));
 parcelHelpers.export(exports, "curveBundle", ()=>(0, _bundleJsDefault.default));
 parcelHelpers.export(exports, "curveCardinalClosed", ()=>(0, _cardinalClosedJsDefault.default));
 parcelHelpers.export(exports, "curveCardinalOpen", ()=>(0, _cardinalOpenJsDefault.default));
@@ -5578,29 +4335,42 @@ var _lineRadialJs = require("./lineRadial.js");
 var _lineRadialJsDefault = parcelHelpers.interopDefault(_lineRadialJs);
 var _pointRadialJs = require("./pointRadial.js");
 var _pointRadialJsDefault = parcelHelpers.interopDefault(_pointRadialJs);
-var _indexJs = require("./link/index.js");
+var _linkJs = require("./link.js");
 var _symbolJs = require("./symbol.js");
 var _symbolJsDefault = parcelHelpers.interopDefault(_symbolJs);
+var _asteriskJs = require("./symbol/asterisk.js");
+var _asteriskJsDefault = parcelHelpers.interopDefault(_asteriskJs);
 var _circleJs = require("./symbol/circle.js");
 var _circleJsDefault = parcelHelpers.interopDefault(_circleJs);
 var _crossJs = require("./symbol/cross.js");
 var _crossJsDefault = parcelHelpers.interopDefault(_crossJs);
 var _diamondJs = require("./symbol/diamond.js");
 var _diamondJsDefault = parcelHelpers.interopDefault(_diamondJs);
+var _diamond2Js = require("./symbol/diamond2.js");
+var _diamond2JsDefault = parcelHelpers.interopDefault(_diamond2Js);
+var _plusJs = require("./symbol/plus.js");
+var _plusJsDefault = parcelHelpers.interopDefault(_plusJs);
 var _squareJs = require("./symbol/square.js");
 var _squareJsDefault = parcelHelpers.interopDefault(_squareJs);
+var _square2Js = require("./symbol/square2.js");
+var _square2JsDefault = parcelHelpers.interopDefault(_square2Js);
 var _starJs = require("./symbol/star.js");
 var _starJsDefault = parcelHelpers.interopDefault(_starJs);
 var _triangleJs = require("./symbol/triangle.js");
 var _triangleJsDefault = parcelHelpers.interopDefault(_triangleJs);
+var _triangle2Js = require("./symbol/triangle2.js");
+var _triangle2JsDefault = parcelHelpers.interopDefault(_triangle2Js);
 var _wyeJs = require("./symbol/wye.js");
 var _wyeJsDefault = parcelHelpers.interopDefault(_wyeJs);
+var _timesJs = require("./symbol/times.js");
+var _timesJsDefault = parcelHelpers.interopDefault(_timesJs);
 var _basisClosedJs = require("./curve/basisClosed.js");
 var _basisClosedJsDefault = parcelHelpers.interopDefault(_basisClosedJs);
 var _basisOpenJs = require("./curve/basisOpen.js");
 var _basisOpenJsDefault = parcelHelpers.interopDefault(_basisOpenJs);
 var _basisJs = require("./curve/basis.js");
 var _basisJsDefault = parcelHelpers.interopDefault(_basisJs);
+var _bumpJs = require("./curve/bump.js");
 var _bundleJs = require("./curve/bundle.js");
 var _bundleJsDefault = parcelHelpers.interopDefault(_bundleJs);
 var _cardinalClosedJs = require("./curve/cardinalClosed.js");
@@ -5649,14 +4419,17 @@ var _noneJsDefault1 = parcelHelpers.interopDefault(_noneJs1);
 var _reverseJs = require("./order/reverse.js");
 var _reverseJsDefault = parcelHelpers.interopDefault(_reverseJs);
 
-},{"./arc.js":false,"./area.js":"87W2h","./line.js":"hTFAN","./pie.js":false,"./areaRadial.js":false,"./lineRadial.js":false,"./pointRadial.js":false,"./link/index.js":false,"./symbol.js":false,"./symbol/circle.js":false,"./symbol/cross.js":false,"./symbol/diamond.js":false,"./symbol/square.js":false,"./symbol/star.js":false,"./symbol/triangle.js":false,"./symbol/wye.js":false,"./curve/basisClosed.js":false,"./curve/basisOpen.js":false,"./curve/basis.js":false,"./curve/bundle.js":false,"./curve/cardinalClosed.js":false,"./curve/cardinalOpen.js":false,"./curve/cardinal.js":false,"./curve/catmullRomClosed.js":false,"./curve/catmullRomOpen.js":false,"./curve/catmullRom.js":false,"./curve/linearClosed.js":false,"./curve/linear.js":false,"./curve/monotone.js":false,"./curve/natural.js":false,"./curve/step.js":false,"./stack.js":false,"./offset/expand.js":false,"./offset/diverging.js":false,"./offset/none.js":false,"./offset/silhouette.js":false,"./offset/wiggle.js":false,"./order/appearance.js":false,"./order/ascending.js":false,"./order/descending.js":false,"./order/insideOut.js":false,"./order/none.js":false,"./order/reverse.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"87W2h":[function(require,module,exports) {
+},{"./arc.js":false,"./area.js":"7dNar","./line.js":"jplr6","./pie.js":false,"./areaRadial.js":false,"./lineRadial.js":false,"./pointRadial.js":false,"./link.js":false,"./symbol.js":false,"./symbol/asterisk.js":false,"./symbol/circle.js":false,"./symbol/cross.js":false,"./symbol/diamond.js":false,"./symbol/diamond2.js":false,"./symbol/plus.js":false,"./symbol/square.js":false,"./symbol/square2.js":false,"./symbol/star.js":false,"./symbol/triangle.js":false,"./symbol/triangle2.js":false,"./symbol/wye.js":false,"./symbol/times.js":false,"./curve/basisClosed.js":false,"./curve/basisOpen.js":false,"./curve/basis.js":false,"./curve/bump.js":false,"./curve/bundle.js":false,"./curve/cardinalClosed.js":false,"./curve/cardinalOpen.js":false,"./curve/cardinal.js":false,"./curve/catmullRomClosed.js":false,"./curve/catmullRomOpen.js":false,"./curve/catmullRom.js":false,"./curve/linearClosed.js":false,"./curve/linear.js":false,"./curve/monotone.js":false,"./curve/natural.js":false,"./curve/step.js":false,"./stack.js":false,"./offset/expand.js":false,"./offset/diverging.js":false,"./offset/none.js":false,"./offset/silhouette.js":false,"./offset/wiggle.js":false,"./order/appearance.js":false,"./order/ascending.js":false,"./order/descending.js":false,"./order/insideOut.js":false,"./order/none.js":false,"./order/reverse.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7dNar":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var x0 = (0, _pointJs.x), x1 = null, y0 = (0, _constantJsDefault.default)(0), y1 = (0, _pointJs.y), defined = (0, _constantJsDefault.default)(true), context = null, curve = (0, _linearJsDefault.default), output = null;
+parcelHelpers.export(exports, "default", ()=>function(x0, y0, y1) {
+        var x1 = null, defined = (0, _constantJsDefault.default)(true), context = null, curve = (0, _linearJsDefault.default), output = null, path = (0, _pathJs.withPath)(area);
+        x0 = typeof x0 === "function" ? x0 : x0 === undefined ? (0, _pointJs.x) : (0, _constantJsDefault.default)(+x0);
+        y0 = typeof y0 === "function" ? y0 : y0 === undefined ? (0, _constantJsDefault.default)(0) : (0, _constantJsDefault.default)(+y0);
+        y1 = typeof y1 === "function" ? y1 : y1 === undefined ? (0, _pointJs.y) : (0, _constantJsDefault.default)(+y1);
         function area(data) {
-            var i, j, k, n = data.length, d, defined0 = false, buffer, x0z = new Array(n), y0z = new Array(n);
-            if (context == null) output = curve(buffer = (0, _d3Path.path)());
+            var i, j, k, n = (data = (0, _arrayJsDefault.default)(data)).length, d, defined0 = false, buffer, x0z = new Array(n), y0z = new Array(n);
+            if (context == null) output = curve(buffer = path());
             for(i = 0; i <= n; ++i){
                 if (!(i < n && defined(d = data[i], i, data)) === defined0) {
                     if (defined0 = !defined0) {
@@ -5719,95 +4492,28 @@ parcelHelpers.export(exports, "default", ()=>function() {
         };
         return area;
     });
-var _d3Path = require("d3-path");
+var _arrayJs = require("./array.js");
+var _arrayJsDefault = parcelHelpers.interopDefault(_arrayJs);
 var _constantJs = require("./constant.js");
 var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
 var _linearJs = require("./curve/linear.js");
 var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
 var _lineJs = require("./line.js");
 var _lineJsDefault = parcelHelpers.interopDefault(_lineJs);
+var _pathJs = require("./path.js");
 var _pointJs = require("./point.js");
 
-},{"d3-path":"eY3pl","./constant.js":"dFe8v","./curve/linear.js":"ajwdK","./line.js":"hTFAN","./point.js":"5bQ0r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eY3pl":[function(require,module,exports) {
+},{"./array.js":"kpsgI","./constant.js":"b6wSb","./curve/linear.js":"8xv10","./line.js":"jplr6","./path.js":"bUrjE","./point.js":"7uEQv","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kpsgI":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "path", ()=>(0, _pathJsDefault.default));
-var _pathJs = require("./path.js");
-var _pathJsDefault = parcelHelpers.interopDefault(_pathJs);
+parcelHelpers.export(exports, "slice", ()=>slice);
+parcelHelpers.export(exports, "default", ()=>function(x) {
+        return typeof x === "object" && "length" in x ? x // Array, TypedArray, NodeList, array-like
+         : Array.from(x); // Map, Set, iterable, string, or anything else
+    });
+var slice = Array.prototype.slice;
 
-},{"./path.js":"jFeAg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jFeAg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var pi = Math.PI, tau = 2 * pi, epsilon = 1e-6, tauEpsilon = tau - epsilon;
-function Path() {
-    this._x0 = this._y0 = this._x1 = this._y1 = null; // end of current subpath
-    this._ = "";
-}
-function path() {
-    return new Path;
-}
-Path.prototype = path.prototype = {
-    constructor: Path,
-    moveTo: function(x, y) {
-        this._ += "M" + (this._x0 = this._x1 = +x) + "," + (this._y0 = this._y1 = +y);
-    },
-    closePath: function() {
-        if (this._x1 !== null) {
-            this._x1 = this._x0, this._y1 = this._y0;
-            this._ += "Z";
-        }
-    },
-    lineTo: function(x, y) {
-        this._ += "L" + (this._x1 = +x) + "," + (this._y1 = +y);
-    },
-    quadraticCurveTo: function(x1, y1, x, y) {
-        this._ += "Q" + +x1 + "," + +y1 + "," + (this._x1 = +x) + "," + (this._y1 = +y);
-    },
-    bezierCurveTo: function(x1, y1, x2, y2, x, y) {
-        this._ += "C" + +x1 + "," + +y1 + "," + +x2 + "," + +y2 + "," + (this._x1 = +x) + "," + (this._y1 = +y);
-    },
-    arcTo: function(x1, y1, x2, y2, r) {
-        x1 = +x1, y1 = +y1, x2 = +x2, y2 = +y2, r = +r;
-        var x0 = this._x1, y0 = this._y1, x21 = x2 - x1, y21 = y2 - y1, x01 = x0 - x1, y01 = y0 - y1, l01_2 = x01 * x01 + y01 * y01;
-        // Is the radius negative? Error.
-        if (r < 0) throw new Error("negative radius: " + r);
-        // Is this path empty? Move to (x1,y1).
-        if (this._x1 === null) this._ += "M" + (this._x1 = x1) + "," + (this._y1 = y1);
-        else if (!(l01_2 > epsilon)) ;
-        else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon) || !r) this._ += "L" + (this._x1 = x1) + "," + (this._y1 = y1);
-        else {
-            var x20 = x2 - x0, y20 = y2 - y0, l21_2 = x21 * x21 + y21 * y21, l20_2 = x20 * x20 + y20 * y20, l21 = Math.sqrt(l21_2), l01 = Math.sqrt(l01_2), l = r * Math.tan((pi - Math.acos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2), t01 = l / l01, t21 = l / l21;
-            // If the start tangent is not coincident with (x0,y0), line to.
-            if (Math.abs(t01 - 1) > epsilon) this._ += "L" + (x1 + t01 * x01) + "," + (y1 + t01 * y01);
-            this._ += "A" + r + "," + r + ",0,0," + +(y01 * x20 > x01 * y20) + "," + (this._x1 = x1 + t21 * x21) + "," + (this._y1 = y1 + t21 * y21);
-        }
-    },
-    arc: function(x, y, r, a0, a1, ccw) {
-        x = +x, y = +y, r = +r, ccw = !!ccw;
-        var dx = r * Math.cos(a0), dy = r * Math.sin(a0), x0 = x + dx, y0 = y + dy, cw = 1 ^ ccw, da = ccw ? a0 - a1 : a1 - a0;
-        // Is the radius negative? Error.
-        if (r < 0) throw new Error("negative radius: " + r);
-        // Is this path empty? Move to (x0,y0).
-        if (this._x1 === null) this._ += "M" + x0 + "," + y0;
-        else if (Math.abs(this._x1 - x0) > epsilon || Math.abs(this._y1 - y0) > epsilon) this._ += "L" + x0 + "," + y0;
-        // Is this arc empty? We’re done.
-        if (!r) return;
-        // Does the angle go the wrong way? Flip the direction.
-        if (da < 0) da = da % tau + tau;
-        // Is this a complete circle? Draw two arcs to complete the circle.
-        if (da > tauEpsilon) this._ += "A" + r + "," + r + ",0,1," + cw + "," + (x - dx) + "," + (y - dy) + "A" + r + "," + r + ",0,1," + cw + "," + (this._x1 = x0) + "," + (this._y1 = y0);
-        else if (da > epsilon) this._ += "A" + r + "," + r + ",0," + +(da >= pi) + "," + cw + "," + (this._x1 = x + r * Math.cos(a1)) + "," + (this._y1 = y + r * Math.sin(a1));
-    },
-    rect: function(x, y, w, h) {
-        this._ += "M" + (this._x0 = this._x1 = +x) + "," + (this._y0 = this._y1 = +y) + "h" + +w + "v" + +h + "h" + -w + "Z";
-    },
-    toString: function() {
-        return this._;
-    }
-};
-exports.default = path;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dFe8v":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"b6wSb":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(x) {
@@ -5816,7 +4522,7 @@ parcelHelpers.export(exports, "default", ()=>function(x) {
         };
     });
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ajwdK":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8xv10":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "default", ()=>function(context) {
@@ -5847,7 +4553,7 @@ Linear.prototype = {
                 this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y);
                 break;
             case 1:
-                this._point = 2; // proceed
+                this._point = 2; // falls through
             default:
                 this._context.lineTo(x, y);
                 break;
@@ -5855,14 +4561,16 @@ Linear.prototype = {
     }
 };
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hTFAN":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"jplr6":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "default", ()=>function() {
-        var x = (0, _pointJs.x), y = (0, _pointJs.y), defined = (0, _constantJsDefault.default)(true), context = null, curve = (0, _linearJsDefault.default), output = null;
+parcelHelpers.export(exports, "default", ()=>function(x, y) {
+        var defined = (0, _constantJsDefault.default)(true), context = null, curve = (0, _linearJsDefault.default), output = null, path = (0, _pathJs.withPath)(line);
+        x = typeof x === "function" ? x : x === undefined ? (0, _pointJs.x) : (0, _constantJsDefault.default)(x);
+        y = typeof y === "function" ? y : y === undefined ? (0, _pointJs.y) : (0, _constantJsDefault.default)(y);
         function line(data) {
-            var i, n = data.length, d, defined0 = false, buffer;
-            if (context == null) output = curve(buffer = (0, _d3Path.path)());
+            var i, n = (data = (0, _arrayJsDefault.default)(data)).length, d, defined0 = false, buffer;
+            if (context == null) output = curve(buffer = path());
             for(i = 0; i <= n; ++i){
                 if (!(i < n && defined(d = data[i], i, data)) === defined0) {
                     if (defined0 = !defined0) output.lineStart();
@@ -5889,14 +4597,137 @@ parcelHelpers.export(exports, "default", ()=>function() {
         };
         return line;
     });
-var _d3Path = require("d3-path");
+var _arrayJs = require("./array.js");
+var _arrayJsDefault = parcelHelpers.interopDefault(_arrayJs);
 var _constantJs = require("./constant.js");
 var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
 var _linearJs = require("./curve/linear.js");
 var _linearJsDefault = parcelHelpers.interopDefault(_linearJs);
+var _pathJs = require("./path.js");
 var _pointJs = require("./point.js");
 
-},{"d3-path":"eY3pl","./constant.js":"dFe8v","./curve/linear.js":"ajwdK","./point.js":"5bQ0r","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5bQ0r":[function(require,module,exports) {
+},{"./array.js":"kpsgI","./constant.js":"b6wSb","./curve/linear.js":"8xv10","./path.js":"bUrjE","./point.js":"7uEQv","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bUrjE":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "withPath", ()=>withPath);
+var _d3Path = require("d3-path");
+function withPath(shape) {
+    let digits = 3;
+    shape.digits = function(_) {
+        if (!arguments.length) return digits;
+        if (_ == null) digits = null;
+        else {
+            const d = Math.floor(_);
+            if (!(d >= 0)) throw new RangeError(`invalid digits: ${_}`);
+            digits = d;
+        }
+        return shape;
+    };
+    return ()=>new (0, _d3Path.Path)(digits);
+}
+
+},{"d3-path":"2eCDY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2eCDY":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Path", ()=>(0, _pathJs.Path));
+parcelHelpers.export(exports, "path", ()=>(0, _pathJs.path));
+parcelHelpers.export(exports, "pathRound", ()=>(0, _pathJs.pathRound));
+var _pathJs = require("./path.js");
+
+},{"./path.js":"gPmfw","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gPmfw":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Path", ()=>Path);
+parcelHelpers.export(exports, "path", ()=>path);
+parcelHelpers.export(exports, "pathRound", ()=>pathRound);
+const pi = Math.PI, tau = 2 * pi, epsilon = 1e-6, tauEpsilon = tau - epsilon;
+function append(strings) {
+    this._ += strings[0];
+    for(let i = 1, n = strings.length; i < n; ++i)this._ += arguments[i] + strings[i];
+}
+function appendRound(digits) {
+    let d = Math.floor(digits);
+    if (!(d >= 0)) throw new Error(`invalid digits: ${digits}`);
+    if (d > 15) return append;
+    const k = 10 ** d;
+    return function(strings) {
+        this._ += strings[0];
+        for(let i = 1, n = strings.length; i < n; ++i)this._ += Math.round(arguments[i] * k) / k + strings[i];
+    };
+}
+class Path {
+    constructor(digits){
+        this._x0 = this._y0 = this._x1 = this._y1 = null; // end of current subpath
+        this._ = "";
+        this._append = digits == null ? append : appendRound(digits);
+    }
+    moveTo(x, y) {
+        this._append`M${this._x0 = this._x1 = +x},${this._y0 = this._y1 = +y}`;
+    }
+    closePath() {
+        if (this._x1 !== null) {
+            this._x1 = this._x0, this._y1 = this._y0;
+            this._append`Z`;
+        }
+    }
+    lineTo(x, y) {
+        this._append`L${this._x1 = +x},${this._y1 = +y}`;
+    }
+    quadraticCurveTo(x1, y1, x, y) {
+        this._append`Q${+x1},${+y1},${this._x1 = +x},${this._y1 = +y}`;
+    }
+    bezierCurveTo(x1, y1, x2, y2, x, y) {
+        this._append`C${+x1},${+y1},${+x2},${+y2},${this._x1 = +x},${this._y1 = +y}`;
+    }
+    arcTo(x1, y1, x2, y2, r) {
+        x1 = +x1, y1 = +y1, x2 = +x2, y2 = +y2, r = +r;
+        // Is the radius negative? Error.
+        if (r < 0) throw new Error(`negative radius: ${r}`);
+        let x0 = this._x1, y0 = this._y1, x21 = x2 - x1, y21 = y2 - y1, x01 = x0 - x1, y01 = y0 - y1, l01_2 = x01 * x01 + y01 * y01;
+        // Is this path empty? Move to (x1,y1).
+        if (this._x1 === null) this._append`M${this._x1 = x1},${this._y1 = y1}`;
+        else if (!(l01_2 > epsilon)) ;
+        else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon) || !r) this._append`L${this._x1 = x1},${this._y1 = y1}`;
+        else {
+            let x20 = x2 - x0, y20 = y2 - y0, l21_2 = x21 * x21 + y21 * y21, l20_2 = x20 * x20 + y20 * y20, l21 = Math.sqrt(l21_2), l01 = Math.sqrt(l01_2), l = r * Math.tan((pi - Math.acos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2), t01 = l / l01, t21 = l / l21;
+            // If the start tangent is not coincident with (x0,y0), line to.
+            if (Math.abs(t01 - 1) > epsilon) this._append`L${x1 + t01 * x01},${y1 + t01 * y01}`;
+            this._append`A${r},${r},0,0,${+(y01 * x20 > x01 * y20)},${this._x1 = x1 + t21 * x21},${this._y1 = y1 + t21 * y21}`;
+        }
+    }
+    arc(x, y, r, a0, a1, ccw) {
+        x = +x, y = +y, r = +r, ccw = !!ccw;
+        // Is the radius negative? Error.
+        if (r < 0) throw new Error(`negative radius: ${r}`);
+        let dx = r * Math.cos(a0), dy = r * Math.sin(a0), x0 = x + dx, y0 = y + dy, cw = 1 ^ ccw, da = ccw ? a0 - a1 : a1 - a0;
+        // Is this path empty? Move to (x0,y0).
+        if (this._x1 === null) this._append`M${x0},${y0}`;
+        else if (Math.abs(this._x1 - x0) > epsilon || Math.abs(this._y1 - y0) > epsilon) this._append`L${x0},${y0}`;
+        // Is this arc empty? We’re done.
+        if (!r) return;
+        // Does the angle go the wrong way? Flip the direction.
+        if (da < 0) da = da % tau + tau;
+        // Is this a complete circle? Draw two arcs to complete the circle.
+        if (da > tauEpsilon) this._append`A${r},${r},0,1,${cw},${x - dx},${y - dy}A${r},${r},0,1,${cw},${this._x1 = x0},${this._y1 = y0}`;
+        else if (da > epsilon) this._append`A${r},${r},0,${+(da >= pi)},${cw},${this._x1 = x + r * Math.cos(a1)},${this._y1 = y + r * Math.sin(a1)}`;
+    }
+    rect(x, y, w, h) {
+        this._append`M${this._x0 = this._x1 = +x},${this._y0 = this._y1 = +y}h${w = +w}v${+h}h${-w}Z`;
+    }
+    toString() {
+        return this._;
+    }
+}
+function path() {
+    return new Path;
+}
+// Allow instanceof d3.path
+path.prototype = Path.prototype;
+function pathRound(digits = 3) {
+    return new Path(+digits);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7uEQv":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "x", ()=>x);
@@ -5908,570 +4739,1305 @@ function y(p) {
     return p[1];
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bV6WG":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7kYfy":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
-parcelHelpers.export(exports, "firstControlPoint", ()=>firstControlPoint);
-parcelHelpers.export(exports, "lastControlPoint", ()=>lastControlPoint);
-parcelHelpers.export(exports, "sketchControlPoint", ()=>sketchControlPoint);
-parcelHelpers.export(exports, "trackLine", ()=>trackLine);
-parcelHelpers.export(exports, "trackLineModifying", ()=>trackLineModifying);
-parcelHelpers.export(exports, "poiPoint", ()=>poiPoint);
-parcelHelpers.export(exports, "numberedControlPoint", ()=>numberedControlPoint);
-parcelHelpers.export(exports, "sketchLabel", ()=>sketchLabel);
-parcelHelpers.export(exports, "sketchLabelPOI", ()=>sketchLabelPOI);
-parcelHelpers.export(exports, "sketchLabelControlPoint", ()=>sketchLabelControlPoint);
-parcelHelpers.export(exports, "sketchLabelSegment", ()=>sketchLabelSegment);
-parcelHelpers.export(exports, "styleRules", ()=>styleRules);
-const controlPoint = {
-    "z-index": 10,
-    "circle-radius": 8,
-    "circle-fill-color": "white"
-};
-const firstControlPoint = {
-    ...controlPoint,
-    "circle-fill-color": "green"
-};
-const lastControlPoint = {
-    ...controlPoint,
-    "circle-fill-color": "red"
-};
-const sketchControlPoint = {
-    "circle-radius": 5,
-    "circle-fill-color": "#ffffffdd"
-};
-const trackLine = {
-    "stroke-width": 6,
-    "stroke-color": "purple"
-};
-const trackLineModifying = {
-    ...trackLine,
-    "stroke-width": 3,
-    "stroke-line-dash": [
-        5,
-        9
-    ]
-};
-const poiPoint = {
-    "z-index": 100,
-    "circle-radius": 8,
-    "circle-fill-color": "yellow",
-    "text-font": "bold 11px Inter",
-    "text-fill-color": "#000",
-    // use 'concat' to convert number to string
-    "text-value": [
-        "concat",
-        [
-            "get",
-            "index"
-        ],
-        ""
-    ]
-};
-const numberedControlPoint = {
-    ...controlPoint,
-    "circle-fill-color": "#ffffffdd",
-    "text-color": "blue",
-    // use 'concat' to convert number to string
-    "text-value": [
-        "concat",
-        [
-            "get",
-            "index"
-        ],
-        ""
-    ]
-};
-const sketchLabel = {
-    "text-font": "20px sans-serif",
-    "text-offset-x": 20,
-    "text-align": "left",
-    "text-background-fill-color": "#ffffffaa"
-};
-const sketchLabelPOI = {
-    ...sketchLabel,
-    "text-value": "click to delete\ndrag to move POI"
-};
-const sketchLabelControlPoint = {
-    ...sketchLabel,
-    "text-value": "click to delete\ndrag to move point"
-};
-const sketchLabelSegment = {
-    ...sketchLabel,
-    "text-value": "drag to create point"
-};
-const styleRules = [
-    {
-        filter: [
-            "==",
-            [
-                "get",
-                "type"
-            ],
-            "sketch"
-        ],
-        style: sketchControlPoint
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "sketch"
-            ],
-            [
-                "==",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "POI"
-            ]
-        ],
-        style: sketchLabelPOI
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "sketch"
-            ],
-            [
-                "==",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "controlPoint"
-            ]
-        ],
-        style: sketchLabelControlPoint
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "sketch"
-            ],
-            [
-                "==",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "segment"
-            ]
-        ],
-        style: sketchLabelSegment
-    },
-    {
-        filter: [
-            "==",
-            [
-                "get",
-                "type"
-            ],
-            "POI"
-        ],
-        style: poiPoint
-    },
-    {
-        // FIXME: shorter filter?
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "controlPoint"
-            ],
-            [
-                "!=",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "first"
-            ],
-            [
-                "!=",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "last"
-            ]
-        ],
-        style: numberedControlPoint
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "controlPoint"
-            ],
-            [
-                "==",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "first"
-            ]
-        ],
-        style: firstControlPoint
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "controlPoint"
-            ],
-            [
-                "==",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "last"
-            ]
-        ],
-        style: lastControlPoint
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "segment"
-            ],
-            [
-                "!=",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "modifying"
-            ]
-        ],
-        style: trackLine
-    },
-    {
-        filter: [
-            "all",
-            [
-                "==",
-                [
-                    "get",
-                    "type"
-                ],
-                "segment"
-            ],
-            [
-                "==",
-                [
-                    "get",
-                    "subtype"
-                ],
-                "modifying"
-            ]
-        ],
-        style: trackLineModifying
-    }
-];
+parcelHelpers.export(exports, "axisTop", ()=>(0, _axisJs.axisTop));
+parcelHelpers.export(exports, "axisRight", ()=>(0, _axisJs.axisRight));
+parcelHelpers.export(exports, "axisBottom", ()=>(0, _axisJs.axisBottom));
+parcelHelpers.export(exports, "axisLeft", ()=>(0, _axisJs.axisLeft));
+var _axisJs = require("./axis.js");
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2SIll":[function(require,module,exports) {
+},{"./axis.js":"eCzHZ","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eCzHZ":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "createMap", ()=>createMap);
-var _epsg2056 = require("@geoblocks/proj/src/EPSG_2056");
-var _epsg2056Default = parcelHelpers.interopDefault(_epsg2056);
-var _tile = require("ol/layer/Tile");
-var _tileDefault = parcelHelpers.interopDefault(_tile);
-var _osm = require("ol/source/OSM");
-var _osmDefault = parcelHelpers.interopDefault(_osm);
-var _vector = require("ol/layer/Vector");
-var _vectorDefault = parcelHelpers.interopDefault(_vector);
-var _vector1 = require("ol/source/Vector");
-var _vectorDefault1 = parcelHelpers.interopDefault(_vector1);
-var _ol = require("ol");
-var _style = require("./style");
-var _proj = require("ol/proj");
-var _shadowtrack = require("./shadowtrack");
-function createMap(target) {
-    const trackSource = new (0, _vectorDefault1.default)();
-    const trackLayer = new (0, _vectorDefault.default)({
-        source: trackSource,
-        style: (0, _style.styleRules)
+parcelHelpers.export(exports, "axisTop", ()=>axisTop);
+parcelHelpers.export(exports, "axisRight", ()=>axisRight);
+parcelHelpers.export(exports, "axisBottom", ()=>axisBottom);
+parcelHelpers.export(exports, "axisLeft", ()=>axisLeft);
+var _identityJs = require("./identity.js");
+var _identityJsDefault = parcelHelpers.interopDefault(_identityJs);
+var top = 1, right = 2, bottom = 3, left = 4, epsilon = 1e-6;
+function translateX(x) {
+    return "translate(" + x + ",0)";
+}
+function translateY(y) {
+    return "translate(0," + y + ")";
+}
+function number(scale) {
+    return (d)=>+scale(d);
+}
+function center(scale, offset) {
+    offset = Math.max(0, scale.bandwidth() - offset * 2) / 2;
+    if (scale.round()) offset = Math.round(offset);
+    return (d)=>+scale(d) + offset;
+}
+function entering() {
+    return !this.__axis;
+}
+function axis(orient, scale) {
+    var tickArguments = [], tickValues = null, tickFormat = null, tickSizeInner = 6, tickSizeOuter = 6, tickPadding = 3, offset = typeof window !== "undefined" && window.devicePixelRatio > 1 ? 0 : 0.5, k = orient === top || orient === left ? -1 : 1, x = orient === left || orient === right ? "x" : "y", transform = orient === top || orient === bottom ? translateX : translateY;
+    function axis(context) {
+        var values = tickValues == null ? scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain() : tickValues, format = tickFormat == null ? scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : (0, _identityJsDefault.default) : tickFormat, spacing = Math.max(tickSizeInner, 0) + tickPadding, range = scale.range(), range0 = +range[0] + offset, range1 = +range[range.length - 1] + offset, position = (scale.bandwidth ? center : number)(scale.copy(), offset), selection = context.selection ? context.selection() : context, path = selection.selectAll(".domain").data([
+            null
+        ]), tick = selection.selectAll(".tick").data(values, scale).order(), tickExit = tick.exit(), tickEnter = tick.enter().append("g").attr("class", "tick"), line = tick.select("line"), text = tick.select("text");
+        path = path.merge(path.enter().insert("path", ".tick").attr("class", "domain").attr("stroke", "currentColor"));
+        tick = tick.merge(tickEnter);
+        line = line.merge(tickEnter.append("line").attr("stroke", "currentColor").attr(x + "2", k * tickSizeInner));
+        text = text.merge(tickEnter.append("text").attr("fill", "currentColor").attr(x, k * spacing).attr("dy", orient === top ? "0em" : orient === bottom ? "0.71em" : "0.32em"));
+        if (context !== selection) {
+            path = path.transition(context);
+            tick = tick.transition(context);
+            line = line.transition(context);
+            text = text.transition(context);
+            tickExit = tickExit.transition(context).attr("opacity", epsilon).attr("transform", function(d) {
+                return isFinite(d = position(d)) ? transform(d + offset) : this.getAttribute("transform");
+            });
+            tickEnter.attr("opacity", epsilon).attr("transform", function(d) {
+                var p = this.parentNode.__axis;
+                return transform((p && isFinite(p = p(d)) ? p : position(d)) + offset);
+            });
+        }
+        tickExit.remove();
+        path.attr("d", orient === left || orient === right ? tickSizeOuter ? "M" + k * tickSizeOuter + "," + range0 + "H" + offset + "V" + range1 + "H" + k * tickSizeOuter : "M" + offset + "," + range0 + "V" + range1 : tickSizeOuter ? "M" + range0 + "," + k * tickSizeOuter + "V" + offset + "H" + range1 + "V" + k * tickSizeOuter : "M" + range0 + "," + offset + "H" + range1);
+        tick.attr("opacity", 1).attr("transform", function(d) {
+            return transform(position(d) + offset);
+        });
+        line.attr(x + "2", k * tickSizeInner);
+        text.attr(x, k * spacing).text(format);
+        selection.filter(entering).attr("fill", "none").attr("font-size", 10).attr("font-family", "sans-serif").attr("text-anchor", orient === right ? "start" : orient === left ? "end" : "middle");
+        selection.each(function() {
+            this.__axis = position;
+        });
+    }
+    axis.scale = function(_) {
+        return arguments.length ? (scale = _, axis) : scale;
+    };
+    axis.ticks = function() {
+        return tickArguments = Array.from(arguments), axis;
+    };
+    axis.tickArguments = function(_) {
+        return arguments.length ? (tickArguments = _ == null ? [] : Array.from(_), axis) : tickArguments.slice();
+    };
+    axis.tickValues = function(_) {
+        return arguments.length ? (tickValues = _ == null ? null : Array.from(_), axis) : tickValues && tickValues.slice();
+    };
+    axis.tickFormat = function(_) {
+        return arguments.length ? (tickFormat = _, axis) : tickFormat;
+    };
+    axis.tickSize = function(_) {
+        return arguments.length ? (tickSizeInner = tickSizeOuter = +_, axis) : tickSizeInner;
+    };
+    axis.tickSizeInner = function(_) {
+        return arguments.length ? (tickSizeInner = +_, axis) : tickSizeInner;
+    };
+    axis.tickSizeOuter = function(_) {
+        return arguments.length ? (tickSizeOuter = +_, axis) : tickSizeOuter;
+    };
+    axis.tickPadding = function(_) {
+        return arguments.length ? (tickPadding = +_, axis) : tickPadding;
+    };
+    axis.offset = function(_) {
+        return arguments.length ? (offset = +_, axis) : offset;
+    };
+    return axis;
+}
+function axisTop(scale) {
+    return axis(top, scale);
+}
+function axisRight(scale) {
+    return axis(right, scale);
+}
+function axisBottom(scale) {
+    return axis(bottom, scale);
+}
+function axisLeft(scale) {
+    return axis(left, scale);
+}
+
+},{"./identity.js":"cGFc4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cGFc4":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(x) {
+        return x;
     });
-    const extent = (0, _proj.transformExtent)((0, _epsg2056.proj).getExtent(), (0, _epsg2056Default.default), "EPSG:3857");
-    const view = new (0, _ol.View)({
-        extent: extent,
-        center: (0, _proj.transform)([
-            2532661.0,
-            1151654.0
-        ], (0, _epsg2056Default.default), "EPSG:3857"),
-        zoom: 10
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4Vxhm":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "create", ()=>(0, _createJsDefault.default));
+parcelHelpers.export(exports, "creator", ()=>(0, _creatorJsDefault.default));
+parcelHelpers.export(exports, "local", ()=>(0, _localJsDefault.default));
+parcelHelpers.export(exports, "matcher", ()=>(0, _matcherJsDefault.default));
+parcelHelpers.export(exports, "namespace", ()=>(0, _namespaceJsDefault.default));
+parcelHelpers.export(exports, "namespaces", ()=>(0, _namespacesJsDefault.default));
+parcelHelpers.export(exports, "pointer", ()=>(0, _pointerJsDefault.default));
+parcelHelpers.export(exports, "pointers", ()=>(0, _pointersJsDefault.default));
+parcelHelpers.export(exports, "select", ()=>(0, _selectJsDefault.default));
+parcelHelpers.export(exports, "selectAll", ()=>(0, _selectAllJsDefault.default));
+parcelHelpers.export(exports, "selection", ()=>(0, _indexJsDefault.default));
+parcelHelpers.export(exports, "selector", ()=>(0, _selectorJsDefault.default));
+parcelHelpers.export(exports, "selectorAll", ()=>(0, _selectorAllJsDefault.default));
+parcelHelpers.export(exports, "style", ()=>(0, _styleJs.styleValue));
+parcelHelpers.export(exports, "window", ()=>(0, _windowJsDefault.default));
+var _createJs = require("./create.js");
+var _createJsDefault = parcelHelpers.interopDefault(_createJs);
+var _creatorJs = require("./creator.js");
+var _creatorJsDefault = parcelHelpers.interopDefault(_creatorJs);
+var _localJs = require("./local.js");
+var _localJsDefault = parcelHelpers.interopDefault(_localJs);
+var _matcherJs = require("./matcher.js");
+var _matcherJsDefault = parcelHelpers.interopDefault(_matcherJs);
+var _namespaceJs = require("./namespace.js");
+var _namespaceJsDefault = parcelHelpers.interopDefault(_namespaceJs);
+var _namespacesJs = require("./namespaces.js");
+var _namespacesJsDefault = parcelHelpers.interopDefault(_namespacesJs);
+var _pointerJs = require("./pointer.js");
+var _pointerJsDefault = parcelHelpers.interopDefault(_pointerJs);
+var _pointersJs = require("./pointers.js");
+var _pointersJsDefault = parcelHelpers.interopDefault(_pointersJs);
+var _selectJs = require("./select.js");
+var _selectJsDefault = parcelHelpers.interopDefault(_selectJs);
+var _selectAllJs = require("./selectAll.js");
+var _selectAllJsDefault = parcelHelpers.interopDefault(_selectAllJs);
+var _indexJs = require("./selection/index.js");
+var _indexJsDefault = parcelHelpers.interopDefault(_indexJs);
+var _selectorJs = require("./selector.js");
+var _selectorJsDefault = parcelHelpers.interopDefault(_selectorJs);
+var _selectorAllJs = require("./selectorAll.js");
+var _selectorAllJsDefault = parcelHelpers.interopDefault(_selectorAllJs);
+var _styleJs = require("./selection/style.js");
+var _windowJs = require("./window.js");
+var _windowJsDefault = parcelHelpers.interopDefault(_windowJs);
+
+},{"./create.js":false,"./creator.js":false,"./local.js":false,"./matcher.js":false,"./namespace.js":false,"./namespaces.js":false,"./pointer.js":"6j2mW","./pointers.js":false,"./select.js":"iqfs8","./selectAll.js":false,"./selection/index.js":false,"./selector.js":false,"./selectorAll.js":false,"./selection/style.js":false,"./window.js":false,"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kJCC5":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name) {
+        var fullname = (0, _namespaceJsDefault.default)(name);
+        return (fullname.local ? creatorFixed : creatorInherit)(fullname);
     });
-    const bgLayer = new (0, _tileDefault.default)({
-        source: new (0, _osmDefault.default)()
-    });
-    const shadowTrackLayer = (0, _shadowtrack.createShadowLayer)();
-    const map = new (0, _ol.Map)({
-        target,
-        view,
-        layers: [
-            bgLayer,
-            shadowTrackLayer,
-            trackLayer
-        ]
-    });
-    window["mymap"] = map;
-    return {
-        map,
-        trackLayer,
-        shadowTrackLayer
+var _namespaceJs = require("./namespace.js");
+var _namespaceJsDefault = parcelHelpers.interopDefault(_namespaceJs);
+var _namespacesJs = require("./namespaces.js");
+function creatorInherit(name) {
+    return function() {
+        var document = this.ownerDocument, uri = this.namespaceURI;
+        return uri === (0, _namespacesJs.xhtml) && document.documentElement.namespaceURI === (0, _namespacesJs.xhtml) ? document.createElement(name) : document.createElementNS(uri, name);
+    };
+}
+function creatorFixed(fullname) {
+    return function() {
+        return this.ownerDocument.createElementNS(fullname.space, fullname.local);
     };
 }
 
-},{"@geoblocks/proj/src/EPSG_2056":"9pCNe","ol/layer/Tile":"3ytzs","ol/source/OSM":"dmxOv","ol/layer/Vector":"iTrAy","ol/source/Vector":"9w7Fr","ol":"3a1E4","./style":"bV6WG","ol/proj":"SznqC","./shadowtrack":"gmvf6","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dmxOv":[function(require,module,exports) {
-/**
- * @module ol/source/OSM
- */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "ATTRIBUTION", ()=>ATTRIBUTION);
-var _xyzJs = require("./XYZ.js");
-var _xyzJsDefault = parcelHelpers.interopDefault(_xyzJs);
-const ATTRIBUTION = '&#169; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors.';
-/**
- * @typedef {Object} Options
- * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
- * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
- * @property {null|string} [crossOrigin='anonymous'] The `crossOrigin` attribute for loaded images.  Note that
- * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
- * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
- * @property {boolean} [interpolate=true] Use interpolated values when resampling.  By default,
- * linear interpolation is used when resampling.  Set to false to use the nearest neighbor instead.
- * @property {number} [maxZoom=19] Max zoom.
- * @property {boolean} [opaque=true] Whether the layer is opaque.
- * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
- * Higher values can increase reprojection performance, but decrease precision.
- * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
- * ```js
- * function(imageTile, src) {
- *   imageTile.getImage().src = src;
- * };
- * ```
- * @property {number} [transition=250] Duration of the opacity transition for rendering.
- * To disable the opacity transition, pass `transition: 0`.
- * @property {string} [url='https://tile.openstreetmap.org/{z}/{x}/{y}.png'] URL template.
- * Must include `{x}`, `{y}` or `{-y}`, and `{z}` placeholders.
- * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
- * @property {number|import("../array.js").NearestDirectionFunction} [zDirection=0]
- * Choose whether to use tiles with a higher or lower zoom level when between integer
- * zoom levels. See {@link module:ol/tilegrid/TileGrid~TileGrid#getZForResolution}.
- */ /**
- * @classdesc
- * Layer source for the OpenStreetMap tile server.
- * @api
- */ class OSM extends (0, _xyzJsDefault.default) {
-    /**
-   * @param {Options} [options] Open Street Map options.
-   */ constructor(options){
-        options = options || {};
-        let attributions;
-        if (options.attributions !== undefined) attributions = options.attributions;
-        else attributions = [
-            ATTRIBUTION
-        ];
-        const crossOrigin = options.crossOrigin !== undefined ? options.crossOrigin : "anonymous";
-        const url = options.url !== undefined ? options.url : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-        super({
-            attributions: attributions,
-            attributionsCollapsible: false,
-            cacheSize: options.cacheSize,
-            crossOrigin: crossOrigin,
-            interpolate: options.interpolate,
-            maxZoom: options.maxZoom !== undefined ? options.maxZoom : 19,
-            opaque: options.opaque !== undefined ? options.opaque : true,
-            reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-            tileLoadFunction: options.tileLoadFunction,
-            transition: options.transition,
-            url: url,
-            wrapX: options.wrapX,
-            zDirection: options.zDirection
-        });
-    }
-}
-exports.default = OSM;
-
-},{"./XYZ.js":"7BJTx","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7BJTx":[function(require,module,exports) {
-/**
- * @module ol/source/XYZ
- */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _tileImageJs = require("./TileImage.js");
-var _tileImageJsDefault = parcelHelpers.interopDefault(_tileImageJs);
-var _tilegridJs = require("../tilegrid.js");
-/**
- * @typedef {Object} Options
- * @property {import("./Source.js").AttributionLike} [attributions] Attributions.
- * @property {boolean} [attributionsCollapsible=true] Attributions are collapsible.
- * @property {number} [cacheSize] Initial tile cache size. Will auto-grow to hold at least the number of tiles in the viewport.
- * @property {null|string} [crossOrigin] The `crossOrigin` attribute for loaded images.  Note that
- * you must provide a `crossOrigin` value if you want to access pixel data with the Canvas renderer.
- * See https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image for more detail.
- * @property {boolean} [interpolate=true] Use interpolated values when resampling.  By default,
- * linear interpolation is used when resampling.  Set to false to use the nearest neighbor instead.
- * @property {boolean} [opaque=false] Whether the layer is opaque.
- * @property {import("../proj.js").ProjectionLike} [projection='EPSG:3857'] Projection.
- * @property {number} [reprojectionErrorThreshold=0.5] Maximum allowed reprojection error (in pixels).
- * Higher values can increase reprojection performance, but decrease precision.
- * @property {number} [maxZoom=42] Optional max zoom level. Not used if `tileGrid` is provided.
- * @property {number} [minZoom=0] Optional min zoom level. Not used if `tileGrid` is provided.
- * @property {number} [maxResolution] Optional tile grid resolution at level zero. Not used if `tileGrid` is provided.
- * @property {import("../tilegrid/TileGrid.js").default} [tileGrid] Tile grid.
- * @property {import("../Tile.js").LoadFunction} [tileLoadFunction] Optional function to load a tile given a URL. The default is
- * ```js
- * function(imageTile, src) {
- *   imageTile.getImage().src = src;
- * };
- * ```
- * @property {number} [tilePixelRatio=1] The pixel ratio used by the tile service.
- * For example, if the tile service advertizes 256px by 256px tiles but actually sends 512px
- * by 512px images (for retina/hidpi devices) then `tilePixelRatio`
- * should be set to `2`.
- * @property {number|import("../size.js").Size} [tileSize=[256, 256]] The tile size used by the tile service.
- * Not used if `tileGrid` is provided.
- * @property {number} [gutter=0] The size in pixels of the gutter around image tiles to ignore.
- * This allows artifacts of rendering at tile edges to be ignored.
- * Supported images should be wider and taller than the tile size by a value of `2 x gutter`.
- * @property {import("../Tile.js").UrlFunction} [tileUrlFunction] Optional function to get
- * tile URL given a tile coordinate and the projection.
- * Required if `url` or `urls` are not provided.
- * @property {string} [url] URL template. Must include `{x}`, `{y}` or `{-y}`,
- * and `{z}` placeholders. A `{?-?}` template pattern, for example `subdomain{a-f}.domain.com`,
- * may be used instead of defining each one separately in the `urls` option.
- * @property {Array<string>} [urls] An array of URL templates.
- * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
- * @property {number} [transition=250] Duration of the opacity transition for rendering.
- * To disable the opacity transition, pass `transition: 0`.
- * @property {number|import("../array.js").NearestDirectionFunction} [zDirection=0]
- * Choose whether to use tiles with a higher or lower zoom level when between integer
- * zoom levels. See {@link module:ol/tilegrid/TileGrid~TileGrid#getZForResolution}.
- */ /**
- * @classdesc
- * Layer source for tile data with URLs in a set XYZ format that are
- * defined in a URL template. By default, this follows the widely-used
- * Google grid where `x` 0 and `y` 0 are in the top left. Grids like
- * TMS where `x` 0 and `y` 0 are in the bottom left can be used by
- * using the `{-y}` placeholder in the URL template, so long as the
- * source does not have a custom tile grid. In this case
- * a `tileUrlFunction` can be used, such as:
- * ```js
- *  tileUrlFunction: function(coordinate) {
- *    return 'http://mapserver.com/' + coordinate[0] + '/' +
- *      coordinate[1] + '/' + (-coordinate[2] - 1) + '.png';
- *  }
- * ```
- * @api
- */ class XYZ extends (0, _tileImageJsDefault.default) {
-    /**
-   * @param {Options} [options] XYZ options.
-   */ constructor(options){
-        options = options || {};
-        const projection = options.projection !== undefined ? options.projection : "EPSG:3857";
-        const tileGrid = options.tileGrid !== undefined ? options.tileGrid : (0, _tilegridJs.createXYZ)({
-            extent: (0, _tilegridJs.extentFromProjection)(projection),
-            maxResolution: options.maxResolution,
-            maxZoom: options.maxZoom,
-            minZoom: options.minZoom,
-            tileSize: options.tileSize
-        });
-        super({
-            attributions: options.attributions,
-            cacheSize: options.cacheSize,
-            crossOrigin: options.crossOrigin,
-            interpolate: options.interpolate,
-            opaque: options.opaque,
-            projection: projection,
-            reprojectionErrorThreshold: options.reprojectionErrorThreshold,
-            tileGrid: tileGrid,
-            tileLoadFunction: options.tileLoadFunction,
-            tilePixelRatio: options.tilePixelRatio,
-            tileUrlFunction: options.tileUrlFunction,
-            url: options.url,
-            urls: options.urls,
-            wrapX: options.wrapX !== undefined ? options.wrapX : true,
-            transition: options.transition,
-            attributionsCollapsible: options.attributionsCollapsible,
-            zDirection: options.zDirection
-        });
-        /**
-     * @private
-     * @type {number}
-     */ this.gutter_ = options.gutter !== undefined ? options.gutter : 0;
-    }
-    /**
-   * @return {number} Gutter.
-   */ getGutter() {
-        return this.gutter_;
-    }
-}
-exports.default = XYZ;
-
-},{"./TileImage.js":"2cBKP","../tilegrid.js":"1Yr4i","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gmvf6":[function(require,module,exports) {
+},{"./namespace.js":"eafwg","./namespaces.js":"3EfaU","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"eafwg":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-/**
- *
- * @return {VectorLayer}
- */ parcelHelpers.export(exports, "createShadowLayer", ()=>createShadowLayer);
-var _vectorJs = require("ol/source/Vector.js");
-var _vectorJsDefault = parcelHelpers.interopDefault(_vectorJs);
-var _vectorJs1 = require("ol/layer/Vector.js");
-var _vectorJsDefault1 = parcelHelpers.interopDefault(_vectorJs1);
-function createShadowLayer() {
-    return new (0, _vectorJsDefault1.default)({
-        source: new (0, _vectorJsDefault.default)(),
-        style: {
-            "stroke-color": "#00cc33aa",
-            "stroke-width": 6
-        }
+parcelHelpers.export(exports, "default", ()=>function(name) {
+        var prefix = name += "", i = prefix.indexOf(":");
+        if (i >= 0 && (prefix = name.slice(0, i)) !== "xmlns") name = name.slice(i + 1);
+        return (0, _namespacesJsDefault.default).hasOwnProperty(prefix) ? {
+            space: (0, _namespacesJsDefault.default)[prefix],
+            local: name
+        } : name; // eslint-disable-line no-prototype-builtins
     });
+var _namespacesJs = require("./namespaces.js");
+var _namespacesJsDefault = parcelHelpers.interopDefault(_namespacesJs);
+
+},{"./namespaces.js":"3EfaU","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3EfaU":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "xhtml", ()=>xhtml);
+var xhtml = "http://www.w3.org/1999/xhtml";
+exports.default = {
+    svg: "http://www.w3.org/2000/svg",
+    xhtml: xhtml,
+    xlink: "http://www.w3.org/1999/xlink",
+    xml: "http://www.w3.org/XML/1998/namespace",
+    xmlns: "http://www.w3.org/2000/xmlns/"
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1mU1W":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(selector) {
+        return function() {
+            return this.matches(selector);
+        };
+    });
+parcelHelpers.export(exports, "childMatcher", ()=>childMatcher);
+function childMatcher(selector) {
+    return function(node) {
+        return node.matches(selector);
+    };
 }
 
-},{"ol/source/Vector.js":"9w7Fr","ol/layer/Vector.js":"iTrAy","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["ijkuy","f4bRs"], "f4bRs", "parcelRequireed82")
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6j2mW":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(event, node) {
+        event = (0, _sourceEventJsDefault.default)(event);
+        if (node === undefined) node = event.currentTarget;
+        if (node) {
+            var svg = node.ownerSVGElement || node;
+            if (svg.createSVGPoint) {
+                var point = svg.createSVGPoint();
+                point.x = event.clientX, point.y = event.clientY;
+                point = point.matrixTransform(node.getScreenCTM().inverse());
+                return [
+                    point.x,
+                    point.y
+                ];
+            }
+            if (node.getBoundingClientRect) {
+                var rect = node.getBoundingClientRect();
+                return [
+                    event.clientX - rect.left - node.clientLeft,
+                    event.clientY - rect.top - node.clientTop
+                ];
+            }
+        }
+        return [
+            event.pageX,
+            event.pageY
+        ];
+    });
+var _sourceEventJs = require("./sourceEvent.js");
+var _sourceEventJsDefault = parcelHelpers.interopDefault(_sourceEventJs);
+
+},{"./sourceEvent.js":"lUUuO","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUUuO":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(event) {
+        let sourceEvent;
+        while(sourceEvent = event.sourceEvent)event = sourceEvent;
+        return event;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iqfs8":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(selector) {
+        return typeof selector === "string" ? new (0, _indexJs.Selection)([
+            [
+                document.querySelector(selector)
+            ]
+        ], [
+            document.documentElement
+        ]) : new (0, _indexJs.Selection)([
+            [
+                selector
+            ]
+        ], (0, _indexJs.root));
+    });
+var _indexJs = require("./selection/index.js");
+
+},{"./selection/index.js":"j90xj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"j90xj":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "root", ()=>root);
+parcelHelpers.export(exports, "Selection", ()=>Selection);
+var _selectJs = require("./select.js");
+var _selectJsDefault = parcelHelpers.interopDefault(_selectJs);
+var _selectAllJs = require("./selectAll.js");
+var _selectAllJsDefault = parcelHelpers.interopDefault(_selectAllJs);
+var _selectChildJs = require("./selectChild.js");
+var _selectChildJsDefault = parcelHelpers.interopDefault(_selectChildJs);
+var _selectChildrenJs = require("./selectChildren.js");
+var _selectChildrenJsDefault = parcelHelpers.interopDefault(_selectChildrenJs);
+var _filterJs = require("./filter.js");
+var _filterJsDefault = parcelHelpers.interopDefault(_filterJs);
+var _dataJs = require("./data.js");
+var _dataJsDefault = parcelHelpers.interopDefault(_dataJs);
+var _enterJs = require("./enter.js");
+var _enterJsDefault = parcelHelpers.interopDefault(_enterJs);
+var _exitJs = require("./exit.js");
+var _exitJsDefault = parcelHelpers.interopDefault(_exitJs);
+var _joinJs = require("./join.js");
+var _joinJsDefault = parcelHelpers.interopDefault(_joinJs);
+var _mergeJs = require("./merge.js");
+var _mergeJsDefault = parcelHelpers.interopDefault(_mergeJs);
+var _orderJs = require("./order.js");
+var _orderJsDefault = parcelHelpers.interopDefault(_orderJs);
+var _sortJs = require("./sort.js");
+var _sortJsDefault = parcelHelpers.interopDefault(_sortJs);
+var _callJs = require("./call.js");
+var _callJsDefault = parcelHelpers.interopDefault(_callJs);
+var _nodesJs = require("./nodes.js");
+var _nodesJsDefault = parcelHelpers.interopDefault(_nodesJs);
+var _nodeJs = require("./node.js");
+var _nodeJsDefault = parcelHelpers.interopDefault(_nodeJs);
+var _sizeJs = require("./size.js");
+var _sizeJsDefault = parcelHelpers.interopDefault(_sizeJs);
+var _emptyJs = require("./empty.js");
+var _emptyJsDefault = parcelHelpers.interopDefault(_emptyJs);
+var _eachJs = require("./each.js");
+var _eachJsDefault = parcelHelpers.interopDefault(_eachJs);
+var _attrJs = require("./attr.js");
+var _attrJsDefault = parcelHelpers.interopDefault(_attrJs);
+var _styleJs = require("./style.js");
+var _styleJsDefault = parcelHelpers.interopDefault(_styleJs);
+var _propertyJs = require("./property.js");
+var _propertyJsDefault = parcelHelpers.interopDefault(_propertyJs);
+var _classedJs = require("./classed.js");
+var _classedJsDefault = parcelHelpers.interopDefault(_classedJs);
+var _textJs = require("./text.js");
+var _textJsDefault = parcelHelpers.interopDefault(_textJs);
+var _htmlJs = require("./html.js");
+var _htmlJsDefault = parcelHelpers.interopDefault(_htmlJs);
+var _raiseJs = require("./raise.js");
+var _raiseJsDefault = parcelHelpers.interopDefault(_raiseJs);
+var _lowerJs = require("./lower.js");
+var _lowerJsDefault = parcelHelpers.interopDefault(_lowerJs);
+var _appendJs = require("./append.js");
+var _appendJsDefault = parcelHelpers.interopDefault(_appendJs);
+var _insertJs = require("./insert.js");
+var _insertJsDefault = parcelHelpers.interopDefault(_insertJs);
+var _removeJs = require("./remove.js");
+var _removeJsDefault = parcelHelpers.interopDefault(_removeJs);
+var _cloneJs = require("./clone.js");
+var _cloneJsDefault = parcelHelpers.interopDefault(_cloneJs);
+var _datumJs = require("./datum.js");
+var _datumJsDefault = parcelHelpers.interopDefault(_datumJs);
+var _onJs = require("./on.js");
+var _onJsDefault = parcelHelpers.interopDefault(_onJs);
+var _dispatchJs = require("./dispatch.js");
+var _dispatchJsDefault = parcelHelpers.interopDefault(_dispatchJs);
+var _iteratorJs = require("./iterator.js");
+var _iteratorJsDefault = parcelHelpers.interopDefault(_iteratorJs);
+var root = [
+    null
+];
+function Selection(groups, parents) {
+    this._groups = groups;
+    this._parents = parents;
+}
+function selection() {
+    return new Selection([
+        [
+            document.documentElement
+        ]
+    ], root);
+}
+function selection_selection() {
+    return this;
+}
+Selection.prototype = selection.prototype = {
+    constructor: Selection,
+    select: (0, _selectJsDefault.default),
+    selectAll: (0, _selectAllJsDefault.default),
+    selectChild: (0, _selectChildJsDefault.default),
+    selectChildren: (0, _selectChildrenJsDefault.default),
+    filter: (0, _filterJsDefault.default),
+    data: (0, _dataJsDefault.default),
+    enter: (0, _enterJsDefault.default),
+    exit: (0, _exitJsDefault.default),
+    join: (0, _joinJsDefault.default),
+    merge: (0, _mergeJsDefault.default),
+    selection: selection_selection,
+    order: (0, _orderJsDefault.default),
+    sort: (0, _sortJsDefault.default),
+    call: (0, _callJsDefault.default),
+    nodes: (0, _nodesJsDefault.default),
+    node: (0, _nodeJsDefault.default),
+    size: (0, _sizeJsDefault.default),
+    empty: (0, _emptyJsDefault.default),
+    each: (0, _eachJsDefault.default),
+    attr: (0, _attrJsDefault.default),
+    style: (0, _styleJsDefault.default),
+    property: (0, _propertyJsDefault.default),
+    classed: (0, _classedJsDefault.default),
+    text: (0, _textJsDefault.default),
+    html: (0, _htmlJsDefault.default),
+    raise: (0, _raiseJsDefault.default),
+    lower: (0, _lowerJsDefault.default),
+    append: (0, _appendJsDefault.default),
+    insert: (0, _insertJsDefault.default),
+    remove: (0, _removeJsDefault.default),
+    clone: (0, _cloneJsDefault.default),
+    datum: (0, _datumJsDefault.default),
+    on: (0, _onJsDefault.default),
+    dispatch: (0, _dispatchJsDefault.default),
+    [Symbol.iterator]: (0, _iteratorJsDefault.default)
+};
+exports.default = selection;
+
+},{"./select.js":"EYlyt","./selectAll.js":"kbniV","./selectChild.js":"1Ks9s","./selectChildren.js":"28fJK","./filter.js":"iw0Qo","./data.js":"iH2cu","./enter.js":"3X1HI","./exit.js":"7LgSm","./join.js":"4EjcX","./merge.js":"hXG0D","./order.js":"3CaTV","./sort.js":"61JD7","./call.js":"8fJM4","./nodes.js":"4DAU1","./node.js":"lo6UY","./size.js":"haXag","./empty.js":"9Wcg6","./each.js":"2hp4M","./attr.js":"buGcI","./style.js":"gh7oy","./property.js":"dnxcr","./classed.js":"2xmU1","./text.js":"5tyq0","./html.js":"bI4bk","./raise.js":"g9Fj8","./lower.js":"fMzO1","./append.js":"ceF7W","./insert.js":"1jf7i","./remove.js":"iBizO","./clone.js":"dblCQ","./datum.js":"ha2d4","./on.js":"dFa0s","./dispatch.js":"hE2BK","./iterator.js":"2HnAp","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"EYlyt":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(select) {
+        if (typeof select !== "function") select = (0, _selectorJsDefault.default)(select);
+        for(var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j){
+            for(var group = groups[j], n = group.length, subgroup = subgroups[j] = new Array(n), node, subnode, i = 0; i < n; ++i)if ((node = group[i]) && (subnode = select.call(node, node.__data__, i, group))) {
+                if ("__data__" in node) subnode.__data__ = node.__data__;
+                subgroup[i] = subnode;
+            }
+        }
+        return new (0, _indexJs.Selection)(subgroups, this._parents);
+    });
+var _indexJs = require("./index.js");
+var _selectorJs = require("../selector.js");
+var _selectorJsDefault = parcelHelpers.interopDefault(_selectorJs);
+
+},{"./index.js":"j90xj","../selector.js":"27lrD","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"27lrD":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(selector) {
+        return selector == null ? none : function() {
+            return this.querySelector(selector);
+        };
+    });
+function none() {}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"kbniV":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(select) {
+        if (typeof select === "function") select = arrayAll(select);
+        else select = (0, _selectorAllJsDefault.default)(select);
+        for(var groups = this._groups, m = groups.length, subgroups = [], parents = [], j = 0; j < m; ++j){
+            for(var group = groups[j], n = group.length, node, i = 0; i < n; ++i)if (node = group[i]) {
+                subgroups.push(select.call(node, node.__data__, i, group));
+                parents.push(node);
+            }
+        }
+        return new (0, _indexJs.Selection)(subgroups, parents);
+    });
+var _indexJs = require("./index.js");
+var _arrayJs = require("../array.js");
+var _arrayJsDefault = parcelHelpers.interopDefault(_arrayJs);
+var _selectorAllJs = require("../selectorAll.js");
+var _selectorAllJsDefault = parcelHelpers.interopDefault(_selectorAllJs);
+function arrayAll(select) {
+    return function() {
+        return (0, _arrayJsDefault.default)(select.apply(this, arguments));
+    };
+}
+
+},{"./index.js":"j90xj","../array.js":"2pvRs","../selectorAll.js":"2Px2o","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2pvRs":[function(require,module,exports) {
+// Given something array like (or null), returns something that is strictly an
+// array. This is used to ensure that array-like objects passed to d3.selectAll
+// or selection.selectAll are converted into proper arrays when creating a
+// selection; we don’t ever want to create a selection backed by a live
+// HTMLCollection or NodeList. However, note that selection.selectAll will use a
+// static NodeList as a group, since it safely derived from querySelectorAll.
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>array);
+function array(x) {
+    return x == null ? [] : Array.isArray(x) ? x : Array.from(x);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2Px2o":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(selector) {
+        return selector == null ? empty : function() {
+            return this.querySelectorAll(selector);
+        };
+    });
+function empty() {
+    return [];
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1Ks9s":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(match) {
+        return this.select(match == null ? childFirst : childFind(typeof match === "function" ? match : (0, _matcherJs.childMatcher)(match)));
+    });
+var _matcherJs = require("../matcher.js");
+var find = Array.prototype.find;
+function childFind(match) {
+    return function() {
+        return find.call(this.children, match);
+    };
+}
+function childFirst() {
+    return this.firstElementChild;
+}
+
+},{"../matcher.js":"1mU1W","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"28fJK":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(match) {
+        return this.selectAll(match == null ? children : childrenFilter(typeof match === "function" ? match : (0, _matcherJs.childMatcher)(match)));
+    });
+var _matcherJs = require("../matcher.js");
+var filter = Array.prototype.filter;
+function children() {
+    return Array.from(this.children);
+}
+function childrenFilter(match) {
+    return function() {
+        return filter.call(this.children, match);
+    };
+}
+
+},{"../matcher.js":"1mU1W","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iw0Qo":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(match) {
+        if (typeof match !== "function") match = (0, _matcherJsDefault.default)(match);
+        for(var groups = this._groups, m = groups.length, subgroups = new Array(m), j = 0; j < m; ++j){
+            for(var group = groups[j], n = group.length, subgroup = subgroups[j] = [], node, i = 0; i < n; ++i)if ((node = group[i]) && match.call(node, node.__data__, i, group)) subgroup.push(node);
+        }
+        return new (0, _indexJs.Selection)(subgroups, this._parents);
+    });
+var _indexJs = require("./index.js");
+var _matcherJs = require("../matcher.js");
+var _matcherJsDefault = parcelHelpers.interopDefault(_matcherJs);
+
+},{"./index.js":"j90xj","../matcher.js":"1mU1W","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iH2cu":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(value, key) {
+        if (!arguments.length) return Array.from(this, datum);
+        var bind = key ? bindKey : bindIndex, parents = this._parents, groups = this._groups;
+        if (typeof value !== "function") value = (0, _constantJsDefault.default)(value);
+        for(var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j){
+            var parent = parents[j], group = groups[j], groupLength = group.length, data = arraylike(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength), exitGroup = exit[j] = new Array(groupLength);
+            bind(parent, group, enterGroup, updateGroup, exitGroup, data, key);
+            // Now connect the enter nodes to their following update node, such that
+            // appendChild can insert the materialized enter node before this node,
+            // rather than at the end of the parent node.
+            for(var i0 = 0, i1 = 0, previous, next; i0 < dataLength; ++i0)if (previous = enterGroup[i0]) {
+                if (i0 >= i1) i1 = i0 + 1;
+                while(!(next = updateGroup[i1]) && ++i1 < dataLength);
+                previous._next = next || null;
+            }
+        }
+        update = new (0, _indexJs.Selection)(update, parents);
+        update._enter = enter;
+        update._exit = exit;
+        return update;
+    });
+var _indexJs = require("./index.js");
+var _enterJs = require("./enter.js");
+var _constantJs = require("../constant.js");
+var _constantJsDefault = parcelHelpers.interopDefault(_constantJs);
+function bindIndex(parent, group, enter, update, exit, data) {
+    var i = 0, node, groupLength = group.length, dataLength = data.length;
+    // Put any non-null nodes that fit into update.
+    // Put any null nodes into enter.
+    // Put any remaining data into enter.
+    for(; i < dataLength; ++i)if (node = group[i]) {
+        node.__data__ = data[i];
+        update[i] = node;
+    } else enter[i] = new (0, _enterJs.EnterNode)(parent, data[i]);
+    // Put any non-null nodes that don’t fit into exit.
+    for(; i < groupLength; ++i)if (node = group[i]) exit[i] = node;
+}
+function bindKey(parent, group, enter, update, exit, data, key) {
+    var i, node, nodeByKeyValue = new Map, groupLength = group.length, dataLength = data.length, keyValues = new Array(groupLength), keyValue;
+    // Compute the key for each node.
+    // If multiple nodes have the same key, the duplicates are added to exit.
+    for(i = 0; i < groupLength; ++i)if (node = group[i]) {
+        keyValues[i] = keyValue = key.call(node, node.__data__, i, group) + "";
+        if (nodeByKeyValue.has(keyValue)) exit[i] = node;
+        else nodeByKeyValue.set(keyValue, node);
+    }
+    // Compute the key for each datum.
+    // If there a node associated with this key, join and add it to update.
+    // If there is not (or the key is a duplicate), add it to enter.
+    for(i = 0; i < dataLength; ++i){
+        keyValue = key.call(parent, data[i], i, data) + "";
+        if (node = nodeByKeyValue.get(keyValue)) {
+            update[i] = node;
+            node.__data__ = data[i];
+            nodeByKeyValue.delete(keyValue);
+        } else enter[i] = new (0, _enterJs.EnterNode)(parent, data[i]);
+    }
+    // Add any remaining nodes that were not bound to data to exit.
+    for(i = 0; i < groupLength; ++i)if ((node = group[i]) && nodeByKeyValue.get(keyValues[i]) === node) exit[i] = node;
+}
+function datum(node) {
+    return node.__data__;
+}
+// Given some data, this returns an array-like view of it: an object that
+// exposes a length property and allows numeric indexing. Note that unlike
+// selectAll, this isn’t worried about “live” collections because the resulting
+// array will only be used briefly while data is being bound. (It is possible to
+// cause the data to change while iterating by using a key function, but please
+// don’t; we’d rather avoid a gratuitous copy.)
+function arraylike(data) {
+    return typeof data === "object" && "length" in data ? data // Array, TypedArray, NodeList, array-like
+     : Array.from(data); // Map, Set, iterable, string, or anything else
+}
+
+},{"./index.js":"j90xj","./enter.js":"3X1HI","../constant.js":"fCO4w","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3X1HI":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return new (0, _indexJs.Selection)(this._enter || this._groups.map((0, _sparseJsDefault.default)), this._parents);
+    });
+parcelHelpers.export(exports, "EnterNode", ()=>EnterNode);
+var _sparseJs = require("./sparse.js");
+var _sparseJsDefault = parcelHelpers.interopDefault(_sparseJs);
+var _indexJs = require("./index.js");
+function EnterNode(parent, datum) {
+    this.ownerDocument = parent.ownerDocument;
+    this.namespaceURI = parent.namespaceURI;
+    this._next = null;
+    this._parent = parent;
+    this.__data__ = datum;
+}
+EnterNode.prototype = {
+    constructor: EnterNode,
+    appendChild: function(child) {
+        return this._parent.insertBefore(child, this._next);
+    },
+    insertBefore: function(child, next) {
+        return this._parent.insertBefore(child, next);
+    },
+    querySelector: function(selector) {
+        return this._parent.querySelector(selector);
+    },
+    querySelectorAll: function(selector) {
+        return this._parent.querySelectorAll(selector);
+    }
+};
+
+},{"./sparse.js":"cGtxX","./index.js":"j90xj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"cGtxX":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(update) {
+        return new Array(update.length);
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fCO4w":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(x) {
+        return function() {
+            return x;
+        };
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"7LgSm":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return new (0, _indexJs.Selection)(this._exit || this._groups.map((0, _sparseJsDefault.default)), this._parents);
+    });
+var _sparseJs = require("./sparse.js");
+var _sparseJsDefault = parcelHelpers.interopDefault(_sparseJs);
+var _indexJs = require("./index.js");
+
+},{"./sparse.js":"cGtxX","./index.js":"j90xj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4EjcX":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(onenter, onupdate, onexit) {
+        var enter = this.enter(), update = this, exit = this.exit();
+        if (typeof onenter === "function") {
+            enter = onenter(enter);
+            if (enter) enter = enter.selection();
+        } else enter = enter.append(onenter + "");
+        if (onupdate != null) {
+            update = onupdate(update);
+            if (update) update = update.selection();
+        }
+        if (onexit == null) exit.remove();
+        else onexit(exit);
+        return enter && update ? enter.merge(update).order() : update;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hXG0D":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(context) {
+        var selection = context.selection ? context.selection() : context;
+        for(var groups0 = this._groups, groups1 = selection._groups, m0 = groups0.length, m1 = groups1.length, m = Math.min(m0, m1), merges = new Array(m0), j = 0; j < m; ++j){
+            for(var group0 = groups0[j], group1 = groups1[j], n = group0.length, merge = merges[j] = new Array(n), node, i = 0; i < n; ++i)if (node = group0[i] || group1[i]) merge[i] = node;
+        }
+        for(; j < m0; ++j)merges[j] = groups0[j];
+        return new (0, _indexJs.Selection)(merges, this._parents);
+    });
+var _indexJs = require("./index.js");
+
+},{"./index.js":"j90xj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3CaTV":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        for(var groups = this._groups, j = -1, m = groups.length; ++j < m;){
+            for(var group = groups[j], i = group.length - 1, next = group[i], node; --i >= 0;)if (node = group[i]) {
+                if (next && node.compareDocumentPosition(next) ^ 4) next.parentNode.insertBefore(node, next);
+                next = node;
+            }
+        }
+        return this;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"61JD7":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(compare) {
+        if (!compare) compare = ascending;
+        function compareNode(a, b) {
+            return a && b ? compare(a.__data__, b.__data__) : !a - !b;
+        }
+        for(var groups = this._groups, m = groups.length, sortgroups = new Array(m), j = 0; j < m; ++j){
+            for(var group = groups[j], n = group.length, sortgroup = sortgroups[j] = new Array(n), node, i = 0; i < n; ++i)if (node = group[i]) sortgroup[i] = node;
+            sortgroup.sort(compareNode);
+        }
+        return new (0, _indexJs.Selection)(sortgroups, this._parents).order();
+    });
+var _indexJs = require("./index.js");
+function ascending(a, b) {
+    return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
+}
+
+},{"./index.js":"j90xj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"8fJM4":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        var callback = arguments[0];
+        arguments[0] = this;
+        callback.apply(null, arguments);
+        return this;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4DAU1":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return Array.from(this);
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lo6UY":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        for(var groups = this._groups, j = 0, m = groups.length; j < m; ++j)for(var group = groups[j], i = 0, n = group.length; i < n; ++i){
+            var node = group[i];
+            if (node) return node;
+        }
+        return null;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"haXag":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        let size = 0;
+        for (const node of this)++size; // eslint-disable-line no-unused-vars
+        return size;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"9Wcg6":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return !this.node();
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2hp4M":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(callback) {
+        for(var groups = this._groups, j = 0, m = groups.length; j < m; ++j){
+            for(var group = groups[j], i = 0, n = group.length, node; i < n; ++i)if (node = group[i]) callback.call(node, node.__data__, i, group);
+        }
+        return this;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"buGcI":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name, value) {
+        var fullname = (0, _namespaceJsDefault.default)(name);
+        if (arguments.length < 2) {
+            var node = this.node();
+            return fullname.local ? node.getAttributeNS(fullname.space, fullname.local) : node.getAttribute(fullname);
+        }
+        return this.each((value == null ? fullname.local ? attrRemoveNS : attrRemove : typeof value === "function" ? fullname.local ? attrFunctionNS : attrFunction : fullname.local ? attrConstantNS : attrConstant)(fullname, value));
+    });
+var _namespaceJs = require("../namespace.js");
+var _namespaceJsDefault = parcelHelpers.interopDefault(_namespaceJs);
+function attrRemove(name) {
+    return function() {
+        this.removeAttribute(name);
+    };
+}
+function attrRemoveNS(fullname) {
+    return function() {
+        this.removeAttributeNS(fullname.space, fullname.local);
+    };
+}
+function attrConstant(name, value) {
+    return function() {
+        this.setAttribute(name, value);
+    };
+}
+function attrConstantNS(fullname, value) {
+    return function() {
+        this.setAttributeNS(fullname.space, fullname.local, value);
+    };
+}
+function attrFunction(name, value) {
+    return function() {
+        var v = value.apply(this, arguments);
+        if (v == null) this.removeAttribute(name);
+        else this.setAttribute(name, v);
+    };
+}
+function attrFunctionNS(fullname, value) {
+    return function() {
+        var v = value.apply(this, arguments);
+        if (v == null) this.removeAttributeNS(fullname.space, fullname.local);
+        else this.setAttributeNS(fullname.space, fullname.local, v);
+    };
+}
+
+},{"../namespace.js":"eafwg","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gh7oy":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name, value, priority) {
+        return arguments.length > 1 ? this.each((value == null ? styleRemove : typeof value === "function" ? styleFunction : styleConstant)(name, value, priority == null ? "" : priority)) : styleValue(this.node(), name);
+    });
+parcelHelpers.export(exports, "styleValue", ()=>styleValue);
+var _windowJs = require("../window.js");
+var _windowJsDefault = parcelHelpers.interopDefault(_windowJs);
+function styleRemove(name) {
+    return function() {
+        this.style.removeProperty(name);
+    };
+}
+function styleConstant(name, value, priority) {
+    return function() {
+        this.style.setProperty(name, value, priority);
+    };
+}
+function styleFunction(name, value, priority) {
+    return function() {
+        var v = value.apply(this, arguments);
+        if (v == null) this.style.removeProperty(name);
+        else this.style.setProperty(name, v, priority);
+    };
+}
+function styleValue(node, name) {
+    return node.style.getPropertyValue(name) || (0, _windowJsDefault.default)(node).getComputedStyle(node, null).getPropertyValue(name);
+}
+
+},{"../window.js":"6uPo4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6uPo4":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(node) {
+        return node.ownerDocument && node.ownerDocument.defaultView // node is a Node
+         || node.document && node // node is a Window
+         || node.defaultView; // node is a Document
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dnxcr":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name, value) {
+        return arguments.length > 1 ? this.each((value == null ? propertyRemove : typeof value === "function" ? propertyFunction : propertyConstant)(name, value)) : this.node()[name];
+    });
+function propertyRemove(name) {
+    return function() {
+        delete this[name];
+    };
+}
+function propertyConstant(name, value) {
+    return function() {
+        this[name] = value;
+    };
+}
+function propertyFunction(name, value) {
+    return function() {
+        var v = value.apply(this, arguments);
+        if (v == null) delete this[name];
+        else this[name] = v;
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2xmU1":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name, value) {
+        var names = classArray(name + "");
+        if (arguments.length < 2) {
+            var list = classList(this.node()), i = -1, n = names.length;
+            while(++i < n)if (!list.contains(names[i])) return false;
+            return true;
+        }
+        return this.each((typeof value === "function" ? classedFunction : value ? classedTrue : classedFalse)(names, value));
+    });
+function classArray(string) {
+    return string.trim().split(/^|\s+/);
+}
+function classList(node) {
+    return node.classList || new ClassList(node);
+}
+function ClassList(node) {
+    this._node = node;
+    this._names = classArray(node.getAttribute("class") || "");
+}
+ClassList.prototype = {
+    add: function(name) {
+        var i = this._names.indexOf(name);
+        if (i < 0) {
+            this._names.push(name);
+            this._node.setAttribute("class", this._names.join(" "));
+        }
+    },
+    remove: function(name) {
+        var i = this._names.indexOf(name);
+        if (i >= 0) {
+            this._names.splice(i, 1);
+            this._node.setAttribute("class", this._names.join(" "));
+        }
+    },
+    contains: function(name) {
+        return this._names.indexOf(name) >= 0;
+    }
+};
+function classedAdd(node, names) {
+    var list = classList(node), i = -1, n = names.length;
+    while(++i < n)list.add(names[i]);
+}
+function classedRemove(node, names) {
+    var list = classList(node), i = -1, n = names.length;
+    while(++i < n)list.remove(names[i]);
+}
+function classedTrue(names) {
+    return function() {
+        classedAdd(this, names);
+    };
+}
+function classedFalse(names) {
+    return function() {
+        classedRemove(this, names);
+    };
+}
+function classedFunction(names, value) {
+    return function() {
+        (value.apply(this, arguments) ? classedAdd : classedRemove)(this, names);
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5tyq0":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(value) {
+        return arguments.length ? this.each(value == null ? textRemove : (typeof value === "function" ? textFunction : textConstant)(value)) : this.node().textContent;
+    });
+function textRemove() {
+    this.textContent = "";
+}
+function textConstant(value) {
+    return function() {
+        this.textContent = value;
+    };
+}
+function textFunction(value) {
+    return function() {
+        var v = value.apply(this, arguments);
+        this.textContent = v == null ? "" : v;
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"bI4bk":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(value) {
+        return arguments.length ? this.each(value == null ? htmlRemove : (typeof value === "function" ? htmlFunction : htmlConstant)(value)) : this.node().innerHTML;
+    });
+function htmlRemove() {
+    this.innerHTML = "";
+}
+function htmlConstant(value) {
+    return function() {
+        this.innerHTML = value;
+    };
+}
+function htmlFunction(value) {
+    return function() {
+        var v = value.apply(this, arguments);
+        this.innerHTML = v == null ? "" : v;
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"g9Fj8":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return this.each(raise);
+    });
+function raise() {
+    if (this.nextSibling) this.parentNode.appendChild(this);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"fMzO1":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return this.each(lower);
+    });
+function lower() {
+    if (this.previousSibling) this.parentNode.insertBefore(this, this.parentNode.firstChild);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ceF7W":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name) {
+        var create = typeof name === "function" ? name : (0, _creatorJsDefault.default)(name);
+        return this.select(function() {
+            return this.appendChild(create.apply(this, arguments));
+        });
+    });
+var _creatorJs = require("../creator.js");
+var _creatorJsDefault = parcelHelpers.interopDefault(_creatorJs);
+
+},{"../creator.js":"kJCC5","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1jf7i":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(name, before) {
+        var create = typeof name === "function" ? name : (0, _creatorJsDefault.default)(name), select = before == null ? constantNull : typeof before === "function" ? before : (0, _selectorJsDefault.default)(before);
+        return this.select(function() {
+            return this.insertBefore(create.apply(this, arguments), select.apply(this, arguments) || null);
+        });
+    });
+var _creatorJs = require("../creator.js");
+var _creatorJsDefault = parcelHelpers.interopDefault(_creatorJs);
+var _selectorJs = require("../selector.js");
+var _selectorJsDefault = parcelHelpers.interopDefault(_selectorJs);
+function constantNull() {
+    return null;
+}
+
+},{"../creator.js":"kJCC5","../selector.js":"27lrD","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"iBizO":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function() {
+        return this.each(remove);
+    });
+function remove() {
+    var parent = this.parentNode;
+    if (parent) parent.removeChild(this);
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dblCQ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(deep) {
+        return this.select(deep ? selection_cloneDeep : selection_cloneShallow);
+    });
+function selection_cloneShallow() {
+    var clone = this.cloneNode(false), parent = this.parentNode;
+    return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
+}
+function selection_cloneDeep() {
+    var clone = this.cloneNode(true), parent = this.parentNode;
+    return parent ? parent.insertBefore(clone, this.nextSibling) : clone;
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"ha2d4":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(value) {
+        return arguments.length ? this.property("__data__", value) : this.node().__data__;
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"dFa0s":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(typename, value, options) {
+        var typenames = parseTypenames(typename + ""), i, n = typenames.length, t;
+        if (arguments.length < 2) {
+            var on = this.node().__on;
+            if (on) for(var j = 0, m = on.length, o; j < m; ++j)for(i = 0, o = on[j]; i < n; ++i){
+                if ((t = typenames[i]).type === o.type && t.name === o.name) return o.value;
+            }
+            return;
+        }
+        on = value ? onAdd : onRemove;
+        for(i = 0; i < n; ++i)this.each(on(typenames[i], value, options));
+        return this;
+    });
+function contextListener(listener) {
+    return function(event) {
+        listener.call(this, event, this.__data__);
+    };
+}
+function parseTypenames(typenames) {
+    return typenames.trim().split(/^|\s+/).map(function(t) {
+        var name = "", i = t.indexOf(".");
+        if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+        return {
+            type: t,
+            name: name
+        };
+    });
+}
+function onRemove(typename) {
+    return function() {
+        var on = this.__on;
+        if (!on) return;
+        for(var j = 0, i = -1, m = on.length, o; j < m; ++j)if (o = on[j], (!typename.type || o.type === typename.type) && o.name === typename.name) this.removeEventListener(o.type, o.listener, o.options);
+        else on[++i] = o;
+        if (++i) on.length = i;
+        else delete this.__on;
+    };
+}
+function onAdd(typename, value, options) {
+    return function() {
+        var on = this.__on, o, listener = contextListener(value);
+        if (on) {
+            for(var j = 0, m = on.length; j < m; ++j)if ((o = on[j]).type === typename.type && o.name === typename.name) {
+                this.removeEventListener(o.type, o.listener, o.options);
+                this.addEventListener(o.type, o.listener = listener, o.options = options);
+                o.value = value;
+                return;
+            }
+        }
+        this.addEventListener(typename.type, listener, options);
+        o = {
+            type: typename.type,
+            name: typename.name,
+            value: value,
+            listener: listener,
+            options: options
+        };
+        if (!on) this.__on = [
+            o
+        ];
+        else on.push(o);
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"hE2BK":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function(type, params) {
+        return this.each((typeof params === "function" ? dispatchFunction : dispatchConstant)(type, params));
+    });
+var _windowJs = require("../window.js");
+var _windowJsDefault = parcelHelpers.interopDefault(_windowJs);
+function dispatchEvent(node, type, params) {
+    var window = (0, _windowJsDefault.default)(node), event = window.CustomEvent;
+    if (typeof event === "function") event = new event(type, params);
+    else {
+        event = window.document.createEvent("Event");
+        if (params) event.initEvent(type, params.bubbles, params.cancelable), event.detail = params.detail;
+        else event.initEvent(type, false, false);
+    }
+    node.dispatchEvent(event);
+}
+function dispatchConstant(type, params) {
+    return function() {
+        return dispatchEvent(this, type, params);
+    };
+}
+function dispatchFunction(type, params) {
+    return function() {
+        return dispatchEvent(this, type, params.apply(this, arguments));
+    };
+}
+
+},{"../window.js":"6uPo4","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"2HnAp":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "default", ()=>function*() {
+        for(var groups = this._groups, j = 0, m = groups.length; j < m; ++j){
+            for(var group = groups[j], i = 0, n = group.length, node; i < n; ++i)if (node = group[i]) yield node;
+        }
+    });
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6057L":[function(require,module,exports) {
+/*
+ (c) 2017, Vladimir Agafonkin
+ Simplify.js, a high-performance JS polyline simplification library
+ mourner.github.io/simplify-js
+*/ (function() {
+    "use strict";
+    // to suit your point format, run search/replace for '.x' and '.y';
+    // for 3D version, see 3d branch (configurability would draw significant performance overhead)
+    // square distance between 2 points
+    function getSqDist(p1, p2) {
+        var dx = p1.x - p2.x, dy = p1.y - p2.y;
+        return dx * dx + dy * dy;
+    }
+    // square distance from a point to a segment
+    function getSqSegDist(p, p1, p2) {
+        var x = p1.x, y = p1.y, dx = p2.x - x, dy = p2.y - y;
+        if (dx !== 0 || dy !== 0) {
+            var t = ((p.x - x) * dx + (p.y - y) * dy) / (dx * dx + dy * dy);
+            if (t > 1) {
+                x = p2.x;
+                y = p2.y;
+            } else if (t > 0) {
+                x += dx * t;
+                y += dy * t;
+            }
+        }
+        dx = p.x - x;
+        dy = p.y - y;
+        return dx * dx + dy * dy;
+    }
+    // rest of the code doesn't care about point format
+    // basic distance-based simplification
+    function simplifyRadialDist(points, sqTolerance) {
+        var prevPoint = points[0], newPoints = [
+            prevPoint
+        ], point;
+        for(var i = 1, len = points.length; i < len; i++){
+            point = points[i];
+            if (getSqDist(point, prevPoint) > sqTolerance) {
+                newPoints.push(point);
+                prevPoint = point;
+            }
+        }
+        if (prevPoint !== point) newPoints.push(point);
+        return newPoints;
+    }
+    function simplifyDPStep(points, first, last, sqTolerance, simplified) {
+        var maxSqDist = sqTolerance, index;
+        for(var i = first + 1; i < last; i++){
+            var sqDist = getSqSegDist(points[i], points[first], points[last]);
+            if (sqDist > maxSqDist) {
+                index = i;
+                maxSqDist = sqDist;
+            }
+        }
+        if (maxSqDist > sqTolerance) {
+            if (index - first > 1) simplifyDPStep(points, first, index, sqTolerance, simplified);
+            simplified.push(points[index]);
+            if (last - index > 1) simplifyDPStep(points, index, last, sqTolerance, simplified);
+        }
+    }
+    // simplification using Ramer-Douglas-Peucker algorithm
+    function simplifyDouglasPeucker(points, sqTolerance) {
+        var last = points.length - 1;
+        var simplified = [
+            points[0]
+        ];
+        simplifyDPStep(points, 0, last, sqTolerance, simplified);
+        simplified.push(points[last]);
+        return simplified;
+    }
+    // both algorithms combined for awesome performance
+    function simplify(points, tolerance, highestQuality) {
+        if (points.length <= 2) return points;
+        var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
+        points = highestQuality ? points : simplifyRadialDist(points, sqTolerance);
+        points = simplifyDouglasPeucker(points, sqTolerance);
+        return points;
+    }
+    // export as AMD module / Node module / browser or worker variable
+    if (typeof define === "function" && define.amd) define(function() {
+        return simplify;
+    });
+    else {
+        module.exports = simplify;
+        module.exports.default = simplify;
+    }
+})();
+
+},{}]},["ijkuy","f4bRs"], "f4bRs", "parcelRequireed82")
 
 //# sourceMappingURL=simple.8341b5a4.js.map

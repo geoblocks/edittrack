@@ -580,7 +580,7 @@ var _trackManager = require("../../src/interaction/TrackManager");
 var _trackManagerDefault = parcelHelpers.interopDefault(_trackManager);
 var _graphHopperTs = require("../../src/router/GraphHopper.ts");
 var _graphHopperTsDefault = parcelHelpers.interopDefault(_graphHopperTs);
-var _index = require("../../src/profiler/index");
+var _indexTs = require("../../src/profiler/index.ts");
 var _style = require("./style");
 var _swisstopo = require("./swisstopo");
 var _track = require("./track");
@@ -594,10 +594,10 @@ async function main() {
         url: ROUTING_URL,
         maxRoutingTolerance: 15
     });
-    const profiler = new (0, _index.FallbackProfiler)({
+    const profiler = new (0, _indexTs.FallbackProfiler)({
         profilers: [
-            new (0, _index.ExtractFromSegmentProfiler)(),
-            new (0, _index.SwisstopoProfiler)({
+            new (0, _indexTs.ExtractFromSegmentProfiler)(),
+            new (0, _indexTs.SwisstopoProfiler)({
                 projection: projection
             })
         ]
@@ -641,7 +641,7 @@ async function main() {
 }
 main();
 
-},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper.ts":"fak2b","../../src/profiler/index":"d5CmD","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
+},{"../../src/interaction/TrackManager":"bPLJ7","../../src/router/GraphHopper.ts":"fak2b","../../src/profiler/index.ts":"1rK0e","./style":"lUZ9u","./swisstopo":"hYgvG","./track":"eJ2Wz","ol/events/condition":"iQTYY","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"lUZ9u":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "controlPoint", ()=>controlPoint);
