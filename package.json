@@ -36,7 +36,6 @@
     "@geoblocks/sources": "0.3.2",
     "@types/chai": "4.3.11",
     "@types/mocha": "10.0.6",
-    "@types/proj4": "2.5.5",
     "@typescript-eslint/eslint-plugin": "6.14.0",
     "@typescript-eslint/parser": "6.14.0",
     "chai": "4.3.10",
@@ -46,14 +45,12 @@
     "mocha": "10.2.0",
     "ol": "8.2.0",
     "parcel": "2.10.3",
-    "proj4": "2.9.2",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "typedoc": "0.25.4",
     "typescript": "5.3.3"
   },
   "peerDependencies": {
-    "ol": "^6 || ^7 || ^8.0.0",
-    "proj4": "^2"
+    "ol": "^6 || ^7 || ^8"
   }
 }
