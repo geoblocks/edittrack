@@ -1,5 +1,5 @@
 
-import TrackManager from '../../src/interaction/TrackManager';
+import TrackManager from '../../src/interaction/TrackManager.ts';
 import GraphHopperRouter from '../../src/router/GraphHopper.ts';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.ts';
 import {styleFunction} from './style';

@@ -1,4 +1,5 @@
 import type Feature from 'ol/Feature.js';
+import type {Geometry, Point} from 'ol/geom.js';
 import type LineString from 'ol/geom/LineString.js';
 
 export function debounce(fn: (...args: any[]) => any, delay = 0): any {
@@ -27,4 +28,12 @@ export function setZ(straightSegment: Feature<LineString>, first: number, last: 
   }
   geometry.setCoordinates(coordinates);
   console.assert(geometry.getLayout() === 'XYZ');
+}
+
+export function isPoint(g: Geometry): g is Point {
+  return g?.getType() === 'Point';
+}
+
+export function isLineString(g: Geometry): g is LineString {
+  return g?.getType() === 'LineString';
 }
