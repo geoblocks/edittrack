@@ -1,14 +1,14 @@
 {
   "name": "@geoblocks/edittrack",
-  "version": "1.2.12",
+  "version": "1.3.0",
   "description": "Geoblocks edittrack",
-  "module": "src/index.js",
   "scripts": {
     "eslint": "eslint src test demos",
     "start": "parcel serve demos/*/*.html",
     "build-demo:simple": "parcel build --target demo demos/simple/simple.html",
     "build-demo:schm": "parcel build --target demo demos/schm/schm.html",
     "build-demo": "npm run build-demo:simple && npm run build-demo:schm",
+    "prepare": "tsc --pretty",
     "test": "mocha --exit",
     "typecheck": "tsc --pretty --noEmit",
     "lint": "npm run eslint && npm run typecheck",
@@ -21,9 +21,13 @@
     "access": "public"
   },
   "files": [
-    "src"
+    "src",
+    "lib",
+    "CHANGES.md"
   ],
   "type": "module",
+  "module": "lib/index.js",
+  "types": "lib/types/index.d.ts",
   "targets": {
     "demo": {
       "context": "browser",
@@ -40,7 +44,6 @@
     "@typescript-eslint/parser": "6.19.0",
     "chai": "5.0.0",
     "eslint": "8.56.0",
-    "eslint-config-openlayers": "19.0.0",
     "gh-pages": "6.1.1",
     "mocha": "10.2.0",
     "ol": "8.2.0",

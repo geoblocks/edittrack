@@ -1,5 +1,5 @@
 extends:
-- 'eslint-config-openlayers'
+- 'eslint:recommended'
 - 'plugin:@typescript-eslint/recommended'
 parser: '@typescript-eslint/parser'
 plugins:
@@ -8,22 +8,8 @@ root: true
 rules:
   no-console: 0
   comma-dangle: 0
-  valid-jsdoc: 0
-  prettier/prettier: 0
-  sort-imports-es6-autofix/sort-imports-es6: 0
-  jsdoc/check-types: 0
-  jsdoc/require-param-description: 0
-  jsdoc/require-returns-description: 0
-  jsdoc/require-property-description: 0
-  import/extensions: 0
   '@typescript-eslint/ban-ts-comment': 0
   '@typescript-eslint/no-explicit-any': 0
 env:
-  es6: true,
-
-parserOptions:
-  ecmaVersion: 11
-  ecmaFeatures:
-    generators: false
-    objectLiteralDuplicateProperties: false
-  sourceType: module
+  es6: true
+  browser: true

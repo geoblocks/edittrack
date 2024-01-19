@@ -1,14 +1,14 @@
 import Interaction from 'ol/interaction/Interaction.js';
 
 import Select from 'ol/interaction/Select.js';
-import Modify from './TrackInteractionModify.ts';
+import Modify from './TrackInteractionModify';
 import {click} from 'ol/events/condition.js';
-import DrawPoint from './DrawPoint.ts';
+import DrawPoint from './DrawPoint';
 import {FALSE} from 'ol/functions';
 import type {Feature, Map, MapBrowserEvent} from 'ol';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import TrackData from './TrackData.ts';
+import TrackData from './TrackData';
 import type {StyleLike} from 'ol/style/Style';
 import type {FlatStyleLike} from 'ol/style/flat';
 import type {Pixel} from 'ol/pixel';

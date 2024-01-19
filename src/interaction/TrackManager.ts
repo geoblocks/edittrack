@@ -1,27 +1,24 @@
-/* eslint-disable jsdoc/require-returns-type */
-/* eslint-disable jsdoc/require-param */
-/* eslint-disable jsdoc/require-param-type */
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
-import TrackData from './TrackData.ts';
-import TrackUpdater from './TrackUpdater.ts';
-import TrackInteraction from './TrackInteraction.ts';
-import HistoryManager from './HistoryManager.ts';
+import TrackData from './TrackData';
+import TrackUpdater from './TrackUpdater';
+import TrackInteraction from './TrackInteraction';
+import HistoryManager from './HistoryManager';
 
-import {ClosestPoint, findClosestPointInLines} from './closestfinder.ts';
+import {ClosestPoint, findClosestPointInLines} from './closestfinder';
 
-import {debounce} from './util.ts';
+import {debounce} from './util';
 import {Map, MapBrowserEvent} from 'ol';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import {Router} from '../router/index.ts';
-import {Profiler} from '../profiler/index.ts';
+import {Router} from '../router/index';
+import {Profiler} from '../profiler/index';
 import type {StyleLike} from 'ol/style/Style';
 import type {FlatStyleLike} from 'ol/style/flat';
 import {LineString} from 'ol/geom';
 import {DrawEvent} from 'ol/interaction/Draw';
-import {ModifyEvent} from './TrackInteractionModify.ts';
+import {ModifyEvent} from './TrackInteractionModify';
 import {SelectEvent} from 'ol/interaction/Select';
 
 export type TrackMode = 'edit'|'';

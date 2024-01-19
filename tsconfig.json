@@ -1,12 +1,21 @@
 {
   "compilerOptions": {
-    /* Basic Options */
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "ES2022",
-    "lib": ["es2022", "dom"],
+    "lib": ["es2023", "dom"],
+    "baseUrl": "./",
     "skipLibCheck": true,
 
-    /* Strict Type-Checking Options */
+    "moduleResolution": "Node",
+    "outDir": "./lib",
+    "inlineSourceMap": true,
+
+     "declaration": true,
+     "declarationDir": "./lib/types",
+
+    "declarationMap": true,
+    "forceConsistentCasingInFileNames": true,
+
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": false,
@@ -15,22 +24,16 @@
     "noImplicitThis": true,
     "alwaysStrict": true,
 
-    /* Additional Checks */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-
-    "baseUrl": "types",
-    "typeRoots": ["types"],
-
-    "esModuleInterop": true,
-    "allowImportingTsExtensions": true,
-
-    "moduleResolution": "Node"
+    "noFallthroughCasesInSwitch": true
   },
   "include": [
     "test/**/*.js",
-    "src/**/*.ts",
-  ]
+    "src/**/*.ts"
+  ],
+    "typeAcquisition": {
+      "enable": false
+    }
 }
