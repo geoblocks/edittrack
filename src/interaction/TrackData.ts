@@ -144,10 +144,16 @@ export default class TrackData {
     }
 
     // update indices property
+    this.updateControlPointsIndexes(index);
+    this.updateSegmentIndexes();
+
+    return removed;
+  }
+
+  private updateControlPointsIndexes(index: number) {
     for (let i = index; i < this.controlPoints.length; ++i) {
       this.controlPoints[i].set('index', i);
     }
-    return removed;
   }
 
   /*
@@ -229,15 +235,18 @@ export default class TrackData {
     deletedFeatures.push(...this.controlPoints.splice(deleteIndex, 1));
 
     // update indices property
-    for (let i = deleteIndex; i < this.controlPoints.length; ++i) {
-      this.controlPoints[i].set('index', i);
-    }
+    this.updateControlPointsIndexes(deleteIndex);
+    this.updateSegmentIndexes();
     return {
       deleted: deletedFeatures,
       pointBefore: pointBefore,
       pointAfter: pointAfter,
       newSegment: newSegment
     };
+  }
+
+  private updateSegmentIndexes() {
+    this.segments.forEach((s, idx) => s.set('index', idx, false));
   }
 
   updatePOIIndexes() {
@@ -253,6 +262,9 @@ export default class TrackData {
       };
     }).sort((a, b) => a.index - b.index);
     sorted.forEach((s, index) => s.poi.set('index', index));
+
+    // We sort the stored pois array itself
+    this.pois.sort((a, b) => a.get('index') - b.get('index'));
   }
 
   /*

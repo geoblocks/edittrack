@@ -269,7 +269,13 @@ export default class TrackManager<POIMeta> {
     const segments = this.getSegments();
     const controlPoints = this.getControlPoints();
     const pois = this.getPOIs();
-    this.historyManager_.add([...segments, ...controlPoints, ...pois]);
+    const features = [...segments, ...controlPoints, ...pois];
+    const clonedFeatures = features.map(f => {
+      const nf = f.clone();
+      nf.setId(f.getId());
+      return nf;
+    })
+    this.historyManager_.add(clonedFeatures);
   }
 
   get mode(): TrackMode {
@@ -388,24 +394,30 @@ export default class TrackManager<POIMeta> {
     this.onTrackChanged_();
   }
 
-  getPOIs(): Feature<Point>[] {
-    return this.trackData_.getPOIs().map((point) => {
-      const clone = point.clone();
-      clone.setId(point.getId());
-      return clone;
-    });
+  /**
+   * See `addPOI`, `deletePOI`, updatePOIMeta`.
+   * The library maintains the POI indexes and geometries so don't modify them.
+   * @return the internal POIs as a readonly array
+   */
+  getPOIs(): readonly Feature<Point>[] {
+    return this.trackData_.getPOIs();
   }
 
-  getControlPoints(): Feature<Point>[] {
-    return this.trackData_.getControlPoints().map((point, index) => {
-      const clone = point.clone();
-      clone.setId(point.getId());
-      clone.set('index', index);
-      return clone;
-    });
+  /**
+   * The library creates and keeps the control points consistently with the segments.
+   * It is generally a bad idea to update control points manually.
+   * @return the internal control points as a readonly array
+   */
+  getControlPoints(): readonly Feature<Point>[] {
+    return this.trackData_.getControlPoints();
   }
 
-  getSegments(): Feature<LineString>[] {
+  /**
+   * The library manages the segments together with the control points.
+   * It is probably a bad idea to update segments manually.
+   * @return the internal segments as a readonly array
+   */
+  getSegments(): readonly Feature<LineString>[] {
     return this.trackData_.getSegments().map((segment, index) => {
       const clone = segment.clone();
       clone.setId(segment.getId());
