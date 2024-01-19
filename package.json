@@ -13,7 +13,7 @@
     "typecheck": "tsc --pretty --noEmit",
     "lint": "npm run eslint && npm run typecheck",
     "doc": "typedoc",
-    "gh-pages": "rm -rf docs && npm run doc && npm run build-demo && gh-pages -d dist"
+    "gh-pages": "rm -rf dist && npm run doc && npm run build-demo && gh-pages -d dist"
   },
   "license": "BSD-3-Clause",
   "repository": "github:geoblocks/edittrack",
