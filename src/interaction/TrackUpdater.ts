@@ -1,8 +1,8 @@
 import type Point from 'ol/geom/Point.js';
 import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData.ts';
-import type {Router} from '../router/router.d.ts';
-import type {Profiler} from '../profiler/profiler.d.ts';
+import type {Router} from '../router/index.ts';
+import type {Profiler} from '../profiler/index.ts';
 import {equals} from 'ol/coordinate';
 
 type TrackUpdaterOptions = {

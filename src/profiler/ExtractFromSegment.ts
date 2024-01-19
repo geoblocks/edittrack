@@ -1,7 +1,7 @@
 import {distance} from 'ol/coordinate.js';
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
-import type {Profiler} from './profiler.d.ts';
+import type {Profiler} from './index';
 
 export default class ExtractFromSegment implements Profiler {
 

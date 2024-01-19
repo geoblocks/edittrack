@@ -1,57 +1,81 @@
 import Interaction from 'ol/interaction/Interaction.js';
 
 import Select from 'ol/interaction/Select.js';
-import Modify from './TrackInteractionModify.js';
+import Modify from './TrackInteractionModify.ts';
 import {click} from 'ol/events/condition.js';
 import DrawPoint from './DrawPoint.ts';
 import {FALSE} from 'ol/functions';
+import type {Feature, Map, MapBrowserEvent} from 'ol';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import TrackData from './TrackData.ts';
+import type {StyleLike} from 'ol/style/Style';
+import type {FlatStyleLike} from 'ol/style/flat';
+import type {Pixel} from 'ol/pixel';
+import {Point} from 'ol/geom';
 
-/** @typedef {import('ol/source/Vector').default<any>} VectorSource */
-/** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
-/** @typedef {import('ol/style/Style').StyleLike} StyleLike */
-/** @typedef {import('ol/style/flat').FlatStyleLike} FlatStyleLike */
-/** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
-/** @typedef {import('ol/Feature.js').FeatureLike} FeatureLike */
+export interface Options {
+  map: Map;
+  trackLayer: VectorLayer<VectorSource>
+  trackData: TrackData
+  style: StyleLike | FlatStyleLike
 
-/**
- * @typedef Options
- * @type {Object}
- * @property {import("ol/Map").default} map
- * @property {VectorLayer} trackLayer
- * @property {import('./TrackData').default} trackData
- * @property {StyleLike | FlatStyleLike} style
- * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Default is to delete control points and pois on click
- * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Default is to add a new point on click
- * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
- * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
- */
+  /**
+   * Default is to delete control points and pois on click
+   */
+  deleteCondition?: (mbe: MapBrowserEvent<UIEvent>, type: string) => boolean;
+  /**
+   * Default is to add a new point on click
+   */
+  addLastPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  /**
+   * In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
+   */
+  addControlPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+
+  /**
+   * Pixel tolerance for considering the pointer close enough to a segment for snapping.
+   */
+  hitTolerance: number;
+}
 
 
 export default class TrackInteraction extends Interaction {
 
+  private trackLayer_: VectorLayer<VectorSource>;
+
   /**
-   *
-   * @param {import("ol/pixel.js").Pixel} pixel
-   * @return {FeatureLike|false}
+   * Default is to delete control points and pois on click
    */
-  controlPointOrPOIAtPixel(pixel) {
+  private userDeleteCondition_?: Options['deleteCondition'];
+  /**
+   * Default is to add a new point on click
+   */
+  private userAddLastPointCondition_?: Options['addLastPointCondition'];
+  /**
+   * In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
+   */
+  private userAddControlPointCondition_?: Options['addControlPointCondition'];
+
+  private drawTrack_: DrawPoint;
+  private modifyTrack_: Modify;
+  private deletePoint_: Select;
+
+  controlPointOrPOIAtPixel(pixel: Pixel): Feature<Point>|false {
     return this.getMap().forEachFeatureAtPixel(pixel,
       (f) => {
         const t = f.get('type');
         if (t === 'controlPoint' || t === 'POI') {
-          return f;
+          console.assert(f.getGeometry().getType() === 'Point');
+          return f as Feature<Point>;
         }
         return false;
       }, {
       layerFilter: l => l === this.trackLayer_,
     });
   }
-  /**
-   *
-   * @param {VectorSource} source
-   * @return {DrawPoint}
-   */
-  createDrawInteraction(source) {
+
+  createDrawInteraction(source: VectorSource): DrawPoint {
     const draw = new DrawPoint({
       source: source,
       condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
@@ -61,15 +85,7 @@ export default class TrackInteraction extends Interaction {
     return draw;
   }
 
-  /**
-   *
-   * @param {import('./TrackData').default} trackData
-   * @param {VectorSource} source
-   * @param {StyleLike | FlatStyleLike} style
-   * @param {number} hitTolerance
-   * @return {Modify}
-   */
-  createModifyInteraction(trackData, source, style, hitTolerance) {
+  createModifyInteraction(trackData: TrackData, source: VectorSource, style: StyleLike | FlatStyleLike, hitTolerance: number): Modify {
     const modify = new Modify({
       trackData: trackData,
       source: source,
@@ -90,12 +106,8 @@ export default class TrackInteraction extends Interaction {
     return modify;
   }
 
-  /**
-   *
-   * @param {import('ol/layer/Vector').default<any>} trackLayer
-   * @return {Select}
-   */
-  createSelectInteraction(trackLayer) {
+
+  createSelectInteraction(trackLayer: VectorLayer<VectorSource>): Select {
     const select = new Select({
       condition: (event) => this.deleteCondition_(event),
       layers: [trackLayer],
@@ -108,11 +120,8 @@ export default class TrackInteraction extends Interaction {
     return select;
   }
 
-  /**
-   * @param {MapBrowserEvent} event
-   * @return {boolean}
-   */
-  deleteCondition_(event) {
+
+  deleteCondition_(event: MapBrowserEvent<UIEvent>): boolean {
     const point = this.controlPointOrPOIAtPixel(event.pixel);
     if (point) {
       return this.userDeleteCondition_(event, point.get('type'));
@@ -120,11 +129,8 @@ export default class TrackInteraction extends Interaction {
     return false;
   }
 
-  /**
-   *
-   * @param {Options} options
-   */
-  constructor(options) {
+
+  constructor(options: Options) {
     super();
 
     this.trackLayer_ = options.trackLayer;
@@ -138,19 +144,8 @@ export default class TrackInteraction extends Interaction {
     source.on('addfeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
     source.on('removefeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
 
-    /**
-     * @private
-     */
     this.drawTrack_ = this.createDrawInteraction(source);
-
-    /**
-     * @private
-     */
     this.modifyTrack_ = this.createModifyInteraction(options.trackData, source, options.style, options.hitTolerance);
-
-    /**
-     * @private
-     */
     this.deletePoint_ = this.createSelectInteraction(options.trackLayer);
 
     this.setActive(false);
@@ -171,11 +166,7 @@ export default class TrackInteraction extends Interaction {
     this.deletePoint_.getFeatures().clear();
   }
 
-  /**
-   *
-   * @param {boolean} active
-   */
-  setActive(active) {
+  setActive(active: boolean) {
     // Hack: the Interaction constructor calls setActive...
     if (this.drawTrack_) {
       this.drawTrack_.setActive(active);

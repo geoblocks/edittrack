@@ -1,9 +1,9 @@
-import {distance} from 'ol/coordinate';
-import type Map from 'ol/Map';
+import {distance} from 'ol/coordinate.js';
+import type Map from 'ol/Map.js';
 import type {Coordinate} from 'ol/coordinate';
 import type Feature from 'ol/Feature';
 import type {LineString, Point} from 'ol/geom';
-import type {Router} from './router.d.ts';
+import type {Router} from './index.ts';
 
 export type RouterBaseOptions = {
   map: Map;

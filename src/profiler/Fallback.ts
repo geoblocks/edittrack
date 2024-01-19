@@ -1,6 +1,6 @@
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
-import type {Profiler} from './profiler.d.ts';
+import type {Profiler} from './index';
 
 type FallbackOptions = {
   profilers: Profiler[];

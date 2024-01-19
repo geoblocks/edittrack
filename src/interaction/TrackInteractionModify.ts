@@ -1,58 +1,46 @@
 import PointerInteraction from 'ol/interaction/Pointer.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
-import Feature from 'ol/Feature.js';
+import Feature, {type FeatureLike} from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
 import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
+import {Geometry} from 'ol/geom';
+import TrackData from './TrackData.ts';
+import {Map, MapBrowserEvent} from 'ol';
+import type {StyleLike} from 'ol/style/Style.js';
+import type {FlatStyleLike} from 'ol/style/flat.js';
+import type {Pixel} from 'ol/pixel.js';
 
-/**
- * @typedef {import('ol/MapBrowserEvent.js').default<UIEvent>} MapBrowserEvent
- */
-
-/** @typedef {import('ol/geom/Geometry.js').default} Geometry */
-
-/** @typedef {import('ol/render/Feature.js').default} RenderFeature */
 
 export class ModifyEvent extends Event {
 
-  /**
-   *
-   * @param {string} type
-   * @param {Feature<Geometry>} feature
-   * @param {import("ol/coordinate.js").Coordinate} coordinate
-   */
-  constructor(type, feature, coordinate) {
+  constructor(type: string, public feature: Feature<Geometry>, public coordinate: number[]) {
     super(type);
 
     /**
      * The feature being modified.
-     * @type {Feature<any>}
      */
     this.feature = feature;
 
     /**
      * The coordinate of the pointer when modification occurred.
-     * @type {import("ol/coordinate.js").Coordinate}
      */
     this.coordinate = coordinate;
   }
 }
 
-
-/** @typedef {import('ol/style/Style').StyleLike} StyleLike */
-/** @typedef {import('ol/style/flat').FlatStyleLike} FlatStyleLike */
-
-/**
- * @typedef Options
- * @type {Object}
- * @property {VectorSource<any>} source
- * @property {import('./TrackData').default} trackData
- * @property {StyleLike | FlatStyleLike} style
- * @property {function(MapBrowserEvent): boolean} condition
- * @property {function(MapBrowserEvent): boolean} addControlPointCondition
- * @property {number} hitTolerance Pixel tolerance for considering the pointer close enough to a segment for snapping.
- */
+export interface Options {
+  source: VectorSource<FeatureLike>;
+  trackData: TrackData;
+  style: StyleLike | FlatStyleLike;
+  condition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  addControlPointCondition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  /**
+   * Pixel tolerance for considering the pointer close enough to a segment for snapping.
+   */
+  hitTolerance: number;
+}
 
 
 /**
@@ -63,11 +51,35 @@ export class ModifyEvent extends Event {
  */
 export default class Modify extends PointerInteraction {
 
+  private dragStarted = false;
+  private condition_: Options['condition'];
+  private addControlPointCondition_: Options['addControlPointCondition'];
+  private source_: Options['source'];
+  private hitTolerance_: Options['hitTolerance'];
+  private feature_: Feature<Point|LineString> = null;
   /**
-   *
-   * @param {Options} options
+   * Editing vertex.
    */
-  constructor(options) {
+  public overlayFeature = new Feature({
+    type: 'segment'
+  });
+  private overlay_: VectorLayer<VectorSource<Feature>>;
+  private lastPixel_ = [0, 0];
+  private trackData_: Options['trackData'];
+  /**
+   * @type {Feature<Point>}
+   */
+  private pointAtCursorFeature_ = new Feature({
+    geometry: new Point([0, 0]),
+    type: 'sketch',
+    subtype: '',
+  });
+
+  private involvedFeatures_: Feature<Geometry>[] = [];
+  private overlayLineString_: LineString = null;
+  private scratchPoint_ = new Point([0, 0]);
+
+  constructor(options: Options) {
     super();
 
     this.dragStarted = false;
@@ -81,24 +93,14 @@ export default class Modify extends PointerInteraction {
     this.hitTolerance_ = options.hitTolerance;
 
     /**
-     * The feature being modified.
-     *  @type {Feature<Point|LineString>}
-     */
-    this.feature_ = null;
-
-    /**
-     * Editing vertex.
-     */
-    this.overlayFeature = new Feature({
-      type: 'segment'
-    });
-
-    /**
      * Draw overlay where sketch features are drawn.
      */
     this.overlay_ = new VectorLayer({
       source: new VectorSource({
-        useSpatialIndex: false
+        useSpatialIndex: false,
+        features: [
+          this.pointAtCursorFeature_,
+        ]
       }),
       style: options.style,
       updateWhileAnimating: true,
@@ -106,39 +108,16 @@ export default class Modify extends PointerInteraction {
     });
 
     this.trackData_ = options.trackData;
-
-    this.lastPixel_ = [0, 0];
-
-    /**
-     * @type {Feature<Point>}
-     */
-    this.pointAtCursorFeature_ = new Feature({
-      geometry: new Point([0, 0]),
-      type: 'sketch',
-      subtype: '',
-    });
-    this.overlay_.getSource().addFeature(this.pointAtCursorFeature_);
-
-    /** @type {Feature<any>[]} */
-    this.involvedFeatures_ = [];
-    this.overlayLineString_ = null;
-
-    this.scratchPoint_ = new Point([0, 0]);
   }
 
-  /**
-   *
-   * @param {import("ol/Map").default} map
-   */
-  setMap(map) {
+
+  setMap(map: Map) {
     this.overlay_.setMap(map);
     super.setMap(map);
   }
 
-  /**
-   * @param {boolean} active
-   */
-  setActive(active) {
+
+  setActive(active: boolean) {
     if (this.overlay_) {
       this.overlay_.setVisible(active);
     }
@@ -150,11 +129,11 @@ export default class Modify extends PointerInteraction {
    * @param {import("ol/pixel").Pixel} pixel
    * @return {Feature<LineString|Point>|undefined}
    */
-  getFeatureAtPixel(pixel) {
-    const features = /** @type {Feature<LineString|Point>[]} */ (this.getMap().getFeaturesAtPixel(pixel, {
+  getFeatureAtPixel(pixel: Pixel): Feature<LineString|Point|undefined> {
+    const features = this.getMap().getFeaturesAtPixel(pixel, {
       layerFilter: (l) => l.getSource() === this.source_,
       hitTolerance: this.hitTolerance_
-    }));
+    }) as Feature<LineString|Point>[];
     // get the first point feature
     const feature = features.find((f) => f.getGeometry().getType() === 'Point');
     if (feature) {
@@ -167,7 +146,7 @@ export default class Modify extends PointerInteraction {
     const feature = this.getFeatureAtPixel(this.lastPixel_);
     // Adds hit geometries to the hit feature and the sketch feature.
     // The geometry is either the closest point on a line or the point itself
-    this.source_.forEachFeature((f) => f.set('sketchHitGeometry', undefined));
+    this.source_.forEachFeature((f) => (f as Feature).set('sketchHitGeometry', undefined));
     this.pointAtCursorFeature_.setProperties({
       'sketchHitGeometry': undefined,
       'subtype': undefined,
@@ -191,10 +170,8 @@ export default class Modify extends PointerInteraction {
     }
   }
 
-  /**
-   * @param {MapBrowserEvent} event
-   */
-  handleMoveEvent(event) {
+
+  handleMoveEvent(event: MapBrowserEvent<UIEvent>) {
     if (event.dragging) {
       return;
     }
@@ -203,11 +180,7 @@ export default class Modify extends PointerInteraction {
     this.updateSketchFeature();
   }
 
-  /**
-   * @param {MapBrowserEvent} event
-   * @return {boolean}
-   */
-  handleEvent(event) {
+  handleEvent(event: MapBrowserEvent<UIEvent>): boolean {
     const stop = super.handleEvent(event);
     if (this.addControlPointCondition_(event)) {
       const feature = this.getFeatureAtPixel(event.pixel);
@@ -219,11 +192,7 @@ export default class Modify extends PointerInteraction {
     return stop;
   }
 
-  /**
-   * @param {MapBrowserEvent} event
-   * @return {boolean}
-   */
-  handleDownEvent(event) {
+  handleDownEvent(event: MapBrowserEvent<UIEvent>): boolean {
     if (!this.condition_(event)) {
       return false;
     }
@@ -237,10 +206,7 @@ export default class Modify extends PointerInteraction {
     return true;
   }
 
-  /**
-   * @param {MapBrowserEvent} event
-   */
-  handleDragEvent(event) {
+  handleDragEvent(event: MapBrowserEvent<UIEvent>) {
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
 
     const type = this.feature_.get('type');
@@ -254,7 +220,7 @@ export default class Modify extends PointerInteraction {
           // we create a 3 points linestring
           const geometry = this.feature_.getGeometry();
           console.assert(geometry.getType() === 'LineString', this.feature_.getProperties());
-          const g = /** @type {LineString} */ (geometry);
+          const g = geometry;
           this.overlayLineString_  = new LineString([g.getFirstCoordinate(), event.coordinate, g.getLastCoordinate()]);
           this.overlayFeature.set('sketchHitGeometry', new Point(event.coordinate));
           this.involvedFeatures_ = [this.feature_];
@@ -263,7 +229,8 @@ export default class Modify extends PointerInteraction {
         case 'controlPoint': {
           this.feature_.set('dragging', true);
           // we create a 3 points linestring, doubled if end points clicked
-          const f = /** @type {Feature<Point>} */ (this.feature_);
+          console.assert(this.feature_.getGeometry().getType() === 'Point', this.feature_.getProperties());
+          const f = this.feature_ as Feature<Point>;
           const {before, after} = this.trackData_.getAdjacentSegments(f);
           if (!before && !after) {
             // single point case
@@ -309,17 +276,13 @@ export default class Modify extends PointerInteraction {
     }
 
     if (type === 'controlPoint' || type === 'POI') {
-      const g = /** @type {Point} */ (this.feature_.getGeometry());
+      console.assert(this.feature_.getGeometry().getType() === 'Point');
+      const g = this.feature_.getGeometry() as Point;
       g.setCoordinates(event.coordinate);
     }
   }
 
-  /**
-   *
-   * @param {MapBrowserEvent} event
-   * @return {boolean}
-   */
-  handleUpEvent(event) {
+  handleUpEvent(event: MapBrowserEvent<UIEvent>): boolean {
     if (!this.dragStarted) {
       this.feature_ = null;
       return false;

@@ -1,133 +1,91 @@
+/* eslint-disable jsdoc/require-returns-type */
+/* eslint-disable jsdoc/require-param */
+/* eslint-disable jsdoc/require-param-type */
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
 import TrackData from './TrackData.ts';
 import TrackUpdater from './TrackUpdater.ts';
-import TrackInteraction from './TrackInteraction.js';
+import TrackInteraction from './TrackInteraction.ts';
 import HistoryManager from './HistoryManager.ts';
 
-import {findClosestPointInLines} from './closestfinder.ts';
+import {ClosestPoint, findClosestPointInLines} from './closestfinder.ts';
 
 import {debounce} from './util.ts';
+import {Map, MapBrowserEvent} from 'ol';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import {Router} from '../router/index.ts';
+import {Profiler} from '../profiler/index.ts';
+import type {StyleLike} from 'ol/style/Style';
+import type {FlatStyleLike} from 'ol/style/flat';
+import {LineString} from 'ol/geom';
+import {DrawEvent} from 'ol/interaction/Draw';
+import {ModifyEvent} from './TrackInteractionModify.ts';
+import {SelectEvent} from 'ol/interaction/Select';
 
+export type TrackMode = 'edit'|'';
+export type TrackSubMode = 'addpoi'|'editpoi'|'';
 
-/** @typedef {import('ol/geom/LineString').default} LineString */
-/** @typedef {import('ol/source/Vector').default<any>} VectorSource */
-/** @typedef {import('ol/MapBrowserEvent').default<any>} MapBrowserEvent */
-/** @typedef {import('ol/style/Style').StyleLike} StyleLike */
-/** @typedef {import('ol/style/flat').FlatStyleLike} FlatStyleLike */
-/** @typedef {import('./closestfinder').ClosestPoint} ClosestPoint */
-/** @typedef {import("ol/layer/Vector").default<VectorSource>} VectorLayer */
-
-/** @typedef {'edit'|''} TrackMode */
-/** @typedef {'addpoi'|'editpoi'|''} TrackSubMode */
-
-/**
- * @typedef Options
- * @type {Object}
- * @property {import("ol/Map").default} map
- * @property {VectorLayer} trackLayer
- * @property {VectorLayer} [shadowTrackLayer]
- * @property {geoblocks.Router} router
- * @property {geoblocks.Profiler} profiler
- * @property {StyleLike | FlatStyleLike} style
- * @property {function(MapBrowserEvent, string): boolean} [deleteCondition] Condition to remove a point (control point or POI). Default is click.
- * @property {function(MapBrowserEvent): boolean} [addLastPointCondition] Condition to add a new last point to the track. Default is click.
- * @property {function(MapBrowserEvent): boolean} [addControlPointCondition] In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
- * @property {number} [hitTolerance=20] Pixel tolerance for considering the pointer close enough to a segment for snapping.
- */
-
-/** @typedef {{name: string, description?: string, img?: File}} PoiMeta */
-
-
-class TrackManager {
+export interface Options {
+  map: Map;
+  trackLayer: VectorLayer<VectorSource>
+  shadowTrackLayer?: VectorLayer<VectorSource>
+  router: Router
+  profiler: Profiler
+  style: StyleLike | FlatStyleLike
+  /**
+   * Condition to remove a point (control point or POI). Default is click.
+   */
+  deleteCondition?: (mbe: MapBrowserEvent<UIEvent>, type: string) => boolean;
+  /**
+   * Condition to add a new last point to the track. Default is click.
+   */
+  addLastPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  /**
+   * In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
+   */
+  addControlPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
 
   /**
-   * @param {Options} options
+   * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
-  constructor(options) {
+  hitTolerance: number;
+}
 
-    /**
-     * @type {import("ol/Map").default}
-     * @private
-     */
+
+export default class TrackManager<POIMeta> {
+
+  private map_: Map;
+  private source_: VectorSource;
+  private trackLayer_: VectorLayer<VectorSource>;
+  private shadowTrackLayer_: VectorLayer<VectorSource>;
+  private hitTolerance_: number;
+  private snapping = true;
+  private mode_: TrackMode = '';
+  private submode_: TrackSubMode = '';
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  private trackChangeEventListeners_: Function[] = [];
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  private trackHoverEventListeners_: Function[] = [];
+  private trackData_ = new TrackData();
+  private router_: Router;
+  private profiler_: Profiler;
+  private updater_: TrackUpdater;
+  private interaction_: TrackInteraction;
+  private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
+
+  constructor(options: Options) {
+
     this.map_ = options.map;
-
-    /**
-     * @type {import("ol/source/Vector").default<any>}
-     * @private
-     */
     this.source_ = options.trackLayer.getSource();
-
-    /**
-     * @type {VectorLayer}
-     * @private
-     */
     this.trackLayer_ = options.trackLayer;
-
-    /**
-     * @type {VectorLayer}
-     * @private
-     */
     this.shadowTrackLayer_ = options.shadowTrackLayer;
-
-    /**
-     * @type {number}
-     * @private
-     */
     this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
-
-    /**
-     * @type {boolean}
-     */
-    this.snapping = true;
-
-    /**
-     * @private
-     * @type {TrackMode}
-     */
-    this.mode_ = '';
-
-    /**
-     * @private
-     * @type {TrackSubMode}
-     */
-    this.submode_ = '';
-
-    /**
-     * @type {Array<Function>}
-     * @private
-     */
-    this.trackChangeEventListeners_ = [];
-
-    /**
-     * @type {Array<Function>}
-     * @private
-     */
-    this.trackHoverEventListeners_ = [];
-
-    /**
-     * @private
-     */
-    this.trackData_ = new TrackData();
-
     console.assert(!!options.router);
 
-    /**
-     * @type {geoblocks.Router}
-     * @private
-     */
     this.router_ = options.router;
-
-    /**
-     * @type {geoblocks.Profiler}
-     * @private
-     */
     this.profiler_ = options.profiler;
-
-    /**
-     * @private
-     */
     this.updater_ = new TrackUpdater({
       profiler: this.profiler_,
       router: this.router_,
@@ -153,19 +111,13 @@ class TrackManager {
     //   subtype: 'first',
     // }));
 
-    /**
-     * @type {HistoryManager<Feature<Point|LineString>[]>}
-     */
-    this.historyManager_ = new HistoryManager();
+
 
     // @ts-ignore too complicate to declare proper events
     this.interaction_.on('drawend',
-    /**
-     * @param {import ('ol/interaction/Draw').DrawEvent} event
-     */
-    async (event) => {
+    async (event: DrawEvent) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
-      const feature = /** @type {Feature<Point>} */ (event.feature);
+      const feature = (event.feature as Feature<Point>);
       if (!this.snapping) {
         feature.set('snapped', false);
       }
@@ -180,11 +132,6 @@ class TrackManager {
       }
     });
 
-    /**
-     * @private
-     * @type {boolean}
-     */
-    this.modifyInProgress_ = false;
 
     const debouncedMapToProfileUpdater = debounce(
       /**
@@ -219,24 +166,21 @@ class TrackManager {
     this.interaction_.on(
       // @ts-ignore too complicate to declare proper events
       'modifyend',
-      /**
-       *
-       * @param {import ('./TrackInteractionModify').ModifyEvent} event
-       */
-      async (event) => {
-        const feature = event.feature;
-        const type = feature.get('type');
+      async (event: ModifyEvent) => {
+        const type = event.feature.get('type');
 
         if (type === 'POI') {
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'controlPoint') {
+          const feature = event.feature as Feature<Point>;
           await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           await this.updater_.computeAdjacentSegmentsProfile(feature);
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'segment') {
+          const feature = event.feature as Feature<LineString>;
           const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
           console.assert(indexOfSegment >= 0);
@@ -263,13 +207,9 @@ class TrackManager {
     this.interaction_.on(
       // @ts-ignore too complicate to declare proper events
       'select',
-      /**
-       *
-       * @param {import ('ol/interaction/Select').SelectEvent} event
-       */
-      (event) => {
+      (event: SelectEvent) => {
         event.mapBrowserEvent.stopPropagation();
-        const selected = /** @type {Feature<Point>} */ (event.selected[0]);
+        const selected = event.selected[0] as Feature<Point>;
         console.assert(selected.getGeometry().getType() === 'Point');
         const type = selected.get('type');
         if (type === 'POI') {
@@ -317,27 +257,19 @@ class TrackManager {
     });
   }
 
-  /**
-   * @private
-   */
-  pushNewStateToHistoryManager_() {
+  private pushNewStateToHistoryManager_() {
     const segments = this.getSegments();
     const controlPoints = this.getControlPoints();
     const pois = this.getPOIs();
     this.historyManager_.add([...segments, ...controlPoints, ...pois]);
   }
 
-  /**
-   * @return {TrackMode} mode
-   */
-  get mode() {
+  get mode(): TrackMode {
     return this.mode_;
   }
 
-  /**
-   * @param {TrackMode} mode
-   */
-  set mode(mode) {
+
+  set mode(mode: TrackMode) {
     const edit = mode === 'edit';
     if (edit) {
       if (this.shadowTrackLayer_) {
@@ -360,17 +292,11 @@ class TrackManager {
     this.render();
   }
 
-  /**
-   * @return {TrackSubMode} submode
-   */
-  get submode() {
+  get submode(): TrackSubMode {
     return this.submode_;
   }
 
-  /**
-   * @param {TrackSubMode} submode
-   */
-  set submode(submode) {
+  set submode(submode: TrackSubMode) {
     this.interaction_.setActive(!submode && this.mode === 'edit');
     this.submode_ = submode || '';
   }
@@ -380,10 +306,7 @@ class TrackManager {
     this.notifyTrackChangeEventListeners_();
   }
 
-  /**
-   * @param {ClosestPoint} point
-   */
-  onTrackHovered_(point) {
+  onTrackHovered_(point: ClosestPoint) {
     // notify observers
     // if (point) {
     //   this.closestPointGeom_.setCoordinates(point.coordinates);
@@ -424,9 +347,8 @@ class TrackManager {
 
   /**
    * This function does not trigger track changed events.
-   * @private
    */
-  clearInternal_() {
+  private clearInternal_() {
     this.source_.clear();
     this.trackData_.clear();
   }
@@ -442,11 +364,8 @@ class TrackManager {
 
   /**
    * This function does not trigger track changed events.
-   * @private
-   * @param {Array<Feature<Point|LineString>>} features
-   * @return {Promise<any>}
    */
-  async restoreFeaturesInternal_(features) {
+  private async restoreFeaturesInternal_(features: Feature<Point|LineString>[]): Promise<void> {
     // should parse features first, compute profile, and then replace the trackdata and add history
     const parsedFeatures = this.trackData_.parseFeatures(features);
     this.source_.addFeatures(features);
@@ -455,20 +374,13 @@ class TrackManager {
     this.trackData_.restoreParsedFeatures(parsedFeatures);
   }
 
-  /**
-   * @param {Array<Feature<Point|LineString>>} features
-   * @return {Promise<any>}
-   */
-  async restoreFeatures(features) {
+  async restoreFeatures(features: Feature<Point|LineString>[]): Promise<void> {
     this.clearInternal_();
     await this.restoreFeaturesInternal_(features);
     this.onTrackChanged_();
   }
 
-  /**
-   * @return {Feature<Point>[]}
-   */
-  getPOIs() {
+  getPOIs(): Feature<Point>[] {
     return this.trackData_.getPOIs().map((point) => {
       const clone = point.clone();
       clone.setId(point.getId());
@@ -476,10 +388,7 @@ class TrackManager {
     });
   }
 
-  /**
-   * @return {Feature<Point>[]}
-   */
-  getControlPoints() {
+  getControlPoints(): Feature<Point>[] {
     return this.trackData_.getControlPoints().map((point, index) => {
       const clone = point.clone();
       clone.setId(point.getId());
@@ -488,10 +397,7 @@ class TrackManager {
     });
   }
 
-  /**
-   * @return {Feature<LineString>[]}
-   */
-  getSegments() {
+  getSegments(): Feature<LineString>[] {
     return this.trackData_.getSegments().map((segment, index) => {
       const clone = segment.clone();
       clone.setId(segment.getId());
@@ -503,10 +409,8 @@ class TrackManager {
 
   /**
    * Add a POI and notify track change listeners.
-   * @param {number[]} coordinates
-   * @param {Object} meta
    */
-  addPOI(coordinates, meta) {
+  addPOI(coordinates: number[], meta: POIMeta) {
     const poi = new Feature({
       geometry: new Point(coordinates),
       type: 'POI',
@@ -521,9 +425,8 @@ class TrackManager {
 
   /**
    * Delete a POI and notify track change listeners.
-   * @param {number} index
    */
-  deletePOI(index) {
+  deletePOI(index: number) {
     const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
     const feature = this.source_.getFeatures().find(feature => feature.get('type') === 'POI' && feature.get('index') === index);
     this.source_.removeFeature(feature);
@@ -534,10 +437,8 @@ class TrackManager {
 
   /**
    * Update the meta of a POI given by its index
-   * @param {number} index
-   * @param {Object} meta
    */
-  updatePOIMeta(index, meta) {
+  updatePOIMeta(index: number, meta: POIMeta) {
     const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
     poi.set('meta', meta);
     this.addManualHistoryEntry();
@@ -545,25 +446,24 @@ class TrackManager {
 
   /**
    * Add new event listener to be notified on track changes.
-   * @param {Function} fn EventListener
    */
-  addTrackChangeEventListener(fn) {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  addTrackChangeEventListener(fn: Function) {
     this.trackChangeEventListeners_.push(fn);
   }
 
   /**
    * Remove registered event listener.
-   * @param {Function} fn EventListener
    */
-  removeTrackChangeEventListener(fn) {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  removeTrackChangeEventListener(fn: Function) {
     this.trackChangeEventListeners_ = this.trackChangeEventListeners_.filter(item => item !== fn);
   }
 
   /**
-   * @private
-   * @param {boolean} notifyHistory Whether to notify history manager
+   * @param notifyHistory Whether to notify history manager
    */
-  notifyTrackChangeEventListeners_(notifyHistory = true) {
+  private notifyTrackChangeEventListeners_(notifyHistory: boolean = true) {
     if (notifyHistory) {
       this.pushNewStateToHistoryManager_();
     }
@@ -576,39 +476,35 @@ class TrackManager {
 
   /**
    * Add new event listener to be notified on track hover.
-   * @param {Function} fn EventListener
    */
-  addTrackHoverEventListener(fn) {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  addTrackHoverEventListener(fn: Function) {
     this.trackHoverEventListeners_.push(fn);
   }
 
   /**
    * Remove registered event listener.
-   * @param {Function} fn EventListener
    */
-  removeTrackHoverEventListener(fn) {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  removeTrackHoverEventListener(fn: Function) {
     this.trackHoverEventListeners_ = this.trackHoverEventListeners_.filter(item => item !== fn);
   }
 
-  /**
-   * @param {number} distance
-   * @private
-   */
-  notifyTrackHoverEventListener_(distance) {
+  private notifyTrackHoverEventListener_(distance: number) {
     this.trackHoverEventListeners_.forEach(handler => handler(distance));
   }
 
   /**
-   * @return {number} number of entries in history
+   * @return number of entries in history
    */
-  get historySize() {
+  get historySize(): number {
     return this.historyManager_.size();
   }
 
   /**
-   * @return {number} current position in history
+   * @return current position in history
    */
-  get historyPosition() {
+  get historyPosition(): number {
     return this.historyManager_.position();
   }
 
@@ -656,5 +552,3 @@ class TrackManager {
     this.shadowTrackLayer_.getSource().changed();
   }
 }
-
-export default TrackManager;
