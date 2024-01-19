@@ -1,5 +1,5 @@
 import {fromLonLat, toLonLat} from 'ol/proj.js';
-import RouterBase, {RouterBaseOptions} from './RouterBase.ts';
+import RouterBase, {RouterBaseOptions} from './RouterBase';
 import type {Coordinate} from 'ol/coordinate.js';
 
 export const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foot/route/v1/driving';

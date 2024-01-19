@@ -6,7 +6,7 @@ import LineString from 'ol/geom/LineString.js';
 import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
 import {Geometry} from 'ol/geom';
-import TrackData from './TrackData.ts';
+import TrackData from './TrackData';
 import {Map, MapBrowserEvent} from 'ol';
 import type {StyleLike} from 'ol/style/Style.js';
 import type {FlatStyleLike} from 'ol/style/flat.js';

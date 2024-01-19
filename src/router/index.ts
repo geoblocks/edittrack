@@ -1,5 +1,5 @@
-export {default as OSMRouter} from './OSRMRouter.ts';
-export {default as GraphHopper} from './GraphHopper.ts';
+export {default as OSMRouter} from './OSRMRouter';
+export {default as GraphHopper} from './GraphHopper';
 
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';

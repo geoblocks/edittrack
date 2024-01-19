@@ -1,6 +1,6 @@
 import {toLonLat} from 'ol/proj.js';
 import PolyLineFormat from 'ol/format/Polyline.js';
-import RouterBase, {RouterBaseOptions} from './RouterBase.ts';
+import RouterBase, {RouterBaseOptions} from './RouterBase';
 import type LineString from 'ol/geom/LineString.js';
 import type {Coordinate} from 'ol/coordinate.js';
 

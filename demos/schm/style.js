@@ -161,7 +161,7 @@ export function styleFunction(feature) {
         return sketchLabel;
       }
       return withPointerDevice ? null : sketchControlPoint;
-    case "POI":
+    case "POI": {
       if (sketchHitGeometry) {
         return poiPointSketchHit
       }
@@ -170,6 +170,7 @@ export function styleFunction(feature) {
         poiPoint.getText().setText((index + 1).toString());
       }
       return poiPoint;
+    }
     case "controlPoint":
       if (!withPointerDevice && sketchHitGeometry) {
         return sketchControlPointHint;
@@ -182,11 +183,12 @@ export function styleFunction(feature) {
         default:
           return controlPoint;
       }
-    case "segment":
+    case "segment": {
       switch (subtype) {
-        case "modifying":
+        case "modifying": {
           return trackLineModifying;
-        default:
+        }
+        default: {
           const intermediatePoint = segmentIntermediatePoint.clone();
           intermediatePoint.setGeometry(new Point(feature.getGeometry().getFlatMidpoint()));
           const styles = [trackLine, intermediatePoint];
@@ -197,7 +199,9 @@ export function styleFunction(feature) {
             styles.push(...pointStyle);
           }
           return styles;
+        }
       }
+    }
     default:
       // console.assert(false, "unknown feature type");
       return null;

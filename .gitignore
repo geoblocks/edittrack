@@ -2,3 +2,5 @@
 /dist/
 /.vscode
 .parcel-cache/
+/lib
+/*.tgz

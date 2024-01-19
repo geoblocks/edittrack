@@ -3,7 +3,7 @@ import type Map from 'ol/Map.js';
 import type {Coordinate} from 'ol/coordinate';
 import type Feature from 'ol/Feature';
 import type {LineString, Point} from 'ol/geom';
-import type {Router} from './index.ts';
+import type {Router} from './index';
 
 export type RouterBaseOptions = {
   map: Map;

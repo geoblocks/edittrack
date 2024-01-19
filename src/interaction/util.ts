@@ -3,7 +3,7 @@ import type {Geometry, Point} from 'ol/geom.js';
 import type LineString from 'ol/geom/LineString.js';
 
 export function debounce(fn: (...args: any[]) => any, delay = 0): any {
-  let id : number | undefined;
+  let id : ReturnType<typeof setTimeout> | undefined;
   return (...args: any) => {
     if (id !== undefined) {
       clearTimeout(id);
