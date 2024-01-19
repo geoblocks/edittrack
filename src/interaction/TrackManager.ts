@@ -54,11 +54,17 @@ export interface Options {
 export default class TrackManager<POIMeta> {
 
   private map_: Map;
+  get map(): Map {
+    return this.map;
+  }
   private source_: VectorSource;
   private trackLayer_: VectorLayer<VectorSource>;
+  get trackLayer(): VectorLayer<VectorSource> {
+    return this.trackLayer_;
+  }
   private shadowTrackLayer_: VectorLayer<VectorSource>;
   private hitTolerance_: number;
-  private snapping = true;
+  public snapping = true;
   private mode_: TrackMode = '';
   private submode_: TrackSubMode = '';
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -67,13 +73,18 @@ export default class TrackManager<POIMeta> {
   private trackHoverEventListeners_: Function[] = [];
   private trackData_ = new TrackData();
   private router_: Router;
+  get router(): Router {
+    return this.router_;
+  }
   private profiler_: Profiler;
+  get profiler(): Profiler {
+    return this.profiler_;
+  }
   private updater_: TrackUpdater;
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
 
   constructor(options: Options) {
-
     this.map_ = options.map;
     this.source_ = options.trackLayer.getSource();
     this.trackLayer_ = options.trackLayer;
