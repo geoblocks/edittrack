@@ -253,6 +253,9 @@ export default class TrackData {
       };
     }).sort((a, b) => a.index - b.index);
     sorted.forEach((s, index) => s.poi.set('index', index));
+
+    // We sort the stored pois array itself
+    this.pois.sort((a, b) => a.get('index') - b.get('index'));
   }
 
   /*
