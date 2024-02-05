@@ -35,13 +35,13 @@
     }
   },
   "devDependencies": {
-    "@geoblocks/elevation-profile": "0.0.11",
+    "@geoblocks/elevation-profile": "0.0.13",
     "@geoblocks/proj": "0.4.8",
     "@geoblocks/sources": "0.3.2",
     "@types/chai": "4.3.11",
     "@types/mocha": "10.0.6",
-    "@typescript-eslint/eslint-plugin": "6.19.1",
-    "@typescript-eslint/parser": "6.19.1",
+    "@typescript-eslint/eslint-plugin": "6.20.0",
+    "@typescript-eslint/parser": "6.20.0",
     "chai": "5.0.3",
     "eslint": "8.56.0",
     "gh-pages": "6.1.1",
