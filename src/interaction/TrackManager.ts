@@ -532,17 +532,22 @@ export default class TrackManager<POIMeta> {
    * Undo one drawing step
    */
   async undo() {
-    if (this.mode === 'edit') {
+    if (this.mode === "edit") {
       const features = this.historyManager_.undo();
-      this.clearInternal_();
-      if (features) {
-        await this.restoreFeaturesInternal_(features.map(feature => {
-          // we need to clone the features, otherwise they could be changed in the history state from outside
-          const clone = feature.clone();
-          clone.setId(feature.getId());
-          return clone;
-        }
-        ));
+      if (this.historyManager_.position() === -1) {
+        console.assert(features === undefined);
+        this.clearInternal_();
+      } else {
+        console.assert(features.length > 0);
+        this.clearInternal_();
+        await this.restoreFeaturesInternal_(
+          features.map(feature => {
+            // we need to clone the features, otherwise they could be changed in the history state from outside
+            const clone = feature.clone();
+            clone.setId(feature.getId());
+            return clone;
+          })
+        );
       }
       this.notifyTrackChangeEventListeners_(false);
     }
