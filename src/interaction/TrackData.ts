@@ -22,7 +22,7 @@ interface AddedControlPoint {
 }
 
 interface DeletedControlPoint {
-  deleted: Array<Feature<Point|LineString>>;
+  deleted: Array<Feature<Point | LineString>>;
   pointBefore?: Feature<Point>;
   pointAfter?: Feature<Point>;
   newSegment?: Feature<LineString>;
@@ -33,7 +33,7 @@ export default class TrackData {
   private controlPoints: Array<Feature<Point>> = [];
   private pois: Array<Feature<Point>> = [];
 
-  parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
+  parseFeatures(features: Feature<Point | LineString>[]): ParsedFeatures {
     const parsed: ParsedFeatures = {
       segments: [],
       pois: [],
@@ -60,7 +60,10 @@ export default class TrackData {
 
   restoreParsedFeatures(parsedFeatures: ParsedFeatures) {
     const {segments, pois, controlPoints} = parsedFeatures;
-    console.assert((!controlPoints.length && !segments.length) || (controlPoints.length === segments.length + 1));
+    console.assert(
+      (!controlPoints.length && !segments.length) ||
+        controlPoints.length === segments.length + 1,
+    );
     this.clear();
     controlPoints.sort(sortByIndex);
     this.segments = segments;
@@ -112,7 +115,10 @@ export default class TrackData {
     return this.segments;
   }
 
-  insertControlPointAt(point: Feature<Point>, index: number): Feature<LineString> | undefined {
+  insertControlPointAt(
+    point: Feature<Point>,
+    index: number,
+  ): Feature<LineString> | undefined {
     let removed = undefined;
     point.set('type', 'controlPoint');
     console.assert(index >= 0 && index <= this.controlPoints.length);
@@ -195,7 +201,7 @@ export default class TrackData {
         deleted: [],
         pointBefore: null,
         pointAfter: null,
-        newSegment: null
+        newSegment: null,
       };
     }
 
@@ -227,7 +233,11 @@ export default class TrackData {
       pointAfter.set('subtype', 'first');
     }
     // deleted point was the last point, update new last point
-    if (pointBefore && deleteIndex === this.controlPoints.length - 1 && deleteIndex !== 1) {
+    if (
+      pointBefore &&
+      deleteIndex === this.controlPoints.length - 1 &&
+      deleteIndex !== 1
+    ) {
       pointBefore.set('subtype', 'last');
     }
 
@@ -241,7 +251,7 @@ export default class TrackData {
       deleted: deletedFeatures,
       pointBefore: pointBefore,
       pointAfter: pointAfter,
-      newSegment: newSegment
+      newSegment: newSegment,
     };
   }
 
@@ -251,16 +261,22 @@ export default class TrackData {
 
   updatePOIIndexes() {
     // build a multi point geometry from all segments coordinates
-    const points = new MultiPoint(this.segments.map((s) => s.getGeometry().getCoordinates()).flat());
+    const points = new MultiPoint(
+      this.segments.map((s) => s.getGeometry().getCoordinates()).flat(),
+    );
     const pointsCoordinates = points.getCoordinates();
-    const sorted = this.pois.map((poi) => {
-      // find the closest point to the POI and returns its index; that's it's "distance" from the start
-      const closestPoint = points.getClosestPoint(poi.getGeometry().getCoordinates());
-      return {
-        poi: poi,
-        index: pointsCoordinates.findIndex((c) => equals(c, closestPoint))
-      };
-    }).sort((a, b) => a.index - b.index);
+    const sorted = this.pois
+      .map((poi) => {
+        // find the closest point to the POI and returns its index; that's it's "distance" from the start
+        const closestPoint = points.getClosestPoint(
+          poi.getGeometry().getCoordinates(),
+        );
+        return {
+          poi: poi,
+          index: pointsCoordinates.findIndex((c) => equals(c, closestPoint)),
+        };
+      })
+      .sort((a, b) => a.index - b.index);
     sorted.forEach((s, index) => s.poi.set('index', index));
 
     // We sort the stored pois array itself
@@ -310,7 +326,11 @@ export default class TrackData {
   }
 
   hasData(): boolean {
-    return this.controlPoints.length > 0 || this.segments.length > 0 || this.pois.length > 0;
+    return (
+      this.controlPoints.length > 0 ||
+      this.segments.length > 0 ||
+      this.pois.length > 0
+    );
   }
 
   /*
@@ -318,13 +338,13 @@ export default class TrackData {
    */
   deletePOI(point: Feature<Point>) {
     console.assert(point.get('type') === 'POI');
-    const idx = this.pois.findIndex(p => p === point);
+    const idx = this.pois.findIndex((p) => p === point);
     this.pois.splice(idx, 1);
   }
 
   addPOI(point: Feature<Point>) {
     console.assert(point.get('type') === 'POI');
-    this.pois.push(point)
+    this.pois.push(point);
   }
 
   clear() {
@@ -345,7 +365,9 @@ export default class TrackData {
         coordinates.push(after.getGeometry().getFirstCoordinate().splice(0, 2));
       }
       if (!coordinates.every((value, _, array) => equals(value, array[0]))) {
-        console.warn(`Not same coordinates at control point ${point.get('index')}`);
+        console.warn(
+          `Not same coordinates at control point ${point.get('index')}`,
+        );
       }
     }
   }
@@ -355,10 +377,13 @@ function sortByIndex(left: Feature<any>, right: Feature<any>): number {
   return left.get('index') - right.get('index');
 }
 
-function createStraightSegment(featureFrom: Feature<Point>, featureTo: Feature<Point>): Feature<LineString> {
+function createStraightSegment(
+  featureFrom: Feature<Point>,
+  featureTo: Feature<Point>,
+): Feature<LineString> {
   const geometry = new LineString([
     featureFrom.getGeometry().getCoordinates(),
-    featureTo.getGeometry().getCoordinates()
+    featureTo.getGeometry().getCoordinates(),
   ]);
 
   const segment = new Feature({geometry});

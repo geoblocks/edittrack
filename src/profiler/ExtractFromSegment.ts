@@ -4,9 +4,7 @@ import type LineString from 'ol/geom/LineString.js';
 import type {Profiler} from './index';
 
 export default class ExtractFromSegment implements Profiler {
-
   computeProfile(segment: Feature<LineString>): Promise<void> {
-
     return new Promise((resolve, reject) => {
       const geometry = segment.getGeometry();
       if (geometry.getLayout() === 'XYZM') {

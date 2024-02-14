@@ -10,8 +10,8 @@
     "outDir": "./lib",
     "inlineSourceMap": true,
 
-     "declaration": true,
-     "declarationDir": "./lib/types",
+    "declaration": true,
+    "declarationDir": "./lib/types",
 
     "declarationMap": true,
     "forceConsistentCasingInFileNames": true,
@@ -29,11 +29,8 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "test/**/*.js",
-    "src/**/*.ts"
-  ],
-    "typeAcquisition": {
-      "enable": false
-    }
+  "include": ["test/**/*.js", "src/**/*.ts"],
+  "typeAcquisition": {
+    "enable": false
+  }
 }

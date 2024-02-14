@@ -9,14 +9,13 @@ import {createShadowLayer} from './shadowtrack';
 
 const RESOLUTIONS = [650, 500, 250, 100, 50, 20, 10, 5, 2.5, 2, 1.5, 1];
 
-
 function createSwisstopoLayer(layer, format = 'image/jpeg') {
   const swisstopoLayer = new SwisstopoSource({
     layer,
     format,
     timestamp: 'current',
     projection: EPSG_2056,
-    crossOrigin: 'anonymous'
+    crossOrigin: 'anonymous',
   });
   return new TileLayer({source: swisstopoLayer});
 }
@@ -45,11 +44,7 @@ export function createMap(target) {
   const map = new OLMap({
     target,
     view,
-    layers: [
-      bgLayer,
-      shadowTrackLayer,
-      trackLayer
-    ]
+    layers: [bgLayer, shadowTrackLayer, trackLayer],
   });
   window['mymap'] = map;
 

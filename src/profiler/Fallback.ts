@@ -15,11 +15,16 @@ export default class Fallback implements Profiler {
 
   computeProfile(segment: Feature<LineString>): Promise<void> {
     // array of computeProfile functions.
-    const functions = this.profilers.map(profiler => () => profiler.computeProfile(segment));
+    const functions = this.profilers.map(
+      (profiler) => () => profiler.computeProfile(segment),
+    );
 
     // execute the promises in sequence, the first resolved will be returned. All the following
     // will execute "identity" function instead of the real function.
     // @ts-ignore don't know why TSC is unhappy with this nice code
-    return functions.reduce((cur, nextFn) => cur.then(val => val, nextFn), Promise.reject());
+    return functions.reduce(
+      (cur, nextFn) => cur.then((val) => val, nextFn),
+      Promise.reject(),
+    );
   }
 }

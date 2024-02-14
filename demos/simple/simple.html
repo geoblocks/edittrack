@@ -1,64 +1,70 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <title>Edit track demo</title>
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/8.2.0/ol.css"
+      integrity="sha512-VW0BZX/F8iCSJ3tnd/7IEVoHjVFabVrgtFUk1rmPoBMhJYus9cekwSiBhqFYJ5TaICYFx0ZY9sKSbrv7mOV3MA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="./profile.css" />
+    <script src="./demo.js" type="module"></script>
+    <style>
+      html,
+      body,
+      main {
+        height: 100%;
+        margin: 0;
+      }
+      main {
+        display: flex;
+      }
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+      #profile {
+        display: block;
+        height: 150px;
+        width: 300px;
+      }
+    </style>
+  </head>
 
-<head>
-  <title>Edit track demo</title>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/8.2.0/ol.css" integrity="sha512-VW0BZX/F8iCSJ3tnd/7IEVoHjVFabVrgtFUk1rmPoBMhJYus9cekwSiBhqFYJ5TaICYFx0ZY9sKSbrv7mOV3MA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="./profile.css">
-  <script src="./demo.js" type="module"></script>
-  <style>
-    html, body, main {
-      height: 100%;
-      margin: 0;
-    }
-    main {
-      display: flex;
-    }
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
-    #profile {
-      display: block;
-      height: 150px;
-      width: 300px;
-    }
-  </style>
-</head>
-
-<body>
-  <main>
-    <div>
-      <elevation-profile id="profile"></elevation-profile>
-      <select id="trackmode">
-        <option value="edit">edit</option>
-        <option value="">view</option>
-      </select>
-      <br />
-      <a href="#" id="snap">Snap</a>
-      <br />
-      <a href="#" id="delete">delete last point</a>
-      <br />
-      <a href="#" id="undo">Undo</a>
-      <br />
-      <a href="#" id="redo">Redo</a>
-      <br />
-      <a href="#" id="clear">clear track</a>
-      <br />
-      <a href="#" id="getTrackData">save & restore</a>
-      <br />
-      <a href="#" id="reverse">reverse</a>
-      <br />
-      <a href="#" id="addPoi">Add poi</a>
-      <div id="poiForm" style="display: none">
-        <input id="poiNameInput" value=""/>
-        <button id="poiCancel">Cancel</button>
-        <button id="poiSave">Save</button>
+  <body>
+    <main>
+      <div>
+        <elevation-profile id="profile"></elevation-profile>
+        <select id="trackmode">
+          <option value="edit">edit</option>
+          <option value="">view</option>
+        </select>
+        <br />
+        <a href="#" id="snap">Snap</a>
+        <br />
+        <a href="#" id="delete">delete last point</a>
+        <br />
+        <a href="#" id="undo">Undo</a>
+        <br />
+        <a href="#" id="redo">Redo</a>
+        <br />
+        <a href="#" id="clear">clear track</a>
+        <br />
+        <a href="#" id="getTrackData">save & restore</a>
+        <br />
+        <a href="#" id="reverse">reverse</a>
+        <br />
+        <a href="#" id="addPoi">Add poi</a>
+        <div id="poiForm" style="display: none">
+          <input id="poiNameInput" value="" />
+          <button id="poiCancel">Cancel</button>
+          <button id="poiSave">Save</button>
+        </div>
       </div>
-  </div>
-    <div id="map"></div>
-  </main>
-</body>
-
+      <div id="map"></div>
+    </main>
+  </body>
 </html>

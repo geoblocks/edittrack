@@ -3,7 +3,7 @@ import type {Geometry, Point} from 'ol/geom.js';
 import type LineString from 'ol/geom/LineString.js';
 
 export function debounce(fn: (...args: any[]) => any, delay = 0): any {
-  let id : ReturnType<typeof setTimeout> | undefined;
+  let id: ReturnType<typeof setTimeout> | undefined;
   return (...args: any) => {
     if (id !== undefined) {
       clearTimeout(id);
@@ -15,7 +15,11 @@ export function debounce(fn: (...args: any[]) => any, delay = 0): any {
   };
 }
 
-export function setZ(straightSegment: Feature<LineString>, first: number, last: number) {
+export function setZ(
+  straightSegment: Feature<LineString>,
+  first: number,
+  last: number,
+) {
   const geometry = straightSegment.getGeometry();
   const coordinates = geometry.getCoordinates();
   console.assert(coordinates.length === 2);

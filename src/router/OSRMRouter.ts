@@ -2,9 +2,10 @@ import {fromLonLat, toLonLat} from 'ol/proj.js';
 import RouterBase, {RouterBaseOptions} from './RouterBase';
 import type {Coordinate} from 'ol/coordinate.js';
 
-export const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foot/route/v1/driving';
-export const OSRM_DEFAULT_PROFILE_URL = 'https://router.project-osrm.org/route/v1/driving';
-
+export const OSM_CH_ROUTED_FOOT_PROFILE_URL =
+  'https://routing.osm.ch/routed-foot/route/v1/driving';
+export const OSRM_DEFAULT_PROFILE_URL =
+  'https://router.project-osrm.org/route/v1/driving';
 
 type OSRMRouterOptions = RouterBaseOptions & {
   url: string;
@@ -27,12 +28,17 @@ export default class OSRMRouter extends RouterBase {
     this.extraParams = options.extraParams;
   }
 
-  async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]> {
+  async getRoute(
+    pointFromCoordinates: Coordinate,
+    pointToCoordinates: Coordinate,
+  ): Promise<Coordinate[]> {
     const mapProjection = this.map.getView().getProjection();
-    const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
+    const coordinates = [pointFromCoordinates, pointToCoordinates].map((cc) =>
+      toLonLat(cc.slice(0, 2), mapProjection),
+    );
 
     // [ [a,b] , [c,d] ] -> 'a,b;c,d'
-    const coordinateString = coordinates.map(c => c.join(',')).join(';');
+    const coordinateString = coordinates.map((c) => c.join(',')).join(';');
     const radiuses = coordinates.map(() => this.radius).join(';');
 
     let url = `${this.url}/${coordinateString}?radiuses=${radiuses}&geometries=geojson`;
@@ -44,6 +50,8 @@ export default class OSRMRouter extends RouterBase {
     console.assert(jsonResponse.code === 'Ok');
     console.assert(jsonResponse.routes.length === 1);
     const route = jsonResponse.routes[0];
-    return route.geometry.coordinates.map((cc: number[]) => fromLonLat(cc, mapProjection));
+    return route.geometry.coordinates.map((cc: number[]) =>
+      fromLonLat(cc, mapProjection),
+    );
   }
 }
