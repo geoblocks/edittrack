@@ -12,6 +12,7 @@ import TrackData from './TrackData';
 import type {StyleLike} from 'ol/style/Style';
 import type {FlatStyleLike} from 'ol/style/flat';
 import type {Pixel} from 'ol/pixel';
+import type {FeatureType} from './TrackData';
 import {Point} from 'ol/geom';
 
 export interface Options {
@@ -23,7 +24,7 @@ export interface Options {
   /**
    * Default is to delete control points and pois on click
    */
-  deleteCondition?: (mbe: MapBrowserEvent<UIEvent>, type: string) => boolean;
+  deleteCondition?: (mbe: MapBrowserEvent<UIEvent>, type: FeatureType) => boolean;
   /**
    * Default is to add a new point on click
    */
@@ -64,7 +65,7 @@ export default class TrackInteraction extends Interaction {
   controlPointOrPOIAtPixel(pixel: Pixel): Feature<Point>|false {
     return this.getMap().forEachFeatureAtPixel(pixel,
       (f) => {
-        const t = f.get('type');
+        const t = f.get('type') as FeatureType;
         if (t === 'controlPoint' || t === 'POI') {
           console.assert(f.getGeometry().getType() === 'Point');
           return f as Feature<Point>;
@@ -112,7 +113,7 @@ export default class TrackInteraction extends Interaction {
       condition: (event) => this.deleteCondition_(event),
       layers: [trackLayer],
       filter: (feature) => {
-        const t = feature.get('type');
+        const t = feature.get('type') as FeatureType;
         return t === 'controlPoint' || t === 'POI';
       },
     });

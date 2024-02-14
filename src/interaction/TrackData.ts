@@ -4,10 +4,12 @@ import LineString from 'ol/geom/LineString.js';
 import MultiPoint from 'ol/geom/MultiPoint.js';
 import Point from 'ol/geom/Point.js';
 
+export type FeatureType = 'segment' | 'controlPoint' | 'POI';
+
 interface ParsedFeatures {
-  segments: Array<Feature<LineString>>;
-  controlPoints: Array<Feature<Point>>;
-  pois: Array<Feature<Point>>;
+  segments: Feature<LineString>[];
+  controlPoints: Feature<Point>[];
+  pois: Feature<Point>[];
 }
 
 interface AdjacentSegments {
@@ -22,16 +24,16 @@ interface AddedControlPoint {
 }
 
 interface DeletedControlPoint {
-  deleted: Array<Feature<Point|LineString>>;
+  deleted: Feature<Point|LineString>[];
   pointBefore?: Feature<Point>;
   pointAfter?: Feature<Point>;
   newSegment?: Feature<LineString>;
 }
 
 export default class TrackData {
-  private segments: Array<Feature<LineString>> = [];
-  private controlPoints: Array<Feature<Point>> = [];
-  private pois: Array<Feature<Point>> = [];
+  private segments: Feature<LineString>[] = [];
+  private controlPoints: Feature<Point>[] = [];
+  private pois: Feature<Point>[] = [];
 
   parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
     const parsed: ParsedFeatures = {
@@ -42,7 +44,7 @@ export default class TrackData {
     const {segments, pois, controlPoints} = parsed;
 
     for (const feature of features) {
-      const type = feature.get('type');
+      const type = feature.get('type') as FeatureType;
       if (type === 'segment') {
         console.assert(feature.getGeometry().getType() === 'LineString');
         segments.push(feature as Feature<LineString>);
@@ -108,7 +110,7 @@ export default class TrackData {
     return this.controlPoints;
   }
 
-  getSegments(): Array<Feature<LineString>> {
+  getSegments(): Feature<LineString>[] {
     return this.segments;
   }
 

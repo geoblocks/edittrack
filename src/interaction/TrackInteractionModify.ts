@@ -11,7 +11,7 @@ import {Map, MapBrowserEvent} from 'ol';
 import type {StyleLike} from 'ol/style/Style.js';
 import type {FlatStyleLike} from 'ol/style/flat.js';
 import type {Pixel} from 'ol/pixel.js';
-
+import type {FeatureType} from './TrackData.js';
 
 export class ModifyEvent extends Event {
 
@@ -152,7 +152,7 @@ export default class Modify extends PointerInteraction {
       'subtype': undefined,
     });
     if (feature) {
-      const type = feature.get('type');
+      const type = feature.get('type') as FeatureType;
       const sketchGeometry = this.pointAtCursorFeature_.getGeometry();
       const featureGeometry = feature.getGeometry();
       let hitGeometry = null;
@@ -209,7 +209,7 @@ export default class Modify extends PointerInteraction {
   handleDragEvent(event: MapBrowserEvent<UIEvent>) {
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
 
-    const type = this.feature_.get('type');
+    const type = this.feature_.get('type') as FeatureType;
     if (!this.dragStarted) {
       this.dispatchEvent(new ModifyEvent('modifystart', this.feature_, event.coordinate));
       this.dragStarted = true;
