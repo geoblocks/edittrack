@@ -55,6 +55,7 @@ function main() {
   window.trackManager = trackManager;
 
   const profileElement = document.querySelector('#profile');
+  profileElement.pointerEvents = false;
   trackManager.addTrackChangeEventListener(() => {
     trackManager.trackData_.assertValid();
     const fullProfile = [];
@@ -66,14 +67,6 @@ function main() {
     }
     profileElement.lines = [fullProfile];
   });
-
-  // trackManager.addTrackHoverEventListener((distance) => {
-  //   if (distance !== undefined) {
-  //     d3Profile.highlight(distance);
-  //   } else {
-  //     d3Profile.clearHighlight();
-  //   }
-  // });
 
   trackManager.mode = 'edit';
   const tmEl = document.querySelector('#trackmode');

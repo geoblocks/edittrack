@@ -20,9 +20,11 @@ import {LineString} from 'ol/geom';
 import {DrawEvent} from 'ol/interaction/Draw';
 import {ModifyEvent} from './TrackInteractionModify';
 import {SelectEvent} from 'ol/interaction/Select';
+import type {Coordinate} from 'ol/coordinate';
+import type {FeatureType} from './TrackData';
 
-export type TrackMode = 'edit'|'';
-export type TrackSubMode = 'addpoi'|'editpoi'|'';
+export type TrackMode = 'edit' | '';
+export type TrackSubMode = 'addpoi' | 'editpoi' | '';
 
 export interface Options {
   map: Map;
@@ -142,12 +144,7 @@ export default class TrackManager<POIMeta> {
 
 
     const debouncedMapToProfileUpdater = debounce(
-      /**
-       *
-       * @param {import('ol/coordinate').Coordinate} coordinate
-       * @param {boolean} hover
-       */
-      (coordinate, hover) => {
+      (coordinate: Coordinate, hover: boolean) => {
       if (hover && this.trackData_.getSegments().length > 0) {
         const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
@@ -175,7 +172,7 @@ export default class TrackManager<POIMeta> {
       // @ts-ignore too complicate to declare proper events
       'modifyend',
       async (event: ModifyEvent) => {
-        const type = event.feature.get('type');
+        const type = event.feature.get('type') as FeatureType;
 
         if (type === 'POI') {
           this.trackData_.updatePOIIndexes();
@@ -219,7 +216,7 @@ export default class TrackManager<POIMeta> {
         event.mapBrowserEvent.stopPropagation();
         const selected = event.selected[0] as Feature<Point>;
         console.assert(selected.getGeometry().getType() === 'Point');
-        const type = selected.get('type');
+        const type = selected.get('type') as FeatureType;
         if (type === 'POI') {
           this.trackData_.deletePOI(selected);
           this.source_.removeFeature(selected);
