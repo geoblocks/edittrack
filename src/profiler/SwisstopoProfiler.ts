@@ -5,7 +5,6 @@ import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
 import type {Profiler} from './index';
 
-
 // https://api3.geo.admin.ch/services/sdiservices.html#profile
 
 type SwisstopoProfilerOptions = {
@@ -29,7 +28,7 @@ export default class SwisstopoProfiler implements Profiler {
 
     this.geojsonFormat = new GeoJSONFormat({
       dataProjection: proj!,
-      featureProjection: options.projection
+      featureProjection: options.projection,
     });
   }
 
@@ -40,15 +39,17 @@ export default class SwisstopoProfiler implements Profiler {
     const request = await fetch(this.url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: `geom=${geom}&sr=2056&offset=1`
+      body: `geom=${geom}&sr=2056&offset=1`,
     });
     const profile = await request.json();
     segment.set('profile', profile.map(swisstopoToXYZM));
   }
 }
 
-function swisstopoToXYZM(p: SwisstopoProfileItem): [number, number, number, number] {
+function swisstopoToXYZM(
+  p: SwisstopoProfileItem,
+): [number, number, number, number] {
   return [p.easting, p.northing, p.alts.COMB, p.dist];
 }

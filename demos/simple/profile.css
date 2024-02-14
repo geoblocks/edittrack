@@ -6,11 +6,13 @@ elevation-profile line {
   shape-rendering: crispEdges;
 }
 
-elevation-profile .axis .domain, .grid .domain {
+elevation-profile .axis .domain,
+.grid .domain {
   display: none;
 }
 
-elevation-profile .axis line, .grid line {
+elevation-profile .axis line,
+.grid line {
   stroke: #707070;
 }
 
@@ -31,7 +33,8 @@ elevation-profile .pointer-circle-outline {
   fill-opacity: 0.2;
 }
 
-elevation-profile .elevation, elevation-profile .elevation.highlight {
+elevation-profile .elevation,
+elevation-profile .elevation.highlight {
   stroke: #3761a4;
   stroke-width: 2;
   stroke-linejoin: round;

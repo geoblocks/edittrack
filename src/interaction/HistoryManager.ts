@@ -1,5 +1,4 @@
-
- export default class HistoryManager<StateType> {
+export default class HistoryManager<StateType> {
   private history: StateType[] = [];
   private historyIndex = -1;
 
@@ -14,7 +13,7 @@
     this.historyIndex = -1;
   }
 
-  undo(): StateType|undefined {
+  undo(): StateType | undefined {
     if (this.historyIndex > 0) {
       this.historyIndex--;
       return this.history[this.historyIndex];
@@ -23,7 +22,7 @@
     return undefined;
   }
 
-  redo(): StateType|undefined {
+  redo(): StateType | undefined {
     if (this.historyIndex < this.history.length - 1) {
       this.historyIndex++;
       return this.history[this.historyIndex];

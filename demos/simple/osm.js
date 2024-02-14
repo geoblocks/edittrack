@@ -9,7 +9,6 @@ import {styleRules} from './style';
 import {transform, transformExtent} from 'ol/proj';
 import {createShadowLayer} from './shadowtrack';
 
-
 export function createMap(target) {
   const trackSource = new VectorSource();
   const trackLayer = new VectorLayer({
@@ -25,18 +24,14 @@ export function createMap(target) {
   });
 
   const bgLayer = new TileLayer({
-    source: new OSM()
+    source: new OSM(),
   });
 
   const shadowTrackLayer = createShadowLayer();
   const map = new OLMap({
     target,
     view,
-    layers: [
-      bgLayer,
-      shadowTrackLayer,
-      trackLayer
-    ]
+    layers: [bgLayer, shadowTrackLayer, trackLayer],
   });
   window['mymap'] = map;
 

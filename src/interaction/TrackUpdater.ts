@@ -11,7 +11,6 @@ type TrackUpdaterOptions = {
   profiler: Profiler;
 };
 
-
 /**
  * Drive the chosen router to update the segment geometries.
  */
@@ -26,10 +25,13 @@ export default class TrackUpdater {
     this.router = options.router;
   }
 
-  computeAdjacentSegmentsProfile(modifiedControlPoint: Feature<Point>): Promise<any> {
+  computeAdjacentSegmentsProfile(
+    modifiedControlPoint: Feature<Point>,
+  ): Promise<any> {
     const promises = [];
     if (modifiedControlPoint) {
-      const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
+      const {before, after} =
+        this.trackData.getAdjacentSegments(modifiedControlPoint);
       if (before) {
         promises.push(this.profiler.computeProfile(before));
       }
@@ -40,9 +42,13 @@ export default class TrackUpdater {
     return Promise.all(promises);
   }
 
-  changeAdjacentSegmentsStyling(modifiedControlPoint: Feature<Point>, subtype: string) {
+  changeAdjacentSegmentsStyling(
+    modifiedControlPoint: Feature<Point>,
+    subtype: string,
+  ) {
     if (modifiedControlPoint) {
-      const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
+      const {before, after} =
+        this.trackData.getAdjacentSegments(modifiedControlPoint);
       if (before) {
         before.set('subtype', subtype);
       }
@@ -52,18 +58,27 @@ export default class TrackUpdater {
     }
   }
 
-  async updateAdjacentSegmentsGeometries(modifiedControlPoint: Feature<Point>, snapping: boolean): Promise<any> {
+  async updateAdjacentSegmentsGeometries(
+    modifiedControlPoint: Feature<Point>,
+    snapping: boolean,
+  ): Promise<any> {
     if (modifiedControlPoint) {
-      const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
-      const pointFrom = this.trackData.getControlPointBefore(modifiedControlPoint);
+      const {before, after} =
+        this.trackData.getAdjacentSegments(modifiedControlPoint);
+      const pointFrom =
+        this.trackData.getControlPointBefore(modifiedControlPoint);
       const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
       modifiedControlPoint.set('snapped', snapping ? undefined : false);
       const geometryUpdates = [];
       if (before) {
-        geometryUpdates.push(this.router.snapSegment(before, pointFrom, modifiedControlPoint));
+        geometryUpdates.push(
+          this.router.snapSegment(before, pointFrom, modifiedControlPoint),
+        );
       }
       if (after) {
-        geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
+        geometryUpdates.push(
+          this.router.snapSegment(after, modifiedControlPoint, pointTo),
+        );
       }
       await Promise.all(geometryUpdates).then(async () => {
         this.equalizeCoordinates(pointFrom);
@@ -98,5 +113,4 @@ export default class TrackUpdater {
       }
     }
   }
-
 }

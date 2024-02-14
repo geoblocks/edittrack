@@ -16,12 +16,22 @@ export default abstract class RouterBase implements Router {
 
   constructor(options: RouterBaseOptions) {
     this.map = options.map;
-    this.maxRoutingTolerance = options.maxRoutingTolerance !== undefined ? options.maxRoutingTolerance : Infinity;
+    this.maxRoutingTolerance =
+      options.maxRoutingTolerance !== undefined
+        ? options.maxRoutingTolerance
+        : Infinity;
   }
 
-  abstract getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]>;
+  abstract getRoute(
+    pointFromCoordinates: Coordinate,
+    pointToCoordinates: Coordinate,
+  ): Promise<Coordinate[]>;
 
-  async snapSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>): Promise<boolean> {
+  async snapSegment(
+    segment: Feature<LineString>,
+    pointFrom: Feature<Point>,
+    pointTo: Feature<Point>,
+  ): Promise<boolean> {
     const pointFromSnapped = pointFrom.get('snapped');
     const pointToSnapped = pointTo.get('snapped');
     const pointFromGeometry = pointFrom.getGeometry();
@@ -30,22 +40,35 @@ export default abstract class RouterBase implements Router {
     const pointToCoordinates = pointToGeometry!.getCoordinates();
 
     if (pointFromSnapped == false || pointToSnapped === false) {
-      segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
+      segment
+        .getGeometry()!
+        .setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
       return false;
     }
 
-    const resultCoordinates = await this.getRoute(pointFromCoordinates, pointToCoordinates);
+    const resultCoordinates = await this.getRoute(
+      pointFromCoordinates,
+      pointToCoordinates,
+    );
     if (resultCoordinates.length === 0) {
       return false;
     }
     const resultFromCoordinates = resultCoordinates[0].slice(0, 2);
-    const resultToCoordinates = resultCoordinates[resultCoordinates.length - 1].slice(0, 2);
+    const resultToCoordinates = resultCoordinates[
+      resultCoordinates.length - 1
+    ].slice(0, 2);
 
     if (pointFromSnapped === undefined) {
-      pointFrom.set('snapped', this.isInTolerance(pointFromCoordinates, resultFromCoordinates));
+      pointFrom.set(
+        'snapped',
+        this.isInTolerance(pointFromCoordinates, resultFromCoordinates),
+      );
     }
     if (pointToSnapped === undefined) {
-      pointTo.set('snapped', this.isInTolerance(pointToCoordinates, resultToCoordinates));
+      pointTo.set(
+        'snapped',
+        this.isInTolerance(pointToCoordinates, resultToCoordinates),
+      );
     }
     const snapped = pointFrom.get('snapped') && pointTo.get('snapped');
 
@@ -54,7 +77,9 @@ export default abstract class RouterBase implements Router {
       pointFromGeometry!.setCoordinates(resultFromCoordinates);
       pointToGeometry!.setCoordinates(resultToCoordinates);
     } else {
-      segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
+      segment
+        .getGeometry()!
+        .setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
     }
     segment.set('snapped', snapped);
 

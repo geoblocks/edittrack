@@ -1,6 +1,6 @@
-import { Fill, Stroke, Style, Icon, Text, Circle } from "ol/style";
-import { toString } from "ol/color";
-import Point from "ol/geom/Point";
+import {Fill, Stroke, Style, Icon, Text, Circle} from 'ol/style';
+import {toString} from 'ol/color';
+import Point from 'ol/geom/Point';
 
 const tourColor = [55, 97, 164];
 const lightTourColor = [...tourColor, 0.6];
@@ -21,7 +21,7 @@ const poiSvgSketchHit = `
 </svg>
 `;
 
-const withPointerDevice = window.matchMedia("(pointer: coarse)").matches;
+const withPointerDevice = window.matchMedia('(pointer: coarse)').matches;
 
 export const controlPoint = new Style({
   zIndex: 100,
@@ -31,14 +31,14 @@ export const controlPoint = new Style({
     }),
     stroke: new Stroke({
       width: 2,
-      color: "#fff",
+      color: '#fff',
     }),
     radius: 8,
   }),
   text: new Text({
-    font: "bold 11px Inter",
+    font: 'bold 11px Inter',
     fill: new Fill({
-      color: "#fff",
+      color: '#fff',
     }),
   }),
 });
@@ -68,35 +68,40 @@ export const controlPointSketchHit = controlPoint.clone();
 controlPointSketchHit.getImage().getFill().setColor(focusRed);
 
 // mouse over a control point or dragging a new control point on a segment
-export const sketchControlPointHint = sketchControlPoint.map((style) => style.clone());
-sketchControlPointHint[1].getImage().setStroke(new Stroke({
-  width: 2,
-  color: "#fff",
-}));
+export const sketchControlPointHint = sketchControlPoint.map((style) =>
+  style.clone(),
+);
+sketchControlPointHint[1].getImage().setStroke(
+  new Stroke({
+    width: 2,
+    color: '#fff',
+  }),
+);
 
 export const segmentIntermediatePoint = controlPoint.clone();
 segmentIntermediatePoint.getImage().setRadius(4);
 
 export const firstControlPoint = controlPoint.clone();
-firstControlPoint.getText().setText("A");
+firstControlPoint.getText().setText('A');
 
 export const lastControlPoint = controlPoint.clone();
-lastControlPoint.getText().setText("B");
+lastControlPoint.getText().setText('B');
 
-export const profileHover = sketchControlPointHint.map((style) => style.clone());
+export const profileHover = sketchControlPointHint.map((style) =>
+  style.clone(),
+);
 profileHover[1].getImage().setRadius(6);
 profileHover[0].getImage().getFill().setColor([0, 0, 0, 0.3]);
-
 
 export const poiPoint = new Style({
   image: new Icon({
     src: `data:image/svg+xml;utf8,${poiSvg}`,
   }),
   text: new Text({
-    font: "11px Inter",
+    font: '11px Inter',
     offsetY: -10,
     fill: new Fill({
-      color: "#fff",
+      color: '#fff',
     }),
   }),
 });
@@ -107,31 +112,30 @@ export const poiPointSketchHit = new Style({
     src: `data:image/svg+xml;utf8,${poiSvgSketchHit}`,
   }),
   text: new Text({
-    font: "11px Inter",
+    font: '11px Inter',
     offsetY: -10,
     fill: new Fill({
-      color: "#fff",
+      color: '#fff',
     }),
   }),
 });
 
 const sketchLabel = new Style({
   text: new Text({
-    font: "16px Inter",
+    font: '16px Inter',
     padding: [4, 4, 4, 4],
     offsetX: 24,
-    textAlign: "left",
+    textAlign: 'left',
     backgroundFill: new Fill({
-      color: "#fff",
+      color: '#fff',
     }),
   }),
-})
-
+});
 
 const sketchLabelText = {
-  POI: "drag to move POI",
-  controlPoint: "double click to delete\ndrag to move point",
-  segment: "drag to create point",
+  POI: 'drag to move POI',
+  controlPoint: 'double click to delete\ndrag to move point',
+  segment: 'drag to create point',
 };
 
 export const trackLine = new Style({
@@ -150,51 +154,55 @@ trackLineModifying.getStroke().setLineDash([1, 12]);
  * @return {?Style}
  */
 export function styleFunction(feature) {
-  const type = feature.get("type");
-  const subtype = feature.get("subtype");
-  const sketchHitGeometry = feature.get("sketchHitGeometry");
+  const type = feature.get('type');
+  const subtype = feature.get('subtype');
+  const sketchHitGeometry = feature.get('sketchHitGeometry');
 
   switch (type) {
-    case "sketch":
+    case 'sketch':
       if (!withPointerDevice && subtype) {
         sketchLabel.getText().setText(sketchLabelText[subtype]);
         return sketchLabel;
       }
       return withPointerDevice ? null : sketchControlPoint;
-    case "POI": {
+    case 'POI': {
       if (sketchHitGeometry) {
-        return poiPointSketchHit
+        return poiPointSketchHit;
       }
-      const index = feature.get("index");
+      const index = feature.get('index');
       if (index !== undefined) {
         poiPoint.getText().setText((index + 1).toString());
       }
       return poiPoint;
     }
-    case "controlPoint":
+    case 'controlPoint':
       if (!withPointerDevice && sketchHitGeometry) {
         return sketchControlPointHint;
       }
       switch (subtype) {
-        case "first":
+        case 'first':
           return firstControlPoint;
-        case "last":
+        case 'last':
           return lastControlPoint;
         default:
           return controlPoint;
       }
-    case "segment": {
+    case 'segment': {
       switch (subtype) {
-        case "modifying": {
+        case 'modifying': {
           return trackLineModifying;
         }
         default: {
           const intermediatePoint = segmentIntermediatePoint.clone();
-          intermediatePoint.setGeometry(new Point(feature.getGeometry().getFlatMidpoint()));
+          intermediatePoint.setGeometry(
+            new Point(feature.getGeometry().getFlatMidpoint()),
+          );
           const styles = [trackLine, intermediatePoint];
           if (!withPointerDevice && sketchHitGeometry) {
-            const dragging = feature.get("dragging");
-            const pointStyle = (dragging ? sketchControlPointHint : sketchControlPoint).map((style) => style.clone());
+            const dragging = feature.get('dragging');
+            const pointStyle = (
+              dragging ? sketchControlPointHint : sketchControlPoint
+            ).map((style) => style.clone());
             pointStyle.forEach((style) => style.setGeometry(sketchHitGeometry));
             styles.push(...pointStyle);
           }

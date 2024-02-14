@@ -21,16 +21,16 @@ import {DrawEvent} from 'ol/interaction/Draw';
 import {ModifyEvent} from './TrackInteractionModify';
 import {SelectEvent} from 'ol/interaction/Select';
 
-export type TrackMode = 'edit'|'';
-export type TrackSubMode = 'addpoi'|'editpoi'|'';
+export type TrackMode = 'edit' | '';
+export type TrackSubMode = 'addpoi' | 'editpoi' | '';
 
 export interface Options {
   map: Map;
-  trackLayer: VectorLayer<VectorSource>
-  shadowTrackLayer?: VectorLayer<VectorSource>
-  router: Router
-  profiler: Profiler
-  style: StyleLike | FlatStyleLike
+  trackLayer: VectorLayer<VectorSource>;
+  shadowTrackLayer?: VectorLayer<VectorSource>;
+  router: Router;
+  profiler: Profiler;
+  style: StyleLike | FlatStyleLike;
   /**
    * Condition to remove a point (control point or POI). Default is click.
    */
@@ -50,9 +50,7 @@ export interface Options {
   hitTolerance: number;
 }
 
-
 export default class TrackManager<POIMeta> {
-
   private map_: Map;
   get map(): Map {
     return this.map;
@@ -82,14 +80,15 @@ export default class TrackManager<POIMeta> {
   }
   private updater_: TrackUpdater;
   private interaction_: TrackInteraction;
-  private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
+  private historyManager_ = new HistoryManager<Feature<Point | LineString>[]>();
 
   constructor(options: Options) {
     this.map_ = options.map;
     this.source_ = options.trackLayer.getSource();
     this.trackLayer_ = options.trackLayer;
     this.shadowTrackLayer_ = options.shadowTrackLayer;
-    this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
+    this.hitTolerance_ =
+      options.hitTolerance !== undefined ? options.hitTolerance : 20;
     console.assert(!!options.router);
 
     this.router_ = options.router;
@@ -97,7 +96,7 @@ export default class TrackManager<POIMeta> {
     this.updater_ = new TrackUpdater({
       profiler: this.profiler_,
       router: this.router_,
-      trackData: this.trackData_
+      trackData: this.trackData_,
     });
 
     this.interaction_ = new TrackInteraction({
@@ -119,17 +118,15 @@ export default class TrackManager<POIMeta> {
     //   subtype: 'first',
     // }));
 
-
-
     // @ts-ignore too complicate to declare proper events
-    this.interaction_.on('drawend',
-    async (event: DrawEvent) => {
+    this.interaction_.on('drawend', async (event: DrawEvent) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
-      const feature = (event.feature as Feature<Point>);
+      const feature = event.feature as Feature<Point>;
       if (!this.snapping) {
         feature.set('snapped', false);
       }
-      const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
+      const {pointFrom, pointTo, segment} =
+        this.trackData_.pushControlPoint(feature);
       if (segment) {
         this.source_.addFeature(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
@@ -140,7 +137,6 @@ export default class TrackManager<POIMeta> {
       }
     });
 
-
     const debouncedMapToProfileUpdater = debounce(
       /**
        *
@@ -148,21 +144,28 @@ export default class TrackManager<POIMeta> {
        * @param {boolean} hover
        */
       (coordinate, hover) => {
-      if (hover && this.trackData_.getSegments().length > 0) {
-        const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
-        const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
-        this.onTrackHovered_(best);
-      } else {
-        this.onTrackHovered_(undefined);
-      }
-    }, 10);
+        if (hover && this.trackData_.getSegments().length > 0) {
+          const segments = this.trackData_
+            .getSegments()
+            .map((feature) => feature.getGeometry());
+          const best = findClosestPointInLines(segments, coordinate, {
+            tolerance: 1,
+            interpolate: true,
+          });
+          this.onTrackHovered_(best);
+        } else {
+          this.onTrackHovered_(undefined);
+        }
+      },
+      10,
+    );
 
     this.map_.on('pointermove', (event) => {
       const hover = this.map_.hasFeatureAtPixel(event.pixel, {
-        layerFilter: l => l === options.trackLayer,
+        layerFilter: (l) => l === options.trackLayer,
         hitTolerance: this.hitTolerance_,
       });
-      const cursor = (this.interaction_.getActive() && hover) ? 'pointer' : '';
+      const cursor = this.interaction_.getActive() && hover ? 'pointer' : '';
       if (this.map_.getTargetElement().style.cursor !== cursor) {
         this.map_.getTargetElement().style.cursor = cursor;
       }
@@ -182,7 +185,10 @@ export default class TrackManager<POIMeta> {
           this.onTrackChanged_();
         } else if (type === 'controlPoint') {
           const feature = event.feature as Feature<Point>;
-          await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
+          await this.updater_.updateAdjacentSegmentsGeometries(
+            feature,
+            this.snapping,
+          );
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           await this.updater_.computeAdjacentSegmentsProfile(feature);
           this.trackData_.updatePOIIndexes();
@@ -193,24 +199,32 @@ export default class TrackManager<POIMeta> {
 
           console.assert(indexOfSegment >= 0);
           const controlPoint = new Feature({
-            geometry: new Point(event.coordinate)
+            geometry: new Point(event.coordinate),
           });
           this.source_.addFeature(controlPoint);
-          const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
+          const removed = this.trackData_.insertControlPointAt(
+            controlPoint,
+            indexOfSegment + 1,
+          );
           console.assert(!!removed);
           this.source_.removeFeature(removed);
 
-          const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
+          const {before, after} =
+            this.trackData_.getAdjacentSegments(controlPoint);
           console.assert(!!before && !!after);
           this.source_.addFeatures([before, after]);
 
-          await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
+          await this.updater_.updateAdjacentSegmentsGeometries(
+            controlPoint,
+            this.snapping,
+          );
           this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
           await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         }
-    });
+      },
+    );
 
     this.interaction_.on(
       // @ts-ignore too complicate to declare proper events
@@ -226,10 +240,11 @@ export default class TrackManager<POIMeta> {
           this.onTrackChanged_();
         } else {
           // control point
-          const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
+          const {deleted, pointBefore, pointAfter, newSegment} =
+            this.trackData_.deleteControlPoint(selected);
 
           // remove deleted features from source
-          deleted.forEach(f => this.source_.removeFeature(f));
+          deleted.forEach((f) => this.source_.removeFeature(f));
 
           // add newly created segment to source
           if (newSegment) {
@@ -240,18 +255,32 @@ export default class TrackManager<POIMeta> {
           if (pointBefore || pointAfter) {
             const geometryUpdates = [];
             if (pointBefore) {
-              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
+              geometryUpdates.push(
+                this.updater_.updateAdjacentSegmentsGeometries(
+                  pointBefore,
+                  this.snapping,
+                ),
+              );
             }
             if (pointAfter) {
-              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
+              geometryUpdates.push(
+                this.updater_.updateAdjacentSegmentsGeometries(
+                  pointAfter,
+                  this.snapping,
+                ),
+              );
             }
             Promise.all(geometryUpdates).then(() => {
               const segmentUpdates = [];
               if (pointBefore) {
-                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+                segmentUpdates.push(
+                  this.updater_.computeAdjacentSegmentsProfile(pointBefore),
+                );
               }
               if (pointAfter) {
-                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+                segmentUpdates.push(
+                  this.updater_.computeAdjacentSegmentsProfile(pointAfter),
+                );
               }
               Promise.all(segmentUpdates).then(() => {
                 this.onTrackChanged_();
@@ -262,7 +291,8 @@ export default class TrackManager<POIMeta> {
 
         // unselect deleted feature
         this.interaction_.clearSelected();
-    });
+      },
+    );
   }
 
   private pushNewStateToHistoryManager_() {
@@ -270,11 +300,11 @@ export default class TrackManager<POIMeta> {
     const controlPoints = this.getControlPoints();
     const pois = this.getPOIs();
     const features = [...segments, ...controlPoints, ...pois];
-    const clonedFeatures = features.map(f => {
+    const clonedFeatures = features.map((f) => {
       const nf = f.clone();
       nf.setId(f.getId());
       return nf;
-    })
+    });
     this.historyManager_.add(clonedFeatures);
   }
 
@@ -282,17 +312,16 @@ export default class TrackManager<POIMeta> {
     return this.mode_;
   }
 
-
   set mode(mode: TrackMode) {
     const edit = mode === 'edit';
     if (edit) {
       if (this.shadowTrackLayer_) {
         this.shadowTrackLayer_.getSource().addFeatures(
-          this.source_.getFeatures().map(f => {
+          this.source_.getFeatures().map((f) => {
             const clone = f.clone();
             clone.setId(f.getId());
             return clone;
-          })
+          }),
         );
       }
     } else {
@@ -332,7 +361,9 @@ export default class TrackManager<POIMeta> {
     if (this.mode_) {
       if (this.trackData_.getControlPoints().length > 0) {
         const deletedFeatures = this.trackData_.deleteLastControlPoint();
-        deletedFeatures.forEach(feature => this.source_.removeFeature(feature));
+        deletedFeatures.forEach((feature) =>
+          this.source_.removeFeature(feature),
+        );
         this.onTrackChanged_();
       }
     }
@@ -347,15 +378,16 @@ export default class TrackManager<POIMeta> {
     for (let i = 1, ii = points.length; i < ii; i += 2) {
       const point = points[i];
       this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
-      this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
-      .then(() => {
-        this.updater_.changeAdjacentSegmentsStyling(point, '');
-        this.updater_.computeAdjacentSegmentsProfile(point);
-      })
-      .then(() => {
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_()
-      });
+      this.updater_
+        .updateAdjacentSegmentsGeometries(point, this.snapping)
+        .then(() => {
+          this.updater_.changeAdjacentSegmentsStyling(point, '');
+          this.updater_.computeAdjacentSegmentsProfile(point);
+        })
+        .then(() => {
+          this.trackData_.updatePOIIndexes();
+          this.onTrackChanged_();
+        });
     }
   }
 
@@ -369,26 +401,32 @@ export default class TrackManager<POIMeta> {
 
   /**
    */
-    clear() {
-      if (this.trackData_.hasData()) {
-        this.clearInternal_()
-        this.onTrackChanged_();
-      }
+  clear() {
+    if (this.trackData_.hasData()) {
+      this.clearInternal_();
+      this.onTrackChanged_();
     }
+  }
 
   /**
    * This function does not trigger track changed events.
    */
-  private async restoreFeaturesInternal_(features: Feature<Point|LineString>[]): Promise<void> {
+  private async restoreFeaturesInternal_(
+    features: Feature<Point | LineString>[],
+  ): Promise<void> {
     // should parse features first, compute profile, and then replace the trackdata and add history
     const parsedFeatures = this.trackData_.parseFeatures(features);
     this.source_.addFeatures(features);
-    const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
+    const profileRequests = parsedFeatures.segments.map((segment) =>
+      this.profiler_.computeProfile(segment),
+    );
     await Promise.all(profileRequests);
     this.trackData_.restoreParsedFeatures(parsedFeatures);
   }
 
-  async restoreFeatures(features: Feature<Point|LineString>[]): Promise<void> {
+  async restoreFeatures(
+    features: Feature<Point | LineString>[],
+  ): Promise<void> {
     this.clearInternal_();
     await this.restoreFeaturesInternal_(features);
     this.onTrackChanged_();
@@ -426,7 +464,6 @@ export default class TrackManager<POIMeta> {
     });
   }
 
-
   /**
    * Add a POI and notify track change listeners.
    */
@@ -435,7 +472,7 @@ export default class TrackManager<POIMeta> {
       geometry: new Point(coordinates),
       type: 'POI',
       meta: meta,
-    })
+    });
     this.source_.addFeature(poi);
     this.trackData_.addPOI(poi);
     this.trackData_.updatePOIIndexes();
@@ -447,8 +484,15 @@ export default class TrackManager<POIMeta> {
    * Delete a POI and notify track change listeners.
    */
   deletePOI(index: number) {
-    const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
-    const feature = this.source_.getFeatures().find(feature => feature.get('type') === 'POI' && feature.get('index') === index);
+    const poi = this.trackData_
+      .getPOIs()
+      .find((feature) => feature.get('index') === index);
+    const feature = this.source_
+      .getFeatures()
+      .find(
+        (feature) =>
+          feature.get('type') === 'POI' && feature.get('index') === index,
+      );
     this.source_.removeFeature(feature);
     this.trackData_.deletePOI(poi);
     this.trackData_.updatePOIIndexes();
@@ -459,7 +503,9 @@ export default class TrackManager<POIMeta> {
    * Update the meta of a POI given by its index
    */
   updatePOIMeta(index: number, meta: POIMeta) {
-    const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
+    const poi = this.trackData_
+      .getPOIs()
+      .find((feature) => feature.get('index') === index);
     poi.set('meta', meta);
     this.addManualHistoryEntry();
   }
@@ -477,7 +523,9 @@ export default class TrackManager<POIMeta> {
    */
   // eslint-disable-next-line @typescript-eslint/ban-types
   removeTrackChangeEventListener(fn: Function) {
-    this.trackChangeEventListeners_ = this.trackChangeEventListeners_.filter(item => item !== fn);
+    this.trackChangeEventListeners_ = this.trackChangeEventListeners_.filter(
+      (item) => item !== fn,
+    );
   }
 
   /**
@@ -487,7 +535,7 @@ export default class TrackManager<POIMeta> {
     if (notifyHistory) {
       this.pushNewStateToHistoryManager_();
     }
-    this.trackChangeEventListeners_.forEach(handler => handler());
+    this.trackChangeEventListeners_.forEach((handler) => handler());
   }
 
   addManualHistoryEntry() {
@@ -507,11 +555,13 @@ export default class TrackManager<POIMeta> {
    */
   // eslint-disable-next-line @typescript-eslint/ban-types
   removeTrackHoverEventListener(fn: Function) {
-    this.trackHoverEventListeners_ = this.trackHoverEventListeners_.filter(item => item !== fn);
+    this.trackHoverEventListeners_ = this.trackHoverEventListeners_.filter(
+      (item) => item !== fn,
+    );
   }
 
   private notifyTrackHoverEventListener_(distance: number) {
-    this.trackHoverEventListeners_.forEach(handler => handler(distance));
+    this.trackHoverEventListeners_.forEach((handler) => handler(distance));
   }
 
   /**
@@ -536,13 +586,14 @@ export default class TrackManager<POIMeta> {
       const features = this.historyManager_.undo();
       this.clearInternal_();
       if (features) {
-        await this.restoreFeaturesInternal_(features.map(feature => {
-          // we need to clone the features, otherwise they could be changed in the history state from outside
-          const clone = feature.clone();
-          clone.setId(feature.getId());
-          return clone;
-        }
-        ));
+        await this.restoreFeaturesInternal_(
+          features.map((feature) => {
+            // we need to clone the features, otherwise they could be changed in the history state from outside
+            const clone = feature.clone();
+            clone.setId(feature.getId());
+            return clone;
+          }),
+        );
       }
       this.notifyTrackChangeEventListeners_(false);
     }
@@ -556,12 +607,14 @@ export default class TrackManager<POIMeta> {
       const features = this.historyManager_.redo();
       this.clearInternal_();
       if (features) {
-        await this.restoreFeaturesInternal_(features.map(feature => {
-          // we need to clone the features, otherwise they could be changed in the history state from outside
-          const clone = feature.clone();
-          clone.setId(feature.getId());
-          return clone;
-        }));
+        await this.restoreFeaturesInternal_(
+          features.map((feature) => {
+            // we need to clone the features, otherwise they could be changed in the history state from outside
+            const clone = feature.clone();
+            clone.setId(feature.getId());
+            return clone;
+          }),
+        );
       }
       this.notifyTrackChangeEventListeners_(false);
     }

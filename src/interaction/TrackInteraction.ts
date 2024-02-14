@@ -16,9 +16,9 @@ import {Point} from 'ol/geom';
 
 export interface Options {
   map: Map;
-  trackLayer: VectorLayer<VectorSource>
-  trackData: TrackData
-  style: StyleLike | FlatStyleLike
+  trackLayer: VectorLayer<VectorSource>;
+  trackData: TrackData;
+  style: StyleLike | FlatStyleLike;
 
   /**
    * Default is to delete control points and pois on click
@@ -39,9 +39,7 @@ export interface Options {
   hitTolerance: number;
 }
 
-
 export default class TrackInteraction extends Interaction {
-
   private trackLayer_: VectorLayer<VectorSource>;
 
   /**
@@ -61,8 +59,9 @@ export default class TrackInteraction extends Interaction {
   private modifyTrack_: Modify;
   private deletePoint_: Select;
 
-  controlPointOrPOIAtPixel(pixel: Pixel): Feature<Point>|false {
-    return this.getMap().forEachFeatureAtPixel(pixel,
+  controlPointOrPOIAtPixel(pixel: Pixel): Feature<Point> | false {
+    return this.getMap().forEachFeatureAtPixel(
+      pixel,
       (f) => {
         const t = f.get('type');
         if (t === 'controlPoint' || t === 'POI') {
@@ -70,28 +69,38 @@ export default class TrackInteraction extends Interaction {
           return f as Feature<Point>;
         }
         return false;
-      }, {
-      layerFilter: l => l === this.trackLayer_,
-    });
+      },
+      {
+        layerFilter: (l) => l === this.trackLayer_,
+      },
+    );
   }
 
   createDrawInteraction(source: VectorSource): DrawPoint {
     const draw = new DrawPoint({
       source: source,
-      condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
+      condition: (event) =>
+        this.userAddLastPointCondition_(event) &&
+        !this.controlPointOrPOIAtPixel(event.pixel),
     });
     // @ts-ignore too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
   }
 
-  createModifyInteraction(trackData: TrackData, source: VectorSource, style: StyleLike | FlatStyleLike, hitTolerance: number): Modify {
+  createModifyInteraction(
+    trackData: TrackData,
+    source: VectorSource,
+    style: StyleLike | FlatStyleLike,
+    hitTolerance: number,
+  ): Modify {
     const modify = new Modify({
       trackData: trackData,
       source: source,
       style: style,
       condition: (event) => !this.deleteCondition_(event),
-      addControlPointCondition: (event) => this.userAddControlPointCondition_(event),
+      addControlPointCondition: (event) =>
+        this.userAddControlPointCondition_(event),
       hitTolerance: hitTolerance,
     });
     // @ts-ignore too complicate to declare proper events
@@ -106,7 +115,6 @@ export default class TrackInteraction extends Interaction {
     return modify;
   }
 
-
   createSelectInteraction(trackLayer: VectorLayer<VectorSource>): Select {
     const select = new Select({
       condition: (event) => this.deleteCondition_(event),
@@ -120,7 +128,6 @@ export default class TrackInteraction extends Interaction {
     return select;
   }
 
-
   deleteCondition_(event: MapBrowserEvent<UIEvent>): boolean {
     const point = this.controlPointOrPOIAtPixel(event.pixel);
     if (point) {
@@ -129,23 +136,38 @@ export default class TrackInteraction extends Interaction {
     return false;
   }
 
-
   constructor(options: Options) {
     super();
 
     this.trackLayer_ = options.trackLayer;
 
-    this.userDeleteCondition_ = options.deleteCondition === undefined ? click : options.deleteCondition;
-    this.userAddLastPointCondition_ = options.addLastPointCondition === undefined ? click : options.addLastPointCondition;
-    this.userAddControlPointCondition_ = options.addControlPointCondition === undefined ? FALSE : options.addControlPointCondition;
+    this.userDeleteCondition_ =
+      options.deleteCondition === undefined ? click : options.deleteCondition;
+    this.userAddLastPointCondition_ =
+      options.addLastPointCondition === undefined
+        ? click
+        : options.addLastPointCondition;
+    this.userAddControlPointCondition_ =
+      options.addControlPointCondition === undefined
+        ? FALSE
+        : options.addControlPointCondition;
 
     const source = options.trackLayer.getSource();
     // FIXME should debounce
-    source.on('addfeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
-    source.on('removefeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
+    source.on('addfeature', () =>
+      requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()),
+    );
+    source.on('removefeature', () =>
+      requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()),
+    );
 
     this.drawTrack_ = this.createDrawInteraction(source);
-    this.modifyTrack_ = this.createModifyInteraction(options.trackData, source, options.style, options.hitTolerance);
+    this.modifyTrack_ = this.createModifyInteraction(
+      options.trackData,
+      source,
+      options.style,
+      options.hitTolerance,
+    );
     this.deletePoint_ = this.createSelectInteraction(options.trackLayer);
 
     this.setActive(false);
