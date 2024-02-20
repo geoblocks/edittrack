@@ -35,31 +35,6 @@ export default class TrackData {
   private controlPoints: Feature<Point>[] = [];
   private pois: Feature<Point>[] = [];
 
-  parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
-    const parsed: ParsedFeatures = {
-      segments: [],
-      pois: [],
-      controlPoints: [],
-    };
-    const {segments, pois, controlPoints} = parsed;
-
-    for (const feature of features) {
-      const type = feature.get('type') as FeatureType;
-      if (type === 'segment') {
-        console.assert(feature.getGeometry().getType() === 'LineString');
-        segments.push(feature as Feature<LineString>);
-      } else if (type === 'controlPoint') {
-        console.assert(feature.getGeometry().getType() === 'Point');
-        controlPoints.push(feature as Feature<Point>);
-      } else if (type === 'POI') {
-        console.assert(feature.getGeometry().getType() === 'Point');
-        pois.push(feature as Feature<Point>);
-      }
-    }
-
-    return parsed;
-  }
-
   restoreParsedFeatures(parsedFeatures: ParsedFeatures) {
     const {segments, pois, controlPoints} = parsedFeatures;
     console.assert((!controlPoints.length && !segments.length) || (controlPoints.length === segments.length + 1));
@@ -367,4 +342,29 @@ function createStraightSegment(featureFrom: Feature<Point>, featureTo: Feature<P
   segment.set('type', 'segment');
 
   return segment;
+}
+
+export function parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
+  const parsed: ParsedFeatures = {
+    segments: [],
+    pois: [],
+    controlPoints: [],
+  };
+  const {segments, pois, controlPoints} = parsed;
+
+  for (const feature of features) {
+    const type = feature.get('type') as FeatureType;
+    if (type === 'segment') {
+      console.assert(feature.getGeometry().getType() === 'LineString');
+      segments.push(feature as Feature<LineString>);
+    } else if (type === 'controlPoint') {
+      console.assert(feature.getGeometry().getType() === 'Point');
+      controlPoints.push(feature as Feature<Point>);
+    } else if (type === 'POI') {
+      console.assert(feature.getGeometry().getType() === 'Point');
+      pois.push(feature as Feature<Point>);
+    }
+  }
+
+  return parsed;
 }

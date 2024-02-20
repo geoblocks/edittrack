@@ -1,7 +1,7 @@
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
-import TrackData from './TrackData';
+import TrackData, {parseFeatures} from './TrackData';
 import TrackUpdater from './TrackUpdater';
 import TrackInteraction from './TrackInteraction';
 import HistoryManager from './HistoryManager';
@@ -378,7 +378,7 @@ export default class TrackManager<POIMeta> {
    */
   private async restoreFeaturesInternal_(features: Feature<Point|LineString>[]): Promise<void> {
     // should parse features first, compute profile, and then replace the trackdata and add history
-    const parsedFeatures = this.trackData_.parseFeatures(features);
+    const parsedFeatures = parseFeatures(features);
     this.source_.addFeatures(features);
     const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
     await Promise.all(profileRequests);
