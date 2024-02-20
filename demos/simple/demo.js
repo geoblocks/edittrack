@@ -124,6 +124,10 @@ function main() {
     }
     trackManager.addPOI(poiOverlay, onAddListener)
   });
+
+  document.querySelector('#createNewPart').addEventListener('click', () => {
+    trackManager.createNewPart();
+  });
 }
 
 main();

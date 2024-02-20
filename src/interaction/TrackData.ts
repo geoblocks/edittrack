@@ -119,6 +119,7 @@ export default class TrackData {
     point.set('type', 'controlPoint');
     console.assert(index >= 0 && index <= this.controlPoints.length);
     // add new control point
+    point.set('trackData', this);
     this.controlPoints.splice(index, 0, point);
 
     // remove segment
@@ -367,4 +368,9 @@ function createStraightSegment(featureFrom: Feature<Point>, featureTo: Feature<P
   segment.set('type', 'segment');
 
   return segment;
+}
+
+
+export function trackData(controlPoint: Feature<Point>): TrackData {
+  return controlPoint.get('trackData') as TrackData;
 }

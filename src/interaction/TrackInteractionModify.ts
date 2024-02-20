@@ -6,12 +6,11 @@ import LineString from 'ol/geom/LineString.js';
 import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
 import {Geometry} from 'ol/geom';
-import TrackData from './TrackData';
 import {Map, MapBrowserEvent} from 'ol';
 import type {StyleLike} from 'ol/style/Style.js';
 import type {FlatStyleLike} from 'ol/style/flat.js';
 import type {Pixel} from 'ol/pixel.js';
-import type {FeatureType} from './TrackData.js';
+import {trackData, type FeatureType} from './TrackData.js';
 
 export class ModifyEvent extends Event {
 
@@ -32,7 +31,6 @@ export class ModifyEvent extends Event {
 
 export interface Options {
   source: VectorSource<FeatureLike>;
-  trackData: TrackData;
   style: StyleLike | FlatStyleLike;
   condition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
   addControlPointCondition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
@@ -65,7 +63,6 @@ export default class Modify extends PointerInteraction {
   });
   private overlay_: VectorLayer<VectorSource<Feature>>;
   private lastPixel_ = [0, 0];
-  private trackData_: Options['trackData'];
   /**
    * @type {Feature<Point>}
    */
@@ -106,8 +103,6 @@ export default class Modify extends PointerInteraction {
       updateWhileAnimating: true,
       updateWhileInteracting: true
     });
-
-    this.trackData_ = options.trackData;
   }
 
 
@@ -231,7 +226,7 @@ export default class Modify extends PointerInteraction {
           // we create a 3 points linestring, doubled if end points clicked
           console.assert(this.feature_.getGeometry().getType() === 'Point', this.feature_.getProperties());
           const f = this.feature_ as Feature<Point>;
-          const {before, after} = this.trackData_.getAdjacentSegments(f);
+          const {before, after} = trackData(f).getAdjacentSegments(f);
           if (!before && !after) {
             // single point case
             this.involvedFeatures_ = [this.feature_];

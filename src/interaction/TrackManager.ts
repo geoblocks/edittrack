@@ -1,7 +1,7 @@
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
-import TrackData from './TrackData';
+import TrackData, { trackData } from './TrackData';
 import TrackUpdater from './TrackUpdater';
 import TrackInteraction from './TrackInteraction';
 import HistoryManager from './HistoryManager';
@@ -73,7 +73,8 @@ export default class TrackManager<POIMeta> {
   private trackChangeEventListeners_: Function[] = [];
   // eslint-disable-next-line @typescript-eslint/ban-types
   private trackHoverEventListeners_: Function[] = [];
-  private trackData_ = new TrackData();
+  // the data for the current line
+  private trackData_: TrackData;
   private router_: Router;
   get router(): Router {
     return this.router_;
@@ -85,6 +86,7 @@ export default class TrackManager<POIMeta> {
   private updater_: TrackUpdater;
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
+  parts: TrackData[] = [];
 
   constructor(options: Options) {
     this.map_ = options.map;
@@ -96,15 +98,16 @@ export default class TrackManager<POIMeta> {
 
     this.router_ = options.router;
     this.profiler_ = options.profiler;
+
+    this.createNewPart();
+
     this.updater_ = new TrackUpdater({
       profiler: this.profiler_,
       router: this.router_,
-      trackData: this.trackData_
     });
 
     this.interaction_ = new TrackInteraction({
       style: options.style,
-      trackData: this.trackData_,
       trackLayer: this.trackLayer_,
       map: this.map_,
       deleteCondition: options.deleteCondition,
@@ -131,6 +134,7 @@ export default class TrackManager<POIMeta> {
       if (!this.snapping) {
         feature.set('snapped', false);
       }
+      // this is what we want: the new point is added to the current line
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
       if (segment) {
         this.source_.addFeature(segment);
@@ -142,7 +146,7 @@ export default class TrackManager<POIMeta> {
       }
     });
 
-
+    // FIXME: check this
     const debouncedMapToProfileUpdater = debounce(
       (coordinate: Coordinate, hover: boolean) => {
       if (hover && this.trackData_.getSegments().length > 0) {
@@ -175,6 +179,7 @@ export default class TrackManager<POIMeta> {
         const type = event.feature.get('type') as FeatureType;
 
         if (type === 'POI') {
+          // FIXME: check this
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'controlPoint') {
@@ -182,10 +187,12 @@ export default class TrackManager<POIMeta> {
           await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           await this.updater_.computeAdjacentSegmentsProfile(feature);
+          // FIXME: check this
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'segment') {
           const feature = event.feature as Feature<LineString>;
+          // FIXME: check this
           const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
           console.assert(indexOfSegment >= 0);
@@ -218,12 +225,12 @@ export default class TrackManager<POIMeta> {
         console.assert(selected.getGeometry().getType() === 'Point');
         const type = selected.get('type') as FeatureType;
         if (type === 'POI') {
-          this.trackData_.deletePOI(selected);
+          trackData(selected).deletePOI(selected);
           this.source_.removeFeature(selected);
           this.onTrackChanged_();
         } else {
           // control point
-          const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
+          const {deleted, pointBefore, pointAfter, newSegment} = trackData(selected).deleteControlPoint(selected);
 
           // remove deleted features from source
           deleted.forEach(f => this.source_.removeFeature(f));
@@ -362,11 +369,13 @@ export default class TrackManager<POIMeta> {
   private clearInternal_() {
     this.source_.clear();
     this.trackData_.clear();
+    // FIXME: remove all parts ?
   }
 
   /**
    */
     clear() {
+      // FIXME: check this
       if (this.trackData_.hasData()) {
         this.clearInternal_()
         this.onTrackChanged_();
@@ -386,6 +395,7 @@ export default class TrackManager<POIMeta> {
   }
 
   async restoreFeatures(features: Feature<Point|LineString>[]): Promise<void> {
+    // FIXME: check this
     this.clearInternal_();
     await this.restoreFeaturesInternal_(features);
     this.onTrackChanged_();
@@ -444,6 +454,7 @@ export default class TrackManager<POIMeta> {
    * Delete a POI and notify track change listeners.
    */
   deletePOI(index: number) {
+    // FIXME: check this
     const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
     const feature = this.source_.getFeatures().find(feature => feature.get('type') === 'POI' && feature.get('index') === index);
     this.source_.removeFeature(feature);
@@ -567,5 +578,12 @@ export default class TrackManager<POIMeta> {
   render() {
     this.source_.changed();
     this.shadowTrackLayer_.getSource().changed();
+  }
+
+  // Add a new line string and set it add the "current" line string
+  createNewPart() {
+    this.trackData_ = new TrackData();
+
+    this.parts.push(this.trackData_);
   }
 }
