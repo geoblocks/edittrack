@@ -50,7 +50,7 @@ export default class TrackData {
     let before = undefined;
     let after = undefined;
     const index = this.controlPoints.indexOf(controlPoint);
-
+    console.assert(index >= 0, 'control point not found');
     if (index >= 1) {
       before = this.segments[index - 1];
     }
@@ -63,6 +63,7 @@ export default class TrackData {
 
   getControlPointBefore(controlPoint: Feature<Point>): Feature<Point> | null {
     const index = this.controlPoints.indexOf(controlPoint);
+    console.assert(index >= 0, 'control point not found');
     if (index > 0) {
       return this.controlPoints[index - 1];
     }
@@ -71,6 +72,7 @@ export default class TrackData {
 
   getControlPointAfter(controlPoint: Feature<Point>): Feature<Point> | null {
     const index = this.controlPoints.indexOf(controlPoint);
+    console.assert(index >= 0, 'control point not found');
     if (index >= 0 && index < this.controlPoints.length - 1) {
       return this.controlPoints[index + 1];
     }
