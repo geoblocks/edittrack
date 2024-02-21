@@ -1,5 +1,6 @@
 import GeoJSONFormat from 'ol/format/GeoJSON.js';
-import {get as getProjection} from 'ol/proj.js';
+import {get as getProjection, transform} from 'ol/proj.js';
+import type {Coordinate} from 'ol/coordinate';
 import type {ProjectionLike} from 'ol/proj.js';
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
@@ -21,15 +22,17 @@ type SwisstopoProfileItem = {
 
 export default class SwisstopoProfiler implements Profiler {
   private url = 'https://api3.geo.admin.ch/rest/services/profile.json';
+  private projection: ProjectionLike;
   private geojsonFormat: GeoJSONFormat;
 
   constructor(options: SwisstopoProfilerOptions) {
-    const proj = getProjection('EPSG:2056');
-    console.assert(!!proj, 'Register projection first');
+    this.projection = options.projection;
+
+    console.assert(getProjection('EPSG:2056'), 'Register EPSG:2056 projection first');
 
     this.geojsonFormat = new GeoJSONFormat({
-      dataProjection: proj!,
-      featureProjection: options.projection
+      dataProjection: 'EPSG:2056',
+      featureProjection: this.projection
     });
   }
 
@@ -45,10 +48,10 @@ export default class SwisstopoProfiler implements Profiler {
       body: `geom=${geom}&sr=2056&offset=1`
     });
     const profile = await request.json();
-    segment.set('profile', profile.map(swisstopoToXYZM));
+    segment.set('profile', profile.map(swisstopoToXYZM.bind(null, this.projection)));
   }
 }
 
-function swisstopoToXYZM(p: SwisstopoProfileItem): [number, number, number, number] {
-  return [p.easting, p.northing, p.alts.COMB, p.dist];
+function swisstopoToXYZM(projection: ProjectionLike, p: SwisstopoProfileItem): Coordinate {
+  return transform([p.easting, p.northing, p.alts.COMB, p.dist], 'EPSG:2056', projection);
 }
