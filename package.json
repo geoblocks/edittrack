@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@geoblocks/elevation-profile": "0.0.18",
-    "@geoblocks/proj": "0.4.8",
+    "@geoblocks/proj": "0.4.9",
     "@geoblocks/sources": "0.3.2",
     "@types/chai": "4.3.12",
     "@types/mocha": "10.0.6",
