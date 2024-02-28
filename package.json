@@ -37,7 +37,7 @@
   "devDependencies": {
     "@geoblocks/elevation-profile": "0.0.18",
     "@geoblocks/proj": "0.4.9",
-    "@geoblocks/sources": "0.3.2",
+    "@geoblocks/sources": "0.3.3",
     "@types/chai": "4.3.12",
     "@types/mocha": "10.0.6",
     "@typescript-eslint/eslint-plugin": "7.1.0",
@@ -46,7 +46,7 @@
     "eslint": "8.57.0",
     "gh-pages": "6.1.1",
     "mocha": "10.3.0",
-    "ol": "8.2.0",
+    "ol": "9.0.0",
     "parcel": "2.11.0",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
@@ -54,6 +54,6 @@
     "typescript": "5.3.3"
   },
   "peerDependencies": {
-    "ol": "^6 || ^7 || ^8"
+    "ol": "^6 || ^7 || ^8 || ^9.0.0"
   }
 }
