@@ -7,7 +7,6 @@ import type {Densifier} from '../densifier/index';
 import {equals} from 'ol/coordinate';
 
 type TrackUpdaterOptions = {
-  trackData: TrackData;
   densifier: Densifier;
   router: Router;
   profiler: Profiler;
@@ -23,10 +22,13 @@ export default class TrackUpdater {
   private router: Router;
 
   constructor(options: TrackUpdaterOptions) {
-    this.trackData = options.trackData;
     this.densifier = options.densifier;
     this.profiler = options.profiler;
     this.router = options.router;
+  }
+
+  setTrackData(trackData: TrackData) {
+    this.trackData = trackData;
   }
 
   changeAdjacentSegmentsStyling(modifiedControlPoint: Feature<Point>, subtype: string) {
