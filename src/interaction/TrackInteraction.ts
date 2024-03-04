@@ -17,12 +17,14 @@ import {Point} from 'ol/geom';
 import {containsCoordinate} from 'ol/extent.js';
 import {Extent} from "ol/extent";
 import {Coordinate} from "ol/coordinate.js";
+import { type FeatureLike } from 'ol/Feature';
 
 export interface Options {
   map: Map;
   trackLayer: VectorLayer<VectorSource>
-  trackData: TrackData
   style: StyleLike | FlatStyleLike
+
+  featureFilter: (feature: FeatureLike) => boolean;
 
   /**
    * Default is to delete control points and pois on click
@@ -56,6 +58,8 @@ export default class TrackInteraction extends Interaction {
   pointerOutListener?: () => void;
   pointerOverListener?: () => void;
 
+  private featureFilter_: Options['featureFilter'];
+
   /**
    * Default is to delete control points and pois on click
    */
@@ -73,11 +77,15 @@ export default class TrackInteraction extends Interaction {
   private modifyTrack_: Modify;
   private deletePoint_: Select;
 
+  setTrackData(trackData: TrackData) {
+    this.modifyTrack_.setTrackData(trackData);
+  }
+
   controlPointOrPOIAtPixel(pixel: Pixel): Feature<Point>|false {
     return this.getMap().forEachFeatureAtPixel(pixel,
       (f) => {
         const t = f.get('type') as FeatureType;
-        if (t === 'controlPoint' || t === 'POI') {
+        if (this.featureFilter_(f) && (t === 'controlPoint' || t === 'POI')) {
           console.assert(f.getGeometry().getType() === 'Point');
           return f as Feature<Point>;
         }
@@ -102,9 +110,8 @@ export default class TrackInteraction extends Interaction {
     return draw;
   }
 
-  createModifyInteraction(trackData: TrackData, source: VectorSource, style: StyleLike | FlatStyleLike, hitTolerance: number): Modify {
+  createModifyInteraction(source: VectorSource, style: StyleLike | FlatStyleLike, hitTolerance: number): Modify {
     const modify = new Modify({
-      trackData: trackData,
       source: source,
       style: style,
       condition: (event) => this.pixelAtDrawingExtent(event.coordinate) && !this.deleteCondition_(event),
@@ -121,6 +128,9 @@ export default class TrackInteraction extends Interaction {
       source.removeFeature(modify.overlayFeature);
       this.dispatchEvent(evt);
     });
+    // @ts-ignore too complicate to declare proper events
+    modify.on('modifyotherpart', (evt) => this.dispatchEvent(evt));
+
     return modify;
   }
 
@@ -131,7 +141,7 @@ export default class TrackInteraction extends Interaction {
       layers: [trackLayer],
       filter: (feature) => {
         const t = feature.get('type') as FeatureType;
-        return t === 'controlPoint' || t === 'POI';
+        return this.featureFilter_(feature) && (t === 'controlPoint' || t === 'POI');
       },
     });
     select.on('select', (evt) => this.dispatchEvent(evt));
@@ -162,6 +172,7 @@ export default class TrackInteraction extends Interaction {
       this.modifyTrack_.pointAtCursorFeature.set("type", "sketch");
     };
 
+    this.featureFilter_ = options.featureFilter;
     this.userDeleteCondition_ = options.deleteCondition === undefined ? click : options.deleteCondition;
     this.userAddLastPointCondition_ = options.addLastPointCondition === undefined ? click : options.addLastPointCondition;
     this.userAddControlPointCondition_ = options.addControlPointCondition === undefined ? FALSE : options.addControlPointCondition;
@@ -172,7 +183,7 @@ export default class TrackInteraction extends Interaction {
     source.on('removefeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
 
     this.drawTrack_ = this.createDrawInteraction(source);
-    this.modifyTrack_ = this.createModifyInteraction(options.trackData, source, options.style, options.hitTolerance);
+    this.modifyTrack_ = this.createModifyInteraction(source, options.style, options.hitTolerance);
     this.deletePoint_ = this.createSelectInteraction(options.trackLayer);
 
     this.setActive(false);
