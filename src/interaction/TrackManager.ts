@@ -1,3 +1,5 @@
+// FIXME: move pois outside of track data
+
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
@@ -97,7 +99,7 @@ export default class TrackManager<POIMeta> {
   private trackChangeEventListeners_: Function[] = [];
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   private trackHoverEventListeners_: Function[] = [];
-  private trackData_ = new TrackData();
+  private trackData_: TrackData;
   private router_: Router;
   get router(): Router {
     return this.router_;
@@ -114,6 +116,7 @@ export default class TrackManager<POIMeta> {
   private updater_: TrackUpdater;
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
+  private parts: TrackData[] = [];
 
   constructor(options: Options) {
     this.map_ = options.map;
@@ -127,16 +130,15 @@ export default class TrackManager<POIMeta> {
     this.snapper_ = options.snapper;
     this.profiler_ = options.profiler;
     this.densifier_ = options.densifier;
+
     this.updater_ = new TrackUpdater({
       profiler: this.profiler_,
       densifier: this.densifier_,
       router: this.router_,
-      trackData: this.trackData_
     });
 
     this.interaction_ = new TrackInteraction({
       style: options.style,
-      trackData: this.trackData_,
       trackLayer: this.trackLayer_,
       map: this.map_,
       deleteCondition: options.deleteCondition,
@@ -144,6 +146,8 @@ export default class TrackManager<POIMeta> {
       addControlPointCondition: options.addControlPointCondition,
       hitTolerance: this.hitTolerance_,
     });
+
+    this.createNewPart();
 
     // Hack to test profile synchro
     // this.closestPointGeom_ = new Point([0, 0]);
@@ -163,6 +167,7 @@ export default class TrackManager<POIMeta> {
       if (!this.snapping) {
         feature.set('snapped', false);
       }
+      feature.set('part', this.trackData_.part);
       // Next line we don't care if the control point will be snapped, or not.
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
       if (this.snapping && this.snapper_) {
@@ -170,6 +175,7 @@ export default class TrackManager<POIMeta> {
       }
       if (segment) {
         this.source_.addFeature(segment);
+        segment.set('part', this.trackData_.part);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
         this.updater_.equalizeCoordinates(pointFrom);
 
@@ -183,6 +189,7 @@ export default class TrackManager<POIMeta> {
 
     const debouncedMapToProfileUpdater = debounce(
       (coordinate: Coordinate, hover: boolean) => {
+      // FIXME multi lines: check this
       if (hover && this.trackData_.getSegments().length > 0) {
         const segments = this.trackData_.getSegments().map(feature => feature.get('profile'));
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
@@ -210,22 +217,26 @@ export default class TrackManager<POIMeta> {
         const type = event.feature.get('type') as FeatureType;
 
         if (type === 'POI') {
-          this.trackData_.updatePOIIndexes();
+        // FIXME multi lines: check this
+        this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'controlPoint') {
           const feature = event.feature as Feature<Point>;
           await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
           await this.updater_.computeAdjacentSegmentsProfile(feature);
+          // FIXME multi lines: check this
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'segment') {
           const feature = event.feature as Feature<LineString>;
+          // FIXME multi lines: check this
           const indexOfSegment = this.trackData_.getSegments().indexOf(feature);
 
           console.assert(indexOfSegment >= 0);
           const controlPoint = new Feature({
-            geometry: new Point(event.coordinate)
+            geometry: new Point(event.coordinate),
+            part: this.trackData_.part,
           });
           this.source_.addFeature(controlPoint);
           const removed = this.trackData_.insertControlPointAt(controlPoint, indexOfSegment + 1);
@@ -234,11 +245,14 @@ export default class TrackManager<POIMeta> {
 
           const {before, after} = this.trackData_.getAdjacentSegments(controlPoint);
           console.assert(!!before && !!after);
+          before.set('part', this.trackData_.part);
+          after.set('part', this.trackData_.part);
           this.source_.addFeatures([before, after]);
 
           await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
           await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
+          // FIXME multi lines: check this
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         }
@@ -254,6 +268,7 @@ export default class TrackManager<POIMeta> {
         console.assert(selected.getGeometry().getType() === 'Point');
         const type = selected.get('type') as FeatureType;
         if (type === 'POI') {
+          // FIXME multi lines: check this
           this.trackData_.deletePOI(selected);
           this.source_.removeFeature(selected);
           this.onTrackChanged_();
@@ -266,6 +281,7 @@ export default class TrackManager<POIMeta> {
 
           // add newly created segment to source
           if (newSegment) {
+            newSegment.set('part', this.trackData_.part);
             this.source_.addFeature(newSegment);
           }
 
@@ -299,10 +315,11 @@ export default class TrackManager<POIMeta> {
   }
 
   private pushNewStateToHistoryManager_() {
-    const segments = this.getSegments();
-    const controlPoints = this.getControlPoints();
-    const pois = this.getPOIs();
-    const features = [...segments, ...controlPoints, ...pois];
+    const features = [
+      ...this.getAllSegments().flat(),
+      ...this.getAllControlPoints().flat(),
+      ...this.getAllPOIs().flat(),
+    ];
     const clonedFeatures = features.map(f => {
       const nf = f.clone();
       nf.setId(f.getId());
@@ -369,6 +386,7 @@ export default class TrackManager<POIMeta> {
 
   deleteLastPoint() {
     if (this.mode_) {
+      // FIXME multi lines: check this
       if (this.trackData_.getControlPoints().length > 0) {
         const deletedFeatures = this.trackData_.deleteLastControlPoint();
         deletedFeatures.forEach(feature => this.source_.removeFeature(feature));
@@ -402,6 +420,7 @@ export default class TrackManager<POIMeta> {
   private clearInternal_() {
     this.source_.clear();
     this.trackData_.clear();
+    // FIXME multi lines: remove all parts ?
   }
 
   /**
@@ -418,17 +437,23 @@ export default class TrackManager<POIMeta> {
    */
   private async restoreFeaturesInternal_(features: Feature<Point|LineString>[]): Promise<void> {
     // should parse features first, compute profile, and then replace the trackdata and add history
-    const parsedFeatures = this.trackData_.parseFeatures(features);
-    this.source_.addFeatures(features);
-    const profileRequests = parsedFeatures.segments.map((segment) =>
-      this.profiler_.computeProfile(segment)
-    );
-    await Promise.all(profileRequests);
-    this.trackData_.restoreParsedFeatures(parsedFeatures);
+    const currentPart = this.activePart();
+    const featuresByPart = Object.groupBy(features, f => f.get('part'));
+    for (const [part, featuresInPart] of Object.entries(featuresByPart)) {
+      const parsedFeatures = this.trackData_.parseFeatures(featuresInPart);
+      this.source_.addFeatures(featuresInPart);
+      const profileRequests = parsedFeatures.segments.map((segment) =>
+        this.profiler_.computeProfile(segment)
+      );
+      await Promise.all(profileRequests);
+      // FIXME: check if part exists
+      this.workOnPart(parseInt(part));
+      this.trackData_.restoreParsedFeatures(parsedFeatures);
+    }
+    this.workOnPart(currentPart);
   }
 
   async restoreFeatures(features: Feature<Point|LineString>[]): Promise<void> {
-    this.clearInternal_();
     await this.restoreFeaturesInternal_(features);
     this.onTrackChanged_();
   }
@@ -465,6 +490,29 @@ export default class TrackManager<POIMeta> {
     });
   }
 
+  getAllSegments(): readonly Feature<LineString>[][] {
+    const segments: Feature<LineString>[][] = [];
+    for (const tm of this.partsGenerator()) {
+      segments.push(tm.getSegments() as Feature<LineString>[]);
+    }
+    return segments;
+  }
+
+  getAllControlPoints(): readonly Feature<Point>[][] {
+    const controlPoints: Feature<Point>[][] = [];
+    for (const tm of this.partsGenerator()) {
+      controlPoints.push(tm.getControlPoints() as Feature<Point>[]);
+    }
+    return controlPoints;
+  }
+
+  getAllPOIs(): readonly Feature<Point>[][] {
+    const pois: Feature<Point>[][] = [];
+    for (const tm of this.partsGenerator()) {
+      pois.push(tm.getPOIs() as Feature<Point>[]);
+    }
+    return pois;
+  }
 
   /**
    * Add a POI and notify track change listeners.
@@ -613,5 +661,43 @@ export default class TrackManager<POIMeta> {
   render() {
     this.source_.changed();
     this.shadowTrackLayer_.getSource().changed();
+  }
+
+  createNewPart(): number {
+    this.trackData_ = new TrackData(this.parts.length);
+    this.parts.push(this.trackData_);
+    this.updater_.setTrackData(this.trackData_);
+    this.interaction_.setTrackData(this.trackData_);
+
+    return this.trackData_.part;
+  }
+
+  activePart(): number {
+    return this.trackData_.part;
+  }
+
+  partsCount(): number {
+    return this.parts.length;
+  }
+
+  workOnPart(index: number) {
+    this.trackData_ = this.parts[index];
+    this.updater_.setTrackData(this.trackData_);
+    this.interaction_.setTrackData(this.trackData_);
+  }
+
+  getParts(): TrackData[] {
+    return this.parts;
+  }
+
+  // FIXME: find a better name
+  *partsGenerator(): Generator<TrackManager<POIMeta>, void> {
+    const currentPart = this.activePart();
+    const length = this.partsCount();
+    for (let i = 0; i < length; i++) {
+      this.workOnPart(i);
+      yield this;
+    }
+    this.workOnPart(currentPart);
   }
 }
