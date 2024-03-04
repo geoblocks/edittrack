@@ -126,6 +126,14 @@ function main() {
     }
     trackManager.addPOI(poiOverlay, onAddListener)
   });
+
+  document.querySelector('#createNewPart').addEventListener('click', () => {
+    trackManager.createNewPart();
+  });
+  document.querySelector('#changeActivePart').addEventListener('click', () => {
+    const nextPart = (trackManager.activePart() + 1) % trackManager.partsCount();
+    trackManager.workOnPart(nextPart);
+  });
 }
 
 main();
