@@ -6,7 +6,7 @@ import LineString from 'ol/geom/LineString.js';
 import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
 import {Geometry} from 'ol/geom';
-import TrackData from './TrackData';
+import type TrackData from './TrackData';
 import {Map, MapBrowserEvent} from 'ol';
 import type {StyleLike} from 'ol/style/Style.js';
 import type {FlatStyleLike} from 'ol/style/flat.js';
@@ -32,7 +32,6 @@ export class ModifyEvent extends Event {
 
 export interface Options {
   source: VectorSource<Feature>;
-  trackData: TrackData;
   style: StyleLike | FlatStyleLike;
   condition: (mbe: MapBrowserEvent) => boolean;
   addControlPointCondition: (mbe: MapBrowserEvent) => boolean;
@@ -67,7 +66,7 @@ export default class Modify extends PointerInteraction {
   });
   private overlay_: VectorLayer<VectorSource>;
   private lastPixel_: Pixel = [0, 0];
-  private trackData_: Options['trackData'];
+  private trackData_: TrackData;
   private pointAtCursorFeature_ = new Feature<Point>({
     geometry: new Point([0, 0]),
     type: 'sketch',
@@ -108,10 +107,16 @@ export default class Modify extends PointerInteraction {
       updateWhileAnimating: true,
       updateWhileInteracting: true
     });
-
-    this.trackData_ = options.trackData;
   }
 
+  setTrackData(trackData: TrackData) {
+    this.trackData_ = trackData;
+    this.overlayFeature.set('part', this.trackData_.part);
+  }
+
+  featureInTrackData(feature: Feature<Geometry> | undefined) {
+    return feature?.get('part') === this.trackData_.part;
+  }
 
   setMap(map: Map) {
     this.overlay_.setMap(map);
@@ -217,6 +222,13 @@ export default class Modify extends PointerInteraction {
 
     if (!this.feature_) {
       return false;
+    }
+    if (!this.featureInTrackData(this.feature_)) {
+      const modify = this.dispatchEvent(new ModifyEvent('modifyotherpart', this.feature_, event.coordinate));
+      if (modify === false) {
+        this.feature_ = null;
+        return false;
+      }
     }
     this.dragStarted = false;
     return true;
