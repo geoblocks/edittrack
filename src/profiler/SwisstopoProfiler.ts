@@ -49,6 +49,13 @@ export default class SwisstopoProfiler implements Profiler {
     });
     const profile = await request.json();
     segment.set('profile', profile.map(swisstopoToXYZM.bind(null, this.projection)));
+    const profileCoordinates = profile.map(swisstopoToXYZM.bind(null, this.projection));
+    // check if there is an undefined altitude in the coordinates
+    for (let i = 0, ii = profileCoordinates.length; i < ii; i++) {
+      if (profileCoordinates[i][2] === undefined) {
+        console.error('undefined altitude', profileCoordinates[i]);
+      }
+    }
   }
 }
 

@@ -9,6 +9,13 @@ export default class ExtractFromSegment implements Profiler {
 
     return new Promise((resolve, reject) => {
       const geometry = segment.getGeometry();
+      // check if there is an undefined altitude in the coordinates
+      const coordinates = geometry.getCoordinates();
+      for (let i = 0, ii = coordinates.length; i < ii; i++) {
+        if (coordinates[i][2] === undefined) {
+          console.error('undefined altitude', coordinates[i]);
+        }
+      }
       if (geometry.getLayout() === 'XYZM') {
         segment.set('profile', geometry.getCoordinates());
         resolve();
