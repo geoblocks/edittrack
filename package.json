@@ -40,6 +40,7 @@
     "@geoblocks/sources": "0.3.3",
     "@types/chai": "4.3.12",
     "@types/mocha": "10.0.6",
+    "@types/proj4": "^2.5.5",
     "@typescript-eslint/eslint-plugin": "7.1.1",
     "@typescript-eslint/parser": "7.1.1",
     "chai": "5.1.0",
@@ -55,5 +56,8 @@
   },
   "peerDependencies": {
     "ol": "^6 || ^7 || ^8 || ^9"
+  },
+  "dependencies": {
+    "proj4": "^2.10.0"
   }
 }
