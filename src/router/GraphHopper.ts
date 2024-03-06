@@ -34,7 +34,10 @@ export default class GraphHopper extends RouterBase {
         featureProjection: mapProjection
       }) as LineString;
       const resultCoordinates = resultGeometry.getCoordinates();
-      resultCoordinates.forEach(c => c[2] *= 1000);
+      resultCoordinates.forEach(c => {
+        if (c.length === 2 || c[2] === undefined) {console.error('Graphhopper: undefined altitude', c)}
+        c[2] *= 1000
+      });
       return resultCoordinates;
     }
     return [];

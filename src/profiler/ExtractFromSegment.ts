@@ -13,7 +13,7 @@ export default class ExtractFromSegment implements Profiler {
       const coordinates = geometry.getCoordinates();
       for (let i = 0, ii = coordinates.length; i < ii; i++) {
         if (coordinates[i][2] === undefined) {
-          console.error('undefined altitude', coordinates[i]);
+          console.error('ExtractFromSegment undefined altitude', coordinates[i]);
         }
       }
       if (geometry.getLayout() === 'XYZM') {
@@ -25,6 +25,9 @@ export default class ExtractFromSegment implements Profiler {
         const coordinates = geometry.getCoordinates();
         for (let i = 0, ii = coordinates.length; i < ii; i++) {
           const coos = coordinates[i];
+          if (coordinates[i][2] === undefined) {
+            console.error('ExtractFromSegment XYZ layout undefined altitude', coordinates[i]);
+          }
           // FIXME: this only works with projections in meters
           // and preserving the distances (thus not with mercator)
           const m = i === 0 ? 0 : distance(coordinates[i - 1], coos);
