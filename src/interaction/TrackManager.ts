@@ -163,7 +163,7 @@ export default class TrackManager<POIMeta> {
       if (this.map_.getTargetElement().style.cursor !== cursor) {
         this.map_.getTargetElement().style.cursor = cursor;
       }
-      if (!this.interaction_.getActive()) {
+      if (!this.interaction_.getActive() && this.trackHoverEventListeners_.length > 0) {
         debouncedMapToProfileUpdater(event.coordinate, hover);
       }
     });
