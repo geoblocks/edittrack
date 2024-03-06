@@ -146,7 +146,7 @@ export default class TrackManager<POIMeta> {
     const debouncedMapToProfileUpdater = debounce(
       (coordinate: Coordinate, hover: boolean) => {
       if (hover && this.trackData_.getSegments().length > 0) {
-        const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
+        const segments = this.trackData_.getSegments().map(feature => feature.get('profile'));
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
         this.onTrackHovered_(best);
       } else {
@@ -163,7 +163,7 @@ export default class TrackManager<POIMeta> {
       if (this.map_.getTargetElement().style.cursor !== cursor) {
         this.map_.getTargetElement().style.cursor = cursor;
       }
-      if (!this.interaction_.getActive()) {
+      if (!this.interaction_.getActive() && this.trackHoverEventListeners_.length > 0) {
         debouncedMapToProfileUpdater(event.coordinate, hover);
       }
     });

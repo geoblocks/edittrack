@@ -1,5 +1,4 @@
 import {distance as fakeDistance, closestOnSegment} from 'ol/coordinate.js';
-import type LineString from 'ol/geom/LineString.js';
 import type {Coordinate} from 'ol/coordinate.js';
 
 export interface ClosestPoint {
@@ -15,14 +14,9 @@ export interface ClosestLinesOptions {
 }
 
 
-export function findClosestPointInLine(line: LineString, searched: Coordinate, previousLineLength: number, interpolate: boolean): ClosestPoint {
+export function findClosestPointInLine(coordinatess: Coordinate[], searched: Coordinate, previousLineLength: number, interpolate: boolean): ClosestPoint {
   let currentLineLength = 0; // from XYZM data
-  const coordinatess = line.getCoordinates();
   let previous = coordinatess[0];
-  if (line.getLayout() !== 'XYZM') {
-    console.error('invalid', line);
-    throw new Error('findClosestPointInLine works only with XYZM lines');
-  }
 
   const best: ClosestPoint = {
     distanceFromStart: 0,
@@ -66,7 +60,7 @@ export function findClosestPointInLine(line: LineString, searched: Coordinate, p
 }
 
 
-export function findClosestPointInLines(lines: LineString[], searched: Coordinate, options: ClosestLinesOptions): ClosestPoint {
+export function findClosestPointInLines(lines: Coordinate[][], searched: Coordinate, options: ClosestLinesOptions): ClosestPoint {
   const {tolerance, interpolate} = options;
   const bests = [];
   let previousDistance = 0;
