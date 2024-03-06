@@ -78,13 +78,13 @@ export default class TrackUpdater {
         }
         if (pointFrom) {
           const {before, after} = this.trackData.getAdjacentSegments(pointFrom);
-          profileUpdates.push(this.profiler.computeProfile(before));
-          profileUpdates.push(this.profiler.computeProfile(after));
+          if (before) profileUpdates.push(this.profiler.computeProfile(before));
+          if (after) profileUpdates.push(this.profiler.computeProfile(after));
         }
         if (pointTo) {
           const {before, after} = this.trackData.getAdjacentSegments(pointTo);
-          profileUpdates.push(this.profiler.computeProfile(before));
-          profileUpdates.push(this.profiler.computeProfile(after));
+          if (before) profileUpdates.push(this.profiler.computeProfile(before));
+          if (after) profileUpdates.push(this.profiler.computeProfile(after));
         }
         await Promise.all(profileUpdates);
       });
@@ -103,6 +103,7 @@ export default class TrackUpdater {
         const beforeCoordinates = before.getGeometry().getCoordinates();
         beforeCoordinates[beforeCoordinates.length - 1] = lastCoordinate;
         before.getGeometry().setCoordinates(beforeCoordinates);
+        console.log('equalizeCoordinates', lastCoordinate);
         this.profiler.computeProfile(before);
         controlPoint.getGeometry().setCoordinates(lastCoordinate);
       }
