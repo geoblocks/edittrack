@@ -85,16 +85,17 @@ export default class TrackUpdater {
   equalizeCoordinates(controlPoint: Feature<Point>) {
     const {before, after} = this.trackData.getAdjacentSegments(controlPoint);
     if (before && after) {
-      const firstCoordinate = before.getGeometry().getLastCoordinate();
-      const lastCoordinate = after.getGeometry().getFirstCoordinate();
+      const firstCoordinateXY = before.getGeometry().getLastCoordinate().slice(0, 2);
+      const lastCoordinateXY = after.getGeometry().getFirstCoordinate().slice(0, 2);
 
-      if (!equals(firstCoordinate.slice(0, 2), lastCoordinate.slice(0, 2))) {
+      if (!equals(firstCoordinateXY, lastCoordinateXY)) {
         // both segments were snapped but the middle point results from the two routing was not exactly the same.
         const beforeCoordinates = before.getGeometry().getCoordinates();
-        beforeCoordinates[beforeCoordinates.length - 1] = lastCoordinate;
+        // only replace the XY part of the last coordinate
+        beforeCoordinates[beforeCoordinates.length - 1].splice(0, 2, ...lastCoordinateXY);
         before.getGeometry().setCoordinates(beforeCoordinates);
 
-        controlPoint.getGeometry().setCoordinates(lastCoordinate);
+        controlPoint.getGeometry().setCoordinates(lastCoordinateXY);
       }
     }
   }
