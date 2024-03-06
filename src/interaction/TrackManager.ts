@@ -146,7 +146,7 @@ export default class TrackManager<POIMeta> {
     const debouncedMapToProfileUpdater = debounce(
       (coordinate: Coordinate, hover: boolean) => {
       if (hover && this.trackData_.getSegments().length > 0) {
-        const segments = this.trackData_.getSegments().map(feature => feature.getGeometry());
+        const segments = this.trackData_.getSegments().map(feature => feature.get('profile'));
         const best = findClosestPointInLines(segments, coordinate, {tolerance: 1, interpolate: true});
         this.onTrackHovered_(best);
       } else {
