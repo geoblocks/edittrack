@@ -21,7 +21,9 @@ function main() {
 
   const profiler = new FallbackProfiler({
     profilers: [
-      new ExtractFromSegmentProfiler(),
+      new ExtractFromSegmentProfiler({
+        projection: map.getView().getProjection()
+      }),
       new SwisstopoProfiler({
         projection: map.getView().getProjection()
       })
