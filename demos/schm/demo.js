@@ -23,7 +23,9 @@ async function main() {
 
   const profiler = new FallbackProfiler({
     profilers: [
-      new ExtractFromSegmentProfiler(),
+      new ExtractFromSegmentProfiler({
+        projection: projection,
+      }),
       new SwisstopoProfiler({
         projection: projection,
       })

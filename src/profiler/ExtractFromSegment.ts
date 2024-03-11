@@ -1,12 +1,23 @@
-import {distance} from 'ol/coordinate.js';
+import { getDistance } from 'ol/sphere';
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
-import type {Profiler} from './index';
+import { ProjectionLike } from 'ol/proj';
+import type { Profiler } from './index';
 
+type ExtractFromSegmentProfilerOptions = {
+  projection: ProjectionLike;
+};
 export default class ExtractFromSegment implements Profiler {
 
-  computeProfile(segment: Feature<LineString>): Promise<void> {
+  private projection: ProjectionLike;
 
+  constructor(options: ExtractFromSegmentProfilerOptions) {
+    this.projection = options.projection;
+  }
+
+  computeProfile(
+    segment: Feature<LineString>,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const geometry = segment.getGeometry();
       if (geometry.getLayout() === 'XYZM') {
@@ -15,12 +26,16 @@ export default class ExtractFromSegment implements Profiler {
       } else if (geometry.getLayout() === 'XYZ') {
         const profile: number[][] = [];
         let accDistance = 0;
+        const geometry_4326 = geometry
+          .clone()
+          .transform(this.projection, 'EPSG:4326');
+
         const coordinates = geometry.getCoordinates();
+        const coordinates_4326 = geometry_4326.getCoordinates();
+
         for (let i = 0, ii = coordinates.length; i < ii; i++) {
           const coos = coordinates[i];
-          // FIXME: this only works with projections in meters
-          // and preserving the distances (thus not with mercator)
-          const m = i === 0 ? 0 : distance(coordinates[i - 1], coos);
+          const m = i === 0 ? 0 : getDistance(coordinates_4326[i - 1], coordinates_4326[i]);
           accDistance += m;
           profile.push([coos[0], coos[1], coos[2], accDistance]);
         }
