@@ -45,6 +45,7 @@ open http://localhost:1234/simple/simple.html
 The source is transpiled to standard ES modules and published on npm.
 
 ```bash
+# update CHANGES.md
 npm version patch
 npm publish
 git push --tags origin master
