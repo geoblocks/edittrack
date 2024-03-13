@@ -64,12 +64,9 @@ export default class Modify extends PointerInteraction {
     type: 'segment'
   });
   private overlay_: VectorLayer<VectorSource<Feature>>;
-  private lastPixel_ = [0, 0];
+  private lastPixel_: Pixel = [0, 0];
   private trackData_: Options['trackData'];
-  /**
-   * @type {Feature<Point>}
-   */
-  private pointAtCursorFeature_ = new Feature({
+  private pointAtCursorFeature_ = new Feature<Point>({
     geometry: new Point([0, 0]),
     type: 'sketch',
     subtype: '',
@@ -126,10 +123,8 @@ export default class Modify extends PointerInteraction {
 
   /**
    * Get the first feature at pixel, favor points over lines
-   * @param {import("ol/pixel").Pixel} pixel
-   * @return {Feature<LineString|Point>|undefined}
    */
-  getFeatureAtPixel(pixel: Pixel): Feature<LineString|Point|undefined> {
+  getFeatureAtPixel(pixel: Pixel): Feature<LineString|Point> {
     const features = this.getMap().getFeaturesAtPixel(pixel, {
       layerFilter: (l) => l.getSource() === this.source_,
       hitTolerance: this.hitTolerance_
