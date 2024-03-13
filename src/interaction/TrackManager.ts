@@ -1,7 +1,7 @@
 import Feature from 'ol/Feature.js';
 import Point from 'ol/geom/Point.js';
 
-import TrackData from './TrackData';
+import TrackData, {parseFeatures} from './TrackData';
 import TrackUpdater from './TrackUpdater';
 import TrackInteraction from './TrackInteraction';
 import HistoryManager from './HistoryManager';
@@ -56,14 +56,8 @@ export interface Options {
 export default class TrackManager<POIMeta> {
 
   private map_: Map;
-  get map(): Map {
-    return this.map;
-  }
   private source_: VectorSource;
   private trackLayer_: VectorLayer<VectorSource>;
-  get trackLayer(): VectorLayer<VectorSource> {
-    return this.trackLayer_;
-  }
   private shadowTrackLayer_: VectorLayer<VectorSource>;
   private hitTolerance_: number;
   public snapping = true;
@@ -75,13 +69,7 @@ export default class TrackManager<POIMeta> {
   private trackHoverEventListeners_: Function[] = [];
   private trackData_ = new TrackData();
   private router_: Router;
-  get router(): Router {
-    return this.router_;
-  }
   private profiler_: Profiler;
-  get profiler(): Profiler {
-    return this.profiler_;
-  }
   private updater_: TrackUpdater;
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
@@ -122,7 +110,7 @@ export default class TrackManager<POIMeta> {
     // }));
 
 
-
+    // Add a control point at the end of the track
     // @ts-ignore too complicate to declare proper events
     this.interaction_.on('drawend',
     async (event: DrawEvent) => {
@@ -168,6 +156,7 @@ export default class TrackManager<POIMeta> {
       }
     });
 
+    // Move an existing poi, control point or segment
     this.interaction_.on(
       // @ts-ignore too complicate to declare proper events
       'modifyend',
@@ -209,6 +198,7 @@ export default class TrackManager<POIMeta> {
         }
     });
 
+    // Delete a control point or a POI
     this.interaction_.on(
       // @ts-ignore too complicate to declare proper events
       'select',
@@ -260,6 +250,22 @@ export default class TrackManager<POIMeta> {
         // unselect deleted feature
         this.interaction_.clearSelected();
     });
+  }
+
+  get map(): Map {
+    return this.map;
+  }
+
+  get trackLayer(): VectorLayer<VectorSource> {
+    return this.trackLayer_;
+  }
+
+  get router(): Router {
+    return this.router_;
+  }
+
+  get profiler(): Profiler {
+    return this.profiler_;
   }
 
   private pushNewStateToHistoryManager_() {
@@ -378,7 +384,7 @@ export default class TrackManager<POIMeta> {
    */
   private async restoreFeaturesInternal_(features: Feature<Point|LineString>[]): Promise<void> {
     // should parse features first, compute profile, and then replace the trackdata and add history
-    const parsedFeatures = this.trackData_.parseFeatures(features);
+    const parsedFeatures = parseFeatures(features);
     this.source_.addFeatures(features);
     const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
     await Promise.all(profileRequests);

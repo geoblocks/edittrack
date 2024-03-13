@@ -66,9 +66,6 @@ export default class Modify extends PointerInteraction {
   private overlay_: VectorLayer<VectorSource<Feature>>;
   private lastPixel_ = [0, 0];
   private trackData_: Options['trackData'];
-  /**
-   * @type {Feature<Point>}
-   */
   private pointAtCursorFeature_ = new Feature({
     geometry: new Point([0, 0]),
     type: 'sketch',

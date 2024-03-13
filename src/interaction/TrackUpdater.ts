@@ -83,6 +83,9 @@ export default class TrackUpdater {
 
   // If needed, equalize the control point, the segment before and after to all share the same coordinate.
   equalizeCoordinates(controlPoint: Feature<Point>) {
+    if (!controlPoint) {
+      return;
+    }
     const {before, after} = this.trackData.getAdjacentSegments(controlPoint);
     if (before && after) {
       const firstCoordinateXY = before.getGeometry().getLastCoordinate().slice(0, 2);

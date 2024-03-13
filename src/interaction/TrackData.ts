@@ -35,31 +35,6 @@ export default class TrackData {
   private controlPoints: Feature<Point>[] = [];
   private pois: Feature<Point>[] = [];
 
-  parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
-    const parsed: ParsedFeatures = {
-      segments: [],
-      pois: [],
-      controlPoints: [],
-    };
-    const {segments, pois, controlPoints} = parsed;
-
-    for (const feature of features) {
-      const type = feature.get('type') as FeatureType;
-      if (type === 'segment') {
-        console.assert(feature.getGeometry().getType() === 'LineString');
-        segments.push(feature as Feature<LineString>);
-      } else if (type === 'controlPoint') {
-        console.assert(feature.getGeometry().getType() === 'Point');
-        controlPoints.push(feature as Feature<Point>);
-      } else if (type === 'POI') {
-        console.assert(feature.getGeometry().getType() === 'Point');
-        pois.push(feature as Feature<Point>);
-      }
-    }
-
-    return parsed;
-  }
-
   restoreParsedFeatures(parsedFeatures: ParsedFeatures) {
     const {segments, pois, controlPoints} = parsedFeatures;
     console.assert((!controlPoints.length && !segments.length) || (controlPoints.length === segments.length + 1));
@@ -75,7 +50,7 @@ export default class TrackData {
     let before = undefined;
     let after = undefined;
     const index = this.controlPoints.indexOf(controlPoint);
-
+    console.assert(index >= 0, 'control point not found');
     if (index >= 1) {
       before = this.segments[index - 1];
     }
@@ -88,6 +63,7 @@ export default class TrackData {
 
   getControlPointBefore(controlPoint: Feature<Point>): Feature<Point> | null {
     const index = this.controlPoints.indexOf(controlPoint);
+    console.assert(index >= 0, 'control point not found');
     if (index > 0) {
       return this.controlPoints[index - 1];
     }
@@ -96,6 +72,7 @@ export default class TrackData {
 
   getControlPointAfter(controlPoint: Feature<Point>): Feature<Point> | null {
     const index = this.controlPoints.indexOf(controlPoint);
+    console.assert(index >= 0, 'control point not found');
     if (index >= 0 && index < this.controlPoints.length - 1) {
       return this.controlPoints[index + 1];
     }
@@ -367,4 +344,29 @@ function createStraightSegment(featureFrom: Feature<Point>, featureTo: Feature<P
   segment.set('type', 'segment');
 
   return segment;
+}
+
+export function parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
+  const parsed: ParsedFeatures = {
+    segments: [],
+    pois: [],
+    controlPoints: [],
+  };
+  const {segments, pois, controlPoints} = parsed;
+
+  for (const feature of features) {
+    const type = feature.get('type') as FeatureType;
+    if (type === 'segment') {
+      console.assert(feature.getGeometry().getType() === 'LineString');
+      segments.push(feature as Feature<LineString>);
+    } else if (type === 'controlPoint') {
+      console.assert(feature.getGeometry().getType() === 'Point');
+      controlPoints.push(feature as Feature<Point>);
+    } else if (type === 'POI') {
+      console.assert(feature.getGeometry().getType() === 'Point');
+      pois.push(feature as Feature<Point>);
+    }
+  }
+
+  return parsed;
 }
