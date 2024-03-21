@@ -2,7 +2,7 @@
  export default class HistoryManager<StateType> {
   private history: StateType[] = [];
   private historyIndex = -1;
-  private historyEntryCount = -1;
+  private historyEntryCount = 0;
 
   add(state: StateType) {
     this.historyIndex++;
