@@ -42,6 +42,6 @@
   }
 
   linear(): number {
-    return this.historyIndex;
+    return this.historyLinear;
   }
 }
