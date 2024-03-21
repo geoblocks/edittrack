@@ -1,12 +1,12 @@
 
  export default class HistoryManager<StateType> {
   private history: StateType[] = [];
-  private historyLinear = -1;
   private historyIndex = -1;
+  private historyEntryCount = -1;
 
   add(state: StateType) {
     this.historyIndex++;
-    this.historyLinear++;
+    this.historyEntryCount++;
     this.history[this.historyIndex] = state;
     this.history.splice(this.historyIndex + 1);
   }
@@ -41,7 +41,7 @@
     return this.historyIndex;
   }
 
-  linear(): number {
-    return this.historyLinear;
+  entryCount(): number {
+    return this.historyEntryCount;
   }
 }

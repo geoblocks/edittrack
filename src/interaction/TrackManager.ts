@@ -527,8 +527,8 @@ export default class TrackManager<POIMeta> {
     return this.historyManager_.position();
   }
 
-  get historyLinear(): number {
-    return this.historyManager_.linear();
+  get historyEntryCount(): number {
+    return this.historyManager_.entryCount();
   }
 
   /**
