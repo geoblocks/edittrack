@@ -527,6 +527,10 @@ export default class TrackManager<POIMeta> {
     return this.historyManager_.position();
   }
 
+  get historyLinear(): number {
+    return this.historyManager_.linear();
+  }
+
   /**
    * Undo one drawing step
    */
