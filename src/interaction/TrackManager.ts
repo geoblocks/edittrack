@@ -527,6 +527,10 @@ export default class TrackManager<POIMeta> {
     return this.historyManager_.position();
   }
 
+  get historyEntryCount(): number {
+    return this.historyManager_.entryCount();
+  }
+
   /**
    * Undo one drawing step
    */

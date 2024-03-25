@@ -1,4 +1,5 @@
 export {default as TrackManager} from './interaction/TrackManager';
+export {default as HistoryManager} from './interaction/HistoryManager';
 
 export {default as ExtractFromSegmentProfiler} from './profiler/ExtractFromSegment';
 export {default as FallbackProfiler} from './profiler/Fallback';

@@ -2,9 +2,11 @@
  export default class HistoryManager<StateType> {
   private history: StateType[] = [];
   private historyIndex = -1;
+  private historyEntryCount = 0;
 
   add(state: StateType) {
     this.historyIndex++;
+    this.historyEntryCount++;
     this.history[this.historyIndex] = state;
     this.history.splice(this.historyIndex + 1);
   }
@@ -37,5 +39,9 @@
 
   position(): number {
     return this.historyIndex;
+  }
+
+  entryCount(): number {
+    return this.historyEntryCount;
   }
 }
