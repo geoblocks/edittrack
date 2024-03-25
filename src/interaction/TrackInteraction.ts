@@ -18,7 +18,6 @@ import {Point} from 'ol/geom';
 export interface Options {
   map: Map;
   trackLayer: VectorLayer<VectorSource>
-  trackData: TrackData
   style: StyleLike | FlatStyleLike
 
   /**
@@ -62,6 +61,10 @@ export default class TrackInteraction extends Interaction {
   private modifyTrack_: Modify;
   private deletePoint_: Select;
 
+  setTrackData(trackData: TrackData) {
+    this.modifyTrack_.setTrackData(trackData);
+  }
+
   controlPointOrPOIAtPixel(pixel: Pixel): Feature<Point>|false {
     return this.getMap().forEachFeatureAtPixel(pixel,
       (f) => {
@@ -86,9 +89,8 @@ export default class TrackInteraction extends Interaction {
     return draw;
   }
 
-  createModifyInteraction(trackData: TrackData, source: VectorSource, style: StyleLike | FlatStyleLike, hitTolerance: number): Modify {
+  createModifyInteraction(source: VectorSource, style: StyleLike | FlatStyleLike, hitTolerance: number): Modify {
     const modify = new Modify({
-      trackData: trackData,
       source: source,
       style: style,
       condition: (event) => !this.deleteCondition_(event),
@@ -146,7 +148,7 @@ export default class TrackInteraction extends Interaction {
     source.on('removefeature', () => requestAnimationFrame(() => this.modifyTrack_.updateSketchFeature()));
 
     this.drawTrack_ = this.createDrawInteraction(source);
-    this.modifyTrack_ = this.createModifyInteraction(options.trackData, source, options.style, options.hitTolerance);
+    this.modifyTrack_ = this.createModifyInteraction(source, options.style, options.hitTolerance);
     this.deletePoint_ = this.createSelectInteraction(options.trackLayer);
 
     this.setActive(false);
