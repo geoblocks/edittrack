@@ -337,25 +337,23 @@ export default class TrackManager<POIMeta> {
     }
   }
 
-  reverse() {
-    if (!this.trackData_.getSegments().length) {
+  async reverse() {
+    if (!this.trackData_.hasData()) {
       return;
     }
     this.trackData_.reverse();
     const points = this.trackData_.getControlPoints();
     for (let i = 1, ii = points.length; i < ii; i += 2) {
       const point = points[i];
+
       this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
-      this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
-      .then(() => {
-        this.updater_.changeAdjacentSegmentsStyling(point, '');
-        this.updater_.computeAdjacentSegmentsProfile(point);
-      })
-      .then(() => {
-        this.trackData_.updatePOIIndexes();
-        this.onTrackChanged_()
-      });
+      await this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
+      this.updater_.changeAdjacentSegmentsStyling(point, '');
+
+      await this.updater_.computeAdjacentSegmentsProfile(point);
     }
+    this.trackData_.updatePOIIndexes();
+    this.onTrackChanged_();
   }
 
   /**
@@ -368,12 +366,12 @@ export default class TrackManager<POIMeta> {
 
   /**
    */
-    clear() {
-      if (this.trackData_.hasData()) {
-        this.clearInternal_()
-        this.onTrackChanged_();
-      }
+  clear() {
+    if (this.trackData_.hasData()) {
+      this.clearInternal_()
+      this.onTrackChanged_();
     }
+  }
 
   /**
    * This function does not trigger track changed events.
