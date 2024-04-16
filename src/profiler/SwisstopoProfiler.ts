@@ -45,7 +45,7 @@ export default class SwisstopoProfiler implements Profiler {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: `geom=${geom}&sr=2056&offset=1`
+      body: `geom=${geom}&sr=2056&offset=1&distinct_points=true`
     });
     const profile = await request.json();
     segment.set('profile', profile.map(swisstopoToXYZM.bind(null, this.projection)));
