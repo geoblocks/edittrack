@@ -37,8 +37,11 @@ export default class SwisstopoProfiler implements Profiler {
   }
 
   async computeProfile(segment: Feature<LineString>): Promise<void> {
-    // TODO: round to coordinate to meter precision
-    const geom = this.geojsonFormat.writeGeometry(segment.getGeometry());
+    const geometry = segment.getGeometry();
+    if (geometry.getCoordinates().length != 2) {
+      throw new Error('SwisstopoProfiler requires a segment with exactly 2 coordinates');
+    }
+    const geom = this.geojsonFormat.writeGeometry(geometry);
 
     const request = await fetch(this.url, {
       method: 'POST',
@@ -47,8 +50,17 @@ export default class SwisstopoProfiler implements Profiler {
       },
       body: `geom=${geom}&sr=2056&offset=1&distinct_points=true`
     });
-    const profile = await request.json();
-    segment.set('profile', profile.map(swisstopoToXYZM.bind(null, this.projection)));
+
+    const profile = (await request.json()).map(swisstopoToXYZM.bind(null, this.projection));
+
+    // Despite the fact that the distinct_points parameter is set and the passed coordinates
+    // must not be modified, the API rounds the coordinates.
+    // Therefore, we need to update the first and last coordinates of the profile with the
+    // original coordinates.
+    profile.at(0).splice(0, 2, ...geometry.getCoordinateAt(0));
+    profile.at(-1).splice(0, 2, ...geometry.getCoordinateAt(-1));
+
+    segment.set('profile', profile);
   }
 }
 
