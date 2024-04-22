@@ -57,8 +57,8 @@ export default class SwisstopoProfiler implements Profiler {
     // must not be modified, the API rounds the coordinates.
     // Therefore, we need to update the first and last coordinates of the profile with the
     // original coordinates.
-    profile.at(0).splice(0, 2, ...geometry.getCoordinateAt(0));
-    profile.at(-1).splice(0, 2, ...geometry.getCoordinateAt(-1));
+    profile.with(0, profile.at(0).slice(0, 2, ...geometry.getCoordinateAt(0)));
+    profile.with(-1, profile.at(-1).slice(0, 2, ...geometry.getCoordinateAt(-1)));
 
     segment.set('profile', profile);
   }
