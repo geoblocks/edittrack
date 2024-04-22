@@ -30,10 +30,11 @@ export default class ExtractFromSegment implements Profiler {
           .clone()
           .transform(this.projection, 'EPSG:4326');
 
+        const coordinates = geometry.getCoordinates();
         const coordinates_4326 = geometry_4326.getCoordinates();
 
-        for (let i = 0, ii = coordinates_4326.length; i < ii; i++) {
-          const coos = coordinates_4326[i];
+        for (let i = 0, ii = coordinates.length; i < ii; i++) {
+          const coos = coordinates[i];
           const m = i === 0 ? 0 : getDistance(coordinates_4326[i - 1], coordinates_4326[i]);
           accDistance += m;
           profile.push([coos[0], coos[1], coos[2], accDistance]);
