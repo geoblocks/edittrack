@@ -38,9 +38,6 @@ export default class SwisstopoProfiler implements Profiler {
 
   async computeProfile(segment: Feature<LineString>): Promise<void> {
     const geometry = segment.getGeometry();
-    if (geometry.getCoordinates().length != 2) {
-      throw new Error('SwisstopoProfiler requires a segment with exactly 2 coordinates');
-    }
     const geom = this.geojsonFormat.writeGeometry(geometry);
 
     const request = await fetch(this.url, {
