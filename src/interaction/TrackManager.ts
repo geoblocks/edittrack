@@ -51,7 +51,7 @@ export interface Options {
    */
   hitTolerance: number;
   /**
-   * Allows users to control cursor style in view mode. 
+   * Allows client applications to control cursor style in view mode. 
    */
   viewModePointerControl: boolean;
 }
@@ -168,7 +168,7 @@ export default class TrackManager<POIMeta> {
       let cursor: string;
       if (this.interaction_.getActive() && hover) {
          cursor = 'pointer'
-      } else if (!this.interaction_.getActive() && !this.viewModePointerControl_) {
+      } else if (!this.viewModePointerControl_ || !hover) {
           cursor = ''
       }
       if (cursor && this.map_.getTargetElement().style.cursor !== cursor) {
