@@ -50,10 +50,6 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
-  /**
-   * Allows client applications to control cursor style in view mode. 
-   */
-  cursorStyleControl: boolean;
 }
 
 
@@ -70,7 +66,6 @@ export default class TrackManager<POIMeta> {
   }
   private shadowTrackLayer_: VectorLayer<VectorSource>;
   private hitTolerance_: number;
-  private cursorStyleControl_ = false;
   public snapping = true;
   private mode_: TrackMode = '';
   private submode_: TrackSubMode = '';
@@ -97,7 +92,6 @@ export default class TrackManager<POIMeta> {
     this.trackLayer_ = options.trackLayer;
     this.shadowTrackLayer_ = options.shadowTrackLayer;
     this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
-    this.cursorStyleControl_ = options.cursorStyleControl || false;
     console.assert(!!options.router);
 
     this.router_ = options.router;
