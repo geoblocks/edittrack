@@ -50,6 +50,10 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
+  /**
+   * Allows users to control cursor style in view mode. 
+   */
+  viewModePointerControl: boolean;
 }
 
 
@@ -66,6 +70,7 @@ export default class TrackManager<POIMeta> {
   }
   private shadowTrackLayer_: VectorLayer<VectorSource>;
   private hitTolerance_: number;
+  private viewModePointerControl_ = false;
   public snapping = true;
   private mode_: TrackMode = '';
   private submode_: TrackSubMode = '';
@@ -92,6 +97,7 @@ export default class TrackManager<POIMeta> {
     this.trackLayer_ = options.trackLayer;
     this.shadowTrackLayer_ = options.shadowTrackLayer;
     this.hitTolerance_ = options.hitTolerance !== undefined ? options.hitTolerance : 20;
+    this.viewModePointerControl_ = options.viewModePointerControl || false;
     console.assert(!!options.router);
 
     this.router_ = options.router;
@@ -159,8 +165,13 @@ export default class TrackManager<POIMeta> {
         layerFilter: l => l === options.trackLayer,
         hitTolerance: this.hitTolerance_,
       });
-      const cursor = (this.interaction_.getActive() && hover) ? 'pointer' : '';
-      if (this.map_.getTargetElement().style.cursor !== cursor) {
+      let cursor: string;
+      if (this.interaction_.getActive() && hover) {
+         cursor = 'pointer'
+      } else if (!this.interaction_.getActive() && !this.viewModePointerControl_) {
+          cursor = ''
+      }
+      if (cursor && this.map_.getTargetElement().style.cursor !== cursor) {
         this.map_.getTargetElement().style.cursor = cursor;
       }
       if (!this.interaction_.getActive() && this.trackHoverEventListeners_.length > 0) {
