@@ -165,10 +165,6 @@ export default class TrackManager<POIMeta> {
         layerFilter: l => l === options.trackLayer,
         hitTolerance: this.hitTolerance_,
       });
-      const cursor = (this.interaction_.getActive() && hover) ? 'pointer' : '';
-      if (!this.cursorStyleControl_ && this.map_.getTargetElement().style.cursor !== cursor) {
-        this.map_.getTargetElement().style.cursor = cursor;
-      }
       if (!this.interaction_.getActive() && this.trackHoverEventListeners_.length > 0) {
         debouncedMapToProfileUpdater(event.coordinate, hover);
       }
