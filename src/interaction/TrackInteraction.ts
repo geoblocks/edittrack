@@ -17,7 +17,7 @@ import {Point} from 'ol/geom';
 
 export interface Options {
   map: Map;
-  trackLayer: VectorLayer<VectorSource>
+  trackLayer: VectorLayer<Feature>
   trackData: TrackData
   style: StyleLike | FlatStyleLike
 
@@ -43,7 +43,7 @@ export interface Options {
 
 export default class TrackInteraction extends Interaction {
 
-  private trackLayer_: VectorLayer<VectorSource>;
+  private trackLayer_: VectorLayer<Feature>;
 
   /**
    * Default is to delete control points and pois on click
@@ -108,7 +108,7 @@ export default class TrackInteraction extends Interaction {
   }
 
 
-  createSelectInteraction(trackLayer: VectorLayer<VectorSource>): Select {
+  createSelectInteraction(trackLayer: VectorLayer<Feature>): Select {
     const select = new Select({
       condition: (event) => this.deleteCondition_(event),
       layers: [trackLayer],
