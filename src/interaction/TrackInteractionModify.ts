@@ -1,7 +1,7 @@
 import PointerInteraction from 'ol/interaction/Pointer.js';
 import VectorLayer from 'ol/layer/Vector.js';
 import VectorSource from 'ol/source/Vector.js';
-import Feature, {type FeatureLike} from 'ol/Feature.js';
+import Feature from 'ol/Feature.js';
 import LineString from 'ol/geom/LineString.js';
 import Point from 'ol/geom/Point.js';
 import Event from 'ol/events/Event.js';
@@ -31,7 +31,7 @@ export class ModifyEvent extends Event {
 }
 
 export interface Options {
-  source: VectorSource<FeatureLike>;
+  source: VectorSource<Feature>;
   trackData: TrackData;
   style: StyleLike | FlatStyleLike;
   condition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
@@ -63,7 +63,7 @@ export default class Modify extends PointerInteraction {
   public overlayFeature = new Feature({
     type: 'segment'
   });
-  private overlay_: VectorLayer<VectorSource<Feature>>;
+  private overlay_: VectorLayer<Feature>;
   private lastPixel_: Pixel = [0, 0];
   private trackData_: Options['trackData'];
   private pointAtCursorFeature_ = new Feature<Point>({
@@ -92,8 +92,8 @@ export default class Modify extends PointerInteraction {
     /**
      * Draw overlay where sketch features are drawn.
      */
-    this.overlay_ = new VectorLayer({
-      source: new VectorSource({
+    this.overlay_ = new VectorLayer<Feature>({
+      source: new VectorSource<Feature>({
         useSpatialIndex: false,
         features: [
           this.pointAtCursorFeature_,

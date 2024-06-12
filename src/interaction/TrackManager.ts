@@ -28,8 +28,8 @@ export type TrackSubMode = 'addpoi' | 'editpoi' | '';
 
 export interface Options {
   map: Map;
-  trackLayer: VectorLayer<VectorSource>
-  shadowTrackLayer?: VectorLayer<VectorSource>
+  trackLayer: VectorLayer<Feature>
+  shadowTrackLayer?: VectorLayer<Feature>
   router: Router
   profiler: Profiler
   style: StyleLike | FlatStyleLike
@@ -60,11 +60,11 @@ export default class TrackManager<POIMeta> {
     return this.map;
   }
   private source_: VectorSource;
-  private trackLayer_: VectorLayer<VectorSource>;
-  get trackLayer(): VectorLayer<VectorSource> {
+  private trackLayer_: VectorLayer<Feature>;
+  get trackLayer(): VectorLayer<Feature> {
     return this.trackLayer_;
   }
-  private shadowTrackLayer_: VectorLayer<VectorSource>;
+  private shadowTrackLayer_: VectorLayer<Feature>;
   private hitTolerance_: number;
   public snapping = true;
   private mode_: TrackMode = '';
