@@ -173,6 +173,8 @@ export default class TrackInteraction extends Interaction {
       this.drawTrack_.setActive(active);
       this.modifyTrack_.setActive(active);
       this.deletePoint_.setActive(active);
+
+      this.trackLayer_.getSource().changed();
     }
     super.setActive(active);
   }
