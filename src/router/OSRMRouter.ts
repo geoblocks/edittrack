@@ -28,7 +28,7 @@ export default class OSRMRouter extends RouterBase {
   }
 
   async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]> {
-    const mapProjection = this.map.getView().getProjection();
+    const mapProjection = this.getMapProjection();
     const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
 
     // [ [a,b] , [c,d] ] -> 'a,b;c,d'

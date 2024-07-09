@@ -22,15 +22,33 @@ import {ModifyEvent} from './TrackInteractionModify';
 import {SelectEvent} from 'ol/interaction/Select';
 import type {Coordinate} from 'ol/coordinate';
 import type {FeatureType} from './TrackData';
+import type {Snapper} from 'src/snapper';
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
 
 export interface Options {
   map: Map;
+  /**
+   * Vector layer where the track, control points and POIs are created.
+   */
   trackLayer: VectorLayer<Feature>
+  /**
+   * Optional layer to display a shadow of the track has it was when entering edit mode.
+   */
   shadowTrackLayer?: VectorLayer<Feature>
+  /**
+   * The router instance to create snapped segments on the network.
+   */
   router: Router
+  /**
+   * The optional snapper instance to snap control points on the network.
+   * If this is not provided, the control points will be lazily snapped during segment snapping.
+   */
+  snapper?: Snapper
+  /**
+   * The profiler instance to add 3d coordinates to segments.
+   */
   profiler: Profiler
   style: StyleLike | FlatStyleLike
   /**
@@ -78,6 +96,10 @@ export default class TrackManager<POIMeta> {
   get router(): Router {
     return this.router_;
   }
+  private snapper_: Snapper;
+  get snapper(): Snapper {
+    return this.snapper_;
+  }
   private profiler_: Profiler;
   get profiler(): Profiler {
     return this.profiler_;
@@ -95,6 +117,7 @@ export default class TrackManager<POIMeta> {
     console.assert(!!options.router);
 
     this.router_ = options.router;
+    this.snapper_ = options.snapper;
     this.profiler_ = options.profiler;
     this.updater_ = new TrackUpdater({
       profiler: this.profiler_,
@@ -131,7 +154,11 @@ export default class TrackManager<POIMeta> {
       if (!this.snapping) {
         feature.set('snapped', false);
       }
+      // Next line we don't care if the control point will be snapped, or not.
       const {pointFrom, pointTo, segment} = this.trackData_.pushControlPoint(feature);
+      if (this.snapping && this.snapper_) {
+        await this.snapper_.snapPoint(pointTo);
+      }
       if (segment) {
         this.source_.addFeature(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
