@@ -13,16 +13,22 @@ export default class GraphHopper extends RouterBase {
     factor: 1e5,
     geometryLayout: 'XYZ'
   });
+
+  /**
+   * The URL prefix used for querying an itinerary on the network.
+   * This depends on a specific vehicle.
+   * To make it easy to change vehicle, this property is public.
+   */
   public url: string;
+
 
   constructor(options: GraphHopperOptions) {
     super(options);
-
     this.url = options.url;
   }
 
   async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]> {
-    const mapProjection = this.map.getView().getProjection();
+    const mapProjection = this.getMapProjection();
     const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
     const coordinateString = coordinates.map(c => `point=${c.reverse().join(',')}`).join('&');
 
@@ -39,5 +45,4 @@ export default class GraphHopper extends RouterBase {
     }
     return [];
   }
-
 }

@@ -1,5 +1,9 @@
 # @geoblocks/edittrack changes
 
+## v1.3.12
+- Add Snapper which eagerly snaps control points
+- Some renaming
+
 ## v1.3.1
 - sort POIs when updating index
 - Do not clone in getPOIS, getControlPoints(), getSegments()

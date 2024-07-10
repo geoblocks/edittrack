@@ -1,6 +1,7 @@
 
 import TrackManager from '../../src/interaction/TrackManager.ts';
-import GraphHopperRouter from '../../src/router/GraphHopper.ts';
+import GraphHopperRouter from '../../src/router/GraphHopperRouter.ts';
+import GraphhopperSnapper from '../../src/snapper/GraphHopperSnapper.ts';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.ts';
 import {styleFunction} from './style';
 import {createMap} from './swisstopo';
@@ -8,6 +9,7 @@ import {getTrack, getPOIs} from './track';
 import {doubleClick, singleClick} from 'ol/events/condition';
 
 const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmneutral&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
+const SNAPPING_URL = 'https://graphhopper-all.schweizmobil.ch/nearest?elevation=true';
 
 
 async function main() {
@@ -20,6 +22,12 @@ async function main() {
     url: ROUTING_URL,
     maxRoutingTolerance: 15,
   });
+
+  const snapper = new GraphhopperSnapper({
+    map: map,
+    url: SNAPPING_URL,
+    maxDistance: 100,
+  })
 
   const profiler = new FallbackProfiler({
     profilers: [
@@ -44,6 +52,7 @@ async function main() {
   const trackManager = new TrackManager({
     map: map,
     router: router,
+    snapper: snapper,
     profiler: profiler,
     trackLayer: trackLayer,
     shadowTrackLayer: shadowTrackLayer,

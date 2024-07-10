@@ -4,6 +4,7 @@ import type {Coordinate} from 'ol/coordinate';
 import type Feature from 'ol/Feature';
 import type {LineString, Point} from 'ol/geom';
 import type {Router} from './index';
+import type {Projection} from 'ol/proj';
 
 export type RouterBaseOptions = {
   map: Map;
@@ -11,12 +12,16 @@ export type RouterBaseOptions = {
 };
 
 export default abstract class RouterBase implements Router {
-  map: Map;
-  maxRoutingTolerance: number;
+  private map: Map;
+  protected maxRoutingTolerance: number;
 
   constructor(options: RouterBaseOptions) {
     this.map = options.map;
-    this.maxRoutingTolerance = options.maxRoutingTolerance !== undefined ? options.maxRoutingTolerance : Infinity;
+    this.maxRoutingTolerance = options.maxRoutingTolerance ?? Infinity;
+  }
+
+  protected getMapProjection(): Projection {
+    return this.map.getView().getProjection()
   }
 
   abstract getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]>;
