@@ -2,15 +2,22 @@ import {fromLonLat, toLonLat} from 'ol/proj.js';
 import type { Snapper } from '.';
 import type { Feature, Map } from 'ol';
 import type { Point } from 'ol/geom';
+import { Coordinate, distance } from 'ol/coordinate';
 
 type GraphHopperOptions = {
   map: Map;
   url: string;
   /**
    * The maximum distance in meters between the initial coordinates and the snapped ones.
-   * Snapping only happen when the distance is lower than this limit.
+   * Snapping only happens when the distance is lower than this limit.
    */
   maxDistance?: number;
+
+  /**
+   * The maximum distance in pixels between the initial coordinates and the snapped ones.
+   * Snapping only happens when the distance is lower than this limit.
+   */
+  maxTolerance?: number;
 };
 
 
@@ -27,10 +34,12 @@ export default class GraphHopper implements Snapper {
 
   private maxDistance: number;
 
+  private maxTolerance: number;
 
   constructor(options: GraphHopperOptions) {
     this.nearestUrl = options.url;
-    this.maxDistance = options.maxDistance ?? 20;
+    this.maxDistance = options.maxDistance ?? Infinity;
+    this.maxTolerance = options.maxTolerance ?? Infinity;
     this.map = options.map;
   }
   
@@ -51,7 +60,17 @@ export default class GraphHopper implements Snapper {
       return undefined;
     }
     const newCoordinates = fromLonLat(json.coordinates, mapProjection);
+    if (this.maxTolerance !== Infinity && !this.isInTolerance(geom.getCoordinates(), newCoordinates)) {
+      return undefined;
+    }
+
     geom.setCoordinates(newCoordinates);
     point.set('snapped', true);
+  }
+
+  isInTolerance(pointA: Coordinate, pointB: Coordinate): boolean {
+    const pointAPixel = this.map.getPixelFromCoordinate(pointA);
+    const pointBPixel = this.map.getPixelFromCoordinate(pointB);
+    return distance(pointAPixel, pointBPixel) < this.maxTolerance;
   }
 }
