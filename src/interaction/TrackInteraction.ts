@@ -44,6 +44,8 @@ export interface Options {
 export default class TrackInteraction extends Interaction {
 
   private trackLayer_: VectorLayer<Feature>;
+  pointerOutListener?: () => void;
+  pointerOverListener?: () => void;
 
   /**
    * Default is to delete control points and pois on click
@@ -136,6 +138,14 @@ export default class TrackInteraction extends Interaction {
 
     this.trackLayer_ = options.trackLayer;
 
+    this.pointerOutListener = () => {
+      this.modifyTrack_.pointAtCursorFeature.set("type", undefined);
+    };
+
+    this.pointerOverListener = () => {
+      this.modifyTrack_.pointAtCursorFeature.set("type", "sketch");
+    };
+
     this.userDeleteCondition_ = options.deleteCondition === undefined ? click : options.deleteCondition;
     this.userAddLastPointCondition_ = options.addLastPointCondition === undefined ? click : options.addLastPointCondition;
     this.userAddControlPointCondition_ = options.addControlPointCondition === undefined ? FALSE : options.addControlPointCondition;
@@ -165,6 +175,16 @@ export default class TrackInteraction extends Interaction {
 
   clearSelected() {
     this.deletePoint_.getFeatures().clear();
+  }
+
+  addMapInOutEventListeners(mapElement: HTMLElement) {
+    mapElement.addEventListener("pointerout", this.pointerOutListener);
+    mapElement.addEventListener("pointerover", this.pointerOverListener);
+  }
+
+  removeMapInOutEventListeners(mapElement: HTMLElement) {
+    mapElement.removeEventListener("pointerout", this.pointerOutListener);
+    mapElement.removeEventListener("pointerover", this.pointerOverListener);
   }
 
   setActive(active: boolean) {
