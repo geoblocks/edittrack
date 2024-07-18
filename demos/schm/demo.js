@@ -36,6 +36,9 @@ async function main() {
       }),
       new SwisstopoProfiler({
         projection: projection,
+        optimalPointDistance: 10,
+        maxPointDistance: 80,
+        maxPoints:4990 * 2
       })
     ]
   });
