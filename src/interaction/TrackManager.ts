@@ -317,10 +317,16 @@ export default class TrackManager<POIMeta> {
           })
         );
       }
+      this.map_.once("postrender", () => {
+        this.interaction_.addMapInOutEventListeners(this.map_.getViewport());
+      });
     } else {
       this.historyManager_.clear();
       if (this.shadowTrackLayer_) {
         this.shadowTrackLayer_.getSource().clear();
+      }
+      if (this.map_?.getViewport()) {
+        this.interaction_.removeMapInOutEventListeners(this.map_.getViewport());
       }
     }
     this.interaction_.setActive(edit);

@@ -121,6 +121,10 @@ export default class Modify extends PointerInteraction {
     super.setActive(active);
   }
 
+  get pointAtCursorFeature(): Feature<Point> {
+    return this.pointAtCursorFeature_;
+  }
+
   /**
    * Get the first feature at pixel, favor points over lines
    */
