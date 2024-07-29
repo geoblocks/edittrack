@@ -32,11 +32,11 @@ export interface Options {
   /**
    * Vector layer where the track, control points and POIs are created.
    */
-  trackLayer: VectorLayer<Feature>
+  trackLayer: VectorLayer<VectorSource>
   /**
    * Optional layer to display a shadow of the track has it was when entering edit mode.
    */
-  shadowTrackLayer?: VectorLayer<Feature>
+  shadowTrackLayer?: VectorLayer<VectorSource>
   /**
    * The router instance to create snapped segments on the network.
    */
@@ -78,11 +78,11 @@ export default class TrackManager<POIMeta> {
     return this.map;
   }
   private source_: VectorSource;
-  private trackLayer_: VectorLayer<Feature>;
-  get trackLayer(): VectorLayer<Feature> {
+  private trackLayer_: VectorLayer<VectorSource>;
+  get trackLayer(): VectorLayer<VectorSource> {
     return this.trackLayer_;
   }
-  private shadowTrackLayer_: VectorLayer<Feature>;
+  private shadowTrackLayer_: VectorLayer<VectorSource>;
   private hitTolerance_: number;
   public snapping = true;
   private mode_: TrackMode = '';
