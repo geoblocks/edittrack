@@ -63,7 +63,7 @@ export default class Modify extends PointerInteraction {
   public overlayFeature = new Feature({
     type: 'segment'
   });
-  private overlay_: VectorLayer<Feature>;
+  private overlay_: VectorLayer<VectorSource>;
   private lastPixel_: Pixel = [0, 0];
   private trackData_: Options['trackData'];
   private pointAtCursorFeature_ = new Feature<Point>({
@@ -92,7 +92,7 @@ export default class Modify extends PointerInteraction {
     /**
      * Draw overlay where sketch features are drawn.
      */
-    this.overlay_ = new VectorLayer<Feature>({
+    this.overlay_ = new VectorLayer<VectorSource>({
       source: new VectorSource<Feature>({
         useSpatialIndex: false,
         features: [

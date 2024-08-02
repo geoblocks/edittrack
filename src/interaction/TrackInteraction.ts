@@ -17,7 +17,7 @@ import {Point} from 'ol/geom';
 
 export interface Options {
   map: Map;
-  trackLayer: VectorLayer<Feature>
+  trackLayer: VectorLayer<VectorSource>
   trackData: TrackData
   style: StyleLike | FlatStyleLike
 
@@ -43,7 +43,7 @@ export interface Options {
 
 export default class TrackInteraction extends Interaction {
 
-  private trackLayer_: VectorLayer<Feature>;
+  private trackLayer_: VectorLayer<VectorSource>;
   pointerOutListener?: () => void;
   pointerOverListener?: () => void;
 
@@ -110,7 +110,7 @@ export default class TrackInteraction extends Interaction {
   }
 
 
-  createSelectInteraction(trackLayer: VectorLayer<Feature>): Select {
+  createSelectInteraction(trackLayer: VectorLayer<VectorSource>): Select {
     const select = new Select({
       condition: (event) => this.deleteCondition_(event),
       layers: [trackLayer],
