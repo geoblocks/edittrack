@@ -158,7 +158,7 @@ export default class TrackData {
     }
   }
 
-  /*
+  /**
    * Add a new control point at the end.
    */
   pushControlPoint(point: Feature<Point>): AddedControlPoint {
@@ -185,7 +185,7 @@ export default class TrackData {
     throw new Error('Internal error: incorrect length');
   }
 
-  /*
+  /**
    * Deletes the supplied point and all adjacent segments.
    * Creates a new segment if the deleted point had two neighbors.
    * Updates first/last subtype if needed.
@@ -269,7 +269,7 @@ export default class TrackData {
     this.pois.sort((a, b) => a.get('index') - b.get('index'));
   }
 
-  /*
+  /**
    * Remove the last control point.
    */
   deleteLastControlPoint(): Feature<Point | LineString>[] {
@@ -315,7 +315,7 @@ export default class TrackData {
     return this.controlPoints.length > 0 || this.segments.length > 0 || this.pois.length > 0;
   }
 
-  /*
+  /**
    * Deletes the supplied point.
    */
   deletePOI(point: Feature<Point>) {

@@ -6,6 +6,11 @@ type FallbackOptions = {
   profilers: Profiler[];
 };
 
+/**
+ * This class takes a list of profilers as fallback options.
+ * it executes their `computeProfile` function in sequence, and the first resolved promise
+ * will be returned.
+ */
 export default class Fallback implements Profiler {
   private profilers: Profiler[];
 
@@ -17,8 +22,7 @@ export default class Fallback implements Profiler {
     // array of computeProfile functions.
     const functions = this.profilers.map(profiler => () => profiler.computeProfile(segment));
 
-    // execute the promises in sequence, the first resolved will be returned. All the following
-    // will execute "identity" function instead of the real function.
+    // All the following will execute "identity" function instead of the real function.
     // @ts-ignore don't know why TSC is unhappy with this nice code
     return functions.reduce((cur, nextFn) => cur.then(val => val, nextFn), Promise.reject());
   }

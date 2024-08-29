@@ -81,7 +81,9 @@ export default class TrackUpdater {
     }
   }
 
-  // If needed, equalize the control point, the segment before and after to all share the same coordinate.
+  /**
+  * If needed, equalize the control point, the segment before and after to all share the same coordinate.
+  */
   equalizeCoordinates(controlPoint: Feature<Point>) {
     const {before, after} = this.trackData.getAdjacentSegments(controlPoint);
     if (before && after) {
