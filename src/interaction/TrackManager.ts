@@ -87,9 +87,9 @@ export default class TrackManager<POIMeta> {
   public snapping = true;
   private mode_: TrackMode = '';
   private submode_: TrackSubMode = '';
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   private trackChangeEventListeners_: Function[] = [];
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   private trackHoverEventListeners_: Function[] = [];
   private trackData_ = new TrackData();
   private router_: Router;
@@ -493,7 +493,7 @@ export default class TrackManager<POIMeta> {
   /**
    * Add new event listener to be notified on track changes.
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   addTrackChangeEventListener(fn: Function) {
     this.trackChangeEventListeners_.push(fn);
   }
@@ -501,7 +501,7 @@ export default class TrackManager<POIMeta> {
   /**
    * Remove registered event listener.
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   removeTrackChangeEventListener(fn: Function) {
     this.trackChangeEventListeners_ = this.trackChangeEventListeners_.filter(item => item !== fn);
   }
@@ -523,7 +523,7 @@ export default class TrackManager<POIMeta> {
   /**
    * Add new event listener to be notified on track hover.
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   addTrackHoverEventListener(fn: Function) {
     this.trackHoverEventListeners_.push(fn);
   }
@@ -531,7 +531,7 @@ export default class TrackManager<POIMeta> {
   /**
    * Remove registered event listener.
    */
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   removeTrackHoverEventListener(fn: Function) {
     this.trackHoverEventListeners_ = this.trackHoverEventListeners_.filter(item => item !== fn);
   }
