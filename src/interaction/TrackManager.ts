@@ -23,6 +23,7 @@ import {SelectEvent} from 'ol/interaction/Select';
 import type {Coordinate} from 'ol/coordinate';
 import type {FeatureType} from './TrackData';
 import type {Snapper} from 'src/snapper';
+import { Densifier } from 'src/densifier';
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -50,7 +51,12 @@ export interface Options {
    * The profiler instance to add 3d coordinates to segments.
    */
   profiler: Profiler
-  style: StyleLike | FlatStyleLike
+  /**
+   * The densifier to use to modify the line geometries
+   * If not provided, the track will not be densified.
+   */
+  densifier?: Densifier;
+  style: StyleLike | FlatStyleLike;
   /**
    * Condition to remove a point (control point or POI). Default is click.
    */
@@ -97,6 +103,7 @@ export default class TrackManager<POIMeta> {
     return this.router_;
   }
   private snapper_: Snapper;
+  private densifier_: Densifier | undefined;
   get snapper(): Snapper {
     return this.snapper_;
   }
@@ -119,8 +126,10 @@ export default class TrackManager<POIMeta> {
     this.router_ = options.router;
     this.snapper_ = options.snapper;
     this.profiler_ = options.profiler;
+    this.densifier_ = options.densifier;
     this.updater_ = new TrackUpdater({
       profiler: this.profiler_,
+      densifier: this.densifier_,
       router: this.router_,
       trackData: this.trackData_
     });
@@ -163,6 +172,8 @@ export default class TrackManager<POIMeta> {
         this.source_.addFeature(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
         this.updater_.equalizeCoordinates(pointFrom);
+
+        if (this.densifier_) this.densifier_.densify(segment);
         await this.profiler_.computeProfile(segment);
         // FIXME: setZ ?
         this.onTrackChanged_();
@@ -409,7 +420,10 @@ export default class TrackManager<POIMeta> {
     // should parse features first, compute profile, and then replace the trackdata and add history
     const parsedFeatures = this.trackData_.parseFeatures(features);
     this.source_.addFeatures(features);
-    const profileRequests = parsedFeatures.segments.map(segment => this.profiler_.computeProfile(segment));
+    const profileRequests = parsedFeatures.segments.map((segment) => {
+      if (this.densifier_) this.densifier_.densify(segment);
+      return this.profiler_.computeProfile(segment);
+    });
     await Promise.all(profileRequests);
     this.trackData_.restoreParsedFeatures(parsedFeatures);
   }
