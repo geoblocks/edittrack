@@ -257,7 +257,9 @@ export default class Modify extends PointerInteraction {
         this.overlayFeature.setGeometry(this.overlayLineString_);
       }
       this.involvedFeatures_.forEach(f => {
-        f?.get('type') === 'segment' && f.set('subtype', 'modifying')
+        if (f?.get('type') === 'segment') {
+          f.set('subtype', 'modifying');
+        }
       });
     }
 
@@ -294,7 +296,9 @@ export default class Modify extends PointerInteraction {
     this.overlayFeature.set('sketchHitGeometry', undefined);
 
     this.involvedFeatures_.forEach(f => {
-      f?.get('type') === 'segment' && f.set('subtype', undefined)
+      if (f?.get('type') === 'segment') {
+        f.set('subtype', undefined);
+      }
     });
     this.feature_ = null;
     return false;

@@ -60,7 +60,7 @@ export function densifyTrack(
         if (addedCount > maxPoints) throw new Error();
       }
       return newCoordinates;
-    } catch (e) {
+    } catch {
       interval *= 2; // Double the interval on error
       retry = true; // Set retry flag to true to retry the loop
     }
