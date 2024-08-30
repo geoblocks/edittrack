@@ -1,6 +1,5 @@
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
-import {ProjectionLike} from 'ol/proj';
 import {Densifier} from './index';
 
 import {MAX_POINTS_PER_REQUEST} from '../profiler/SwisstopoProfiler';
@@ -11,10 +10,6 @@ const MAX_POINT_DISTANCE_FOR_A_TRACK = 80;
 const EXTRA_DISTANCE = 6; //
 
 type SnappedDensifierOptions = {
-  /** The current projection of the geometry */
-  projection: ProjectionLike;
-  // TODO: should we move projection as a function parameter instead ?
-
   /** The wanted distance between two adjacent points */
   optimalPointDistance?: number;
 
@@ -36,9 +31,11 @@ type SnappedDensifierOptions = {
 
 /**
  * This densifier will insert points to an geometry to increase the point density according to the parameters.
+ *
+ * WARNING:: It is assumed that the map projection is in meters, like EPSG:3857 or EPSG:2056, as the
+ * euclidian distance is used to compute the new points.
  */
 export default class SnappedDensifier implements Densifier {
-  private projection: ProjectionLike;
   private optimalPointDistance: number;
   private maxPointDistance?: number = MAX_POINTS_PER_REQUEST;
   private maxPoints?: number = MAX_POINTS_PER_REQUEST * 2;
@@ -46,7 +43,6 @@ export default class SnappedDensifier implements Densifier {
   private nDigits?: number = AT_LEAST_A_POINT_EVERY_N_METERS / 2 + 1;
 
   constructor(parameters: SnappedDensifierOptions) {
-    this.projection = parameters.projection;
     this.optimalPointDistance = parameters.optimalPointDistance ?? AT_LEAST_A_POINT_EVERY_N_METERS;
     this.maxPointDistance = parameters.maxPointDistance ?? MAX_POINT_DISTANCE_FOR_A_TRACK;
   }

@@ -1,6 +1,5 @@
 import type Feature from 'ol/Feature.js';
 import type LineString from 'ol/geom/LineString.js';
-import {ProjectionLike} from 'ol/proj';
 import {Densifier} from './index';
 import {distance} from 'ol/coordinate';
 
@@ -8,10 +7,6 @@ const MAX_POINT_DISTANCE_FOR_A_TRACK = 10;
 const DEFAULT_MAX_POINTS = 200;
 
 type UnsnappedDensifierOptions = {
-  // TODO: should we move projection as a function parameter instead ?
-  /** The current projection of the geometry */
-  projection: ProjectionLike;
-
   /** Maximum distance between two points, in meters */
   maxPointDistance?: number;
 
@@ -28,16 +23,17 @@ type UnsnappedDensifierOptions = {
  *
  * If the segment already contains points in between, they are discarded and a new straight segment between
  * the start and the end of the line is returned.
+ *
+ * WARNING:: It is assumed that the map projection is in meters, like EPSG:3857 or EPSG:2056, as the
+ * euclidian distance is used to compute the new points.
  */
 export default class UnsnappedDensifier implements Densifier {
-  private projection: ProjectionLike;
   private maxPointDistance: number;
   private maxPoints: number;
   private nDigits: number;
 
   constructor(parameters: UnsnappedDensifierOptions) {
-    this.projection = parameters.projection;
-    this.maxPointDistance = parameters.maxPointDistance || MAX_POINT_DISTANCE_FOR_A_TRACK;
+    this.maxPointDistance = parameters.distance || MAX_POINT_DISTANCE_FOR_A_TRACK;
     this.maxPoints = parameters.maxPoints || DEFAULT_MAX_POINTS;
     this.nDigits = parameters.nDigits ?? MAX_POINT_DISTANCE_FOR_A_TRACK / 2 + 1;
   }
@@ -48,7 +44,6 @@ export default class UnsnappedDensifier implements Densifier {
       return;
     }
 
-    // TODO: Handle projection
     const geometry = segment.getGeometry();
     const coordinates = geometry.getCoordinates();
 
