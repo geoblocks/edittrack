@@ -23,7 +23,7 @@ type SnappedDensifierOptions = {
 
   /**
    * The maximal number of points allowed for the new geometry
-   * If this number is reached, an error will be thrown.
+   * If this number is reached, the original coordinates will be kept
    */
   maxPoints?: number;
 
