@@ -420,10 +420,9 @@ export default class TrackManager<POIMeta> {
     // should parse features first, compute profile, and then replace the trackdata and add history
     const parsedFeatures = this.trackData_.parseFeatures(features);
     this.source_.addFeatures(features);
-    const profileRequests = parsedFeatures.segments.map((segment) => {
-      if (this.densifier_) this.densifier_.densify(segment);
-      return this.profiler_.computeProfile(segment);
-    });
+    const profileRequests = parsedFeatures.segments.map((segment) =>
+      this.profiler_.computeProfile(segment)
+    );
     await Promise.all(profileRequests);
     this.trackData_.restoreParsedFeatures(parsedFeatures);
   }
