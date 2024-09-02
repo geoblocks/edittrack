@@ -42,7 +42,7 @@ export default class SwisstopoProfiler implements Profiler {
     const profile = [];
     const geometries = splitGeometry(geometry, MAX_POINTS_PER_REQUEST);
     for (const segment of geometries) {
-      const geom = this.geojsonFormat.writeGeometry(segment);
+      const geom = this.geojsonFormat.writeGeometry(segment, {decimals: 1});
       const request = await fetch(this.url, {
         method: 'POST',
         headers: {

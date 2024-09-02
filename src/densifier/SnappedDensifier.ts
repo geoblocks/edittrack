@@ -24,9 +24,6 @@ type SnappedDensifierOptions = {
 
   /** no points will be inserted if one exists at that extra distance */
   extraDistance?: number;
-
-  /** The precision digits used for the new coordinates */
-  nDigits?: number;
 };
 
 /**
@@ -40,7 +37,6 @@ export default class SnappedDensifier implements Densifier {
   private maxPointDistance?: number = MAX_POINTS_PER_REQUEST;
   private maxPoints?: number = MAX_POINTS_PER_REQUEST * 2;
   private extraDistance?: number = EXTRA_DISTANCE;
-  private nDigits?: number = AT_LEAST_A_POINT_EVERY_N_METERS / 2 + 1;
 
   constructor(parameters: SnappedDensifierOptions) {
     this.optimalPointDistance = parameters.optimalPointDistance ?? AT_LEAST_A_POINT_EVERY_N_METERS;
@@ -79,10 +75,7 @@ export default class SnappedDensifier implements Densifier {
                 previousCoordinate[1] + stepVector[1],
               ];
               dist -= interval;
-              newCoordinates.push([
-                parseFloat(previousCoordinate[0].toFixed(this.nDigits)),
-                parseFloat(previousCoordinate[1].toFixed(this.nDigits)),
-              ]);
+              newCoordinates.push(previousCoordinate);
               addedCount += 1;
               if (addedCount > this.maxPoints) throw new Error();
             }
