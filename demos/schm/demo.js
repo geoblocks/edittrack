@@ -2,6 +2,7 @@
 import TrackManager from '../../src/interaction/TrackManager.ts';
 import GraphHopperRouter from '../../src/router/GraphHopperRouter.ts';
 import GraphhopperSnapper from '../../src/snapper/GraphHopperSnapper.ts';
+import UnsnappedDensifier from '../../src/densifier/UnsnappedDensifier.ts';
 import {ExtractFromSegmentProfiler, FallbackProfiler, SwisstopoProfiler} from '../../src/profiler/index.ts';
 import {styleFunction} from './style';
 import {createMap} from './swisstopo';
@@ -43,6 +44,8 @@ async function main() {
     ]
   });
 
+const densifier = new UnsnappedDensifier({ });
+
   /**
    * @param {MapBrowserEvent} mapBrowserEvent
    * @param {string} pointType
@@ -57,6 +60,7 @@ async function main() {
     router: router,
     snapper: snapper,
     profiler: profiler,
+    densifier: densifier,
     trackLayer: trackLayer,
     shadowTrackLayer: shadowTrackLayer,
     style: styleFunction,
