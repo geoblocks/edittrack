@@ -1,5 +1,8 @@
 # @geoblocks/edittrack changes
 
+## v1.3.16
+- Add Densifier to manipulate geometries after routing;
+
 ## v1.3.12
 - Add Snapper which eagerly snaps control points
 - Some renaming
