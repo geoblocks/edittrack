@@ -73,21 +73,10 @@ export default class TrackUpdater {
       if (after) {
         geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
       }
-      await Promise.all(geometryUpdates).then(async () => {
-        this.equalizeCoordinates(pointFrom);
-        this.equalizeCoordinates(modifiedControlPoint);
-        this.equalizeCoordinates(pointTo);
-        const profileUpdates = [];
-        if (before) {
-          if (this.densifier) this.densifier.densify(before);
-          profileUpdates.push(this.profiler.computeProfile(before));
-        }
-        if (after) {
-          if (this.densifier) this.densifier.densify(after);
-          profileUpdates.push(this.profiler.computeProfile(after));
-        }
-        await Promise.all(profileUpdates);
-      });
+      this.equalizeCoordinates(pointFrom);
+      this.equalizeCoordinates(modifiedControlPoint);
+      this.equalizeCoordinates(pointTo);
+      return Promise.all(geometryUpdates);
     }
   }
 
