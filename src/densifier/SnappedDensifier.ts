@@ -1,13 +1,13 @@
-import type Feature from 'ol/Feature.js';
-import type LineString from 'ol/geom/LineString.js';
-import {Densifier} from './index';
+import type Feature from "ol/Feature.js";
+import type LineString from "ol/geom/LineString.js";
+import { Densifier } from "./index";
 
-import {MAX_POINTS_PER_REQUEST} from '../profiler/SwisstopoProfiler';
-import {Coordinate, distance} from 'ol/coordinate';
+import { Coordinate, distance } from "ol/coordinate";
 
 const AT_LEAST_A_POINT_EVERY_N_METERS = 10;
 const MAX_POINT_DISTANCE_FOR_A_TRACK = 80;
-const EXTRA_DISTANCE = 6; //
+const DEFAULT_MAX_POINTS = 2000
+const DEFAULT_EXTRA_DISTANCE = 6; //
 
 type SnappedDensifierOptions = {
   /** The wanted distance between two adjacent points */
@@ -19,8 +19,9 @@ type SnappedDensifierOptions = {
   /**
    * The maximal number of points allowed for the new geometry
    * If this number is reached, the original coordinates will be kept
+   * If null, the number of points will not be checked
    */
-  maxPoints?: number;
+  maxPoints: number | null;
 
   /** no points will be inserted if one exists at that extra distance */
   extraDistance?: number;
@@ -34,13 +35,17 @@ type SnappedDensifierOptions = {
  */
 export default class SnappedDensifier implements Densifier {
   private optimalPointDistance: number;
-  private maxPointDistance?: number = MAX_POINTS_PER_REQUEST;
-  private maxPoints?: number = MAX_POINTS_PER_REQUEST * 2;
-  private extraDistance?: number = EXTRA_DISTANCE;
+  private maxPointDistance: number;
+  private maxPoints: number | null;
+  private extraDistance: number;
 
   constructor(parameters: SnappedDensifierOptions) {
-    this.optimalPointDistance = parameters.optimalPointDistance ?? AT_LEAST_A_POINT_EVERY_N_METERS;
-    this.maxPointDistance = parameters.maxPointDistance ?? MAX_POINT_DISTANCE_FOR_A_TRACK;
+    this.optimalPointDistance =
+      parameters.optimalPointDistance ?? AT_LEAST_A_POINT_EVERY_N_METERS;
+    this.maxPointDistance =
+      parameters.maxPointDistance ?? MAX_POINT_DISTANCE_FOR_A_TRACK;
+    this.extraDistance = parameters.extraDistance ?? DEFAULT_EXTRA_DISTANCE;
+    this.maxPoints = parameters.maxPoints !== undefined ? parameters.maxPoints : DEFAULT_MAX_POINTS;
   }
 
   densify(segment: Feature<LineString>): void {
@@ -55,13 +60,12 @@ export default class SnappedDensifier implements Densifier {
       try {
         const newCoordinates = [];
         const optimalPointDistancePlusExtra = this.optimalPointDistance + this.extraDistance;
-        let previousCoordinate: Coordinate;
+        let previousCoordinate: Coordinate = coordinates[0]
         let addedCount = 0;
         for (const coordinate of coordinates) {
           if (addedCount === 0) {
             newCoordinates.push(coordinate);
             addedCount += 1;
-            previousCoordinate = coordinate;
             continue;
           }
           const xDiff = coordinate[0] - previousCoordinate[0];
@@ -77,13 +81,13 @@ export default class SnappedDensifier implements Densifier {
               dist -= interval;
               newCoordinates.push(previousCoordinate);
               addedCount += 1;
-              if (addedCount > this.maxPoints) throw new Error();
+              if (this.maxPoints && addedCount > this.maxPoints) throw new Error();
             }
           }
           newCoordinates.push(coordinate);
           previousCoordinate = coordinate;
           addedCount += 1;
-          if (addedCount > this.maxPoints) throw new Error();
+          if (this.maxPoints && addedCount > this.maxPoints) throw new Error();
         }
         geometry.setCoordinates(newCoordinates);
       } catch {

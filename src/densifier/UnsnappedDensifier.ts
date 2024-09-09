@@ -1,9 +1,9 @@
-import type Feature from 'ol/Feature.js';
-import type LineString from 'ol/geom/LineString.js';
-import {Densifier} from './index';
-import {distance} from 'ol/coordinate';
+import type Feature from "ol/Feature.js";
+import type LineString from "ol/geom/LineString.js";
+import { Densifier } from "./index";
+import { distance } from "ol/coordinate";
 
-const MAX_POINT_DISTANCE_FOR_A_TRACK = 10;
+const DEFAULT_DISTANCE = 10;
 const DEFAULT_MAX_POINTS = 200;
 
 type UnsnappedDensifierOptions = {
@@ -36,19 +36,21 @@ export default class UnsnappedDensifier implements Densifier {
   private maxPoints: number;
 
   constructor(parameters: UnsnappedDensifierOptions) {
-    this.distance = parameters.distance || MAX_POINT_DISTANCE_FOR_A_TRACK;
-    this.maxPoints = parameters.maxPoints || DEFAULT_MAX_POINTS;
+    this.distance = parameters.distance ?? DEFAULT_DISTANCE;
+    this.maxPoints = parameters.maxPoints ?? DEFAULT_MAX_POINTS;
   }
 
   densify(segment: Feature<LineString>): void {
-    if (segment.get('snapped')) {
-      console.log('Segment is snapped, skipped densifier');
+    if (segment.get("snapped")) {
       return;
     }
 
     const geometry = segment.getGeometry();
     const coordinates = geometry.getCoordinates();
 
+    if (coordinates.length < 2) {
+      return;
+    }
     const start = coordinates[0];
     const end = coordinates[coordinates.length - 1];
 
