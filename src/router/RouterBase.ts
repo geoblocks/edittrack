@@ -36,6 +36,7 @@ export default abstract class RouterBase implements Router {
 
     if (pointFromSnapped == false || pointToSnapped === false) {
       segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
+      segment.set('snapped', false);
       return false;
     }
 
