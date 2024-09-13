@@ -90,6 +90,7 @@ export default class SnappedDensifier implements Densifier {
           if (this.maxPoints && addedCount > this.maxPoints) throw new Error();
         }
         geometry.setCoordinates(newCoordinates);
+        return;
       } catch {
         interval *= 2; // Double the interval on error
         retry = true; // Set retry flag to true to retry the loop
