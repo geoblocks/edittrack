@@ -12,6 +12,8 @@ export const sketchControlPoint = {
 export const trackLine = {
   "stroke-width": 6,
   "stroke-color": "purple",
+  "text-value": ["concat", "", ["get", "part"]],
+  "text-fill-color": "#fff",
 };
 
 export const trackLineModifying = {
@@ -27,7 +29,7 @@ export const poiPoint = {
   "text-font": "bold 11px Inter",
   "text-fill-color": "#000",
   // use 'concat' to convert number to string
-  "text-value": ["concat", ["get", "index"], ""],
+  "text-value": ["concat", "", ["get", "part"]],
 };
 
 export const numberedControlPoint = {
@@ -35,7 +37,7 @@ export const numberedControlPoint = {
   "circle-fill-color": "#ffffffdd",
   "text-color": "blue",
   // use 'concat' to convert number to string
-  "text-value": ["concat", ["get", "index"], ""],
+  "text-value": ["concat", "", ["get", "part"]],
 };
 
 export const snappedTrue = {
