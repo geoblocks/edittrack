@@ -39,7 +39,7 @@
     "@geoblocks/proj": "0.4.10",
     "@geoblocks/sources": "0.3.4",
     "@types/chai": "4.3.19",
-    "@types/mocha": "10.0.7",
+    "@types/mocha": "10.0.8",
     "@typescript-eslint/eslint-plugin": "8.5.0",
     "@typescript-eslint/parser": "8.5.0",
     "chai": "5.1.1",
