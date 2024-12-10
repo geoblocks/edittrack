@@ -38,12 +38,18 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
+
+  /**
+   * Drawing above this layer will not be possible
+   */
+  drawMaskLayer?: VectorLayer<VectorSource>;
 }
 
 
 export default class TrackInteraction extends Interaction {
 
   private trackLayer_: VectorLayer<VectorSource>;
+  private drawMaskLayer_?: VectorLayer<VectorSource>;
   pointerOutListener?: () => void;
   pointerOverListener?: () => void;
 
@@ -78,10 +84,17 @@ export default class TrackInteraction extends Interaction {
     });
   }
 
+  maskAtPixel(pixel: Pixel): boolean {
+    if (!this.drawMaskLayer_) return false;
+    return this.getMap().hasFeatureAtPixel(pixel, {
+      layerFilter: l => l === this.drawMaskLayer_
+    });
+  }
+
   createDrawInteraction(source: VectorSource): DrawPoint {
     const draw = new DrawPoint({
       source: source,
-      condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
+      condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel) && !this.maskAtPixel(event.pixel)
     });
     // @ts-ignore too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
@@ -93,8 +106,9 @@ export default class TrackInteraction extends Interaction {
       trackData: trackData,
       source: source,
       style: style,
-      condition: (event) => !this.deleteCondition_(event),
-      addControlPointCondition: (event) => this.userAddControlPointCondition_(event),
+      condition: (event) => !this.deleteCondition_(event) && !this.maskAtPixel(event.pixel),
+      addControlPointCondition: (event) => this.userAddControlPointCondition_(event) && !this.maskAtPixel(event.pixel),
+      sketchPointCondition: (event) => !this.maskAtPixel(event.pixel),
       hitTolerance: hitTolerance,
     });
     // @ts-ignore too complicate to declare proper events
@@ -137,6 +151,7 @@ export default class TrackInteraction extends Interaction {
     super();
 
     this.trackLayer_ = options.trackLayer;
+    this.drawMaskLayer_ = options.drawMaskLayer;
 
     this.pointerOutListener = () => {
       this.modifyTrack_.pointAtCursorFeature.set("type", undefined);
