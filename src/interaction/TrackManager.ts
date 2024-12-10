@@ -26,6 +26,8 @@ import type {Snapper} from 'src/snapper';
 import { Densifier } from 'src/densifier';
 import {fromExtent} from "ol/geom/Polygon";
 import {Extent} from "ol/extent";
+import {EXTENT as epsg3857Extent} from "ol/proj/epsg3857";
+import {EXTENT as epsg4326Extent} from "ol/proj/epsg4326";
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -148,11 +150,7 @@ export default class TrackManager<POIMeta> {
 
     this.drawMaskLayer = options.drawMaskLayer;
     if (options.drawExtent && this.drawMaskLayer) {
-      const mapExtent = this.map_.getView().getProjection().getExtent();
-      const mask = fromExtent(mapExtent);
-      const drawingArea = fromExtent(options.drawExtent);
-      mask.appendLinearRing(drawingArea.getLinearRing(0));
-      this.drawMaskLayer.getSource().addFeature(new Feature(mask))
+      this.drawMaskLayer.getSource().addFeature(this.calculateMaskFeature(options.drawExtent))
       this.drawMaskLayer.setVisible(false)
     }
 
@@ -637,5 +635,20 @@ export default class TrackManager<POIMeta> {
   render() {
     this.source_.changed();
     this.shadowTrackLayer_.getSource().changed();
+  }
+
+  private calculateMaskFeature(extent: Extent) {
+    const projection = this.map_.getView().getProjection();
+    // for some projections (like EPSG:2056) extent smaller than visible map
+    let wExtent = projection.getExtent();
+    if (projection.getUnits() === 'm') {
+      wExtent = epsg3857Extent;
+    } else if (projection.getUnits() === 'degrees') {
+      wExtent = epsg4326Extent;
+    }
+    const mask = fromExtent(wExtent);
+    const drawingArea = fromExtent(extent);
+    mask.appendLinearRing(drawingArea.getLinearRing(0));
+    return new Feature(mask);
   }
 }
