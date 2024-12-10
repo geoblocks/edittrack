@@ -24,6 +24,8 @@ import type {Coordinate} from 'ol/coordinate';
 import type {FeatureType} from './TrackData';
 import type {Snapper} from 'src/snapper';
 import { Densifier } from 'src/densifier';
+import {fromExtent} from "ol/geom/Polygon";
+import {Extent} from "ol/extent";
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -74,6 +76,14 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
+  /**
+   * Optional layer to display a drawing area mask. drawExtent should be specified to use mask.
+   */
+  drawMaskLayer?: VectorLayer<VectorSource>;
+  /**
+   * Drawing area extent. drawMaskLayer should be specified.
+   */
+  drawExtent?: Extent;
 }
 
 
@@ -115,6 +125,8 @@ export default class TrackManager<POIMeta> {
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
 
+  private drawMaskLayer: VectorLayer<VectorSource>;
+
   constructor(options: Options) {
     this.map_ = options.map;
     this.source_ = options.trackLayer.getSource();
@@ -134,6 +146,16 @@ export default class TrackManager<POIMeta> {
       trackData: this.trackData_
     });
 
+    this.drawMaskLayer = options.drawMaskLayer;
+    if (options.drawExtent && this.drawMaskLayer) {
+      const mapExtent = this.map_.getView().getProjection().getExtent();
+      const mask = fromExtent(mapExtent);
+      const drawingArea = fromExtent(options.drawExtent);
+      mask.appendLinearRing(drawingArea.getLinearRing(0));
+      this.drawMaskLayer.getSource().addFeature(new Feature(mask))
+      this.drawMaskLayer.setVisible(false)
+    }
+
     this.interaction_ = new TrackInteraction({
       style: options.style,
       trackData: this.trackData_,
@@ -143,6 +165,7 @@ export default class TrackManager<POIMeta> {
       addLastPointCondition: options.addLastPointCondition,
       addControlPointCondition: options.addControlPointCondition,
       hitTolerance: this.hitTolerance_,
+      drawMaskLayer: this.drawMaskLayer,
     });
 
     // Hack to test profile synchro
@@ -340,6 +363,7 @@ export default class TrackManager<POIMeta> {
         this.interaction_.removeMapInOutEventListeners(this.map_.getViewport());
       }
     }
+    this.drawMaskLayer?.setVisible(edit);
     this.interaction_.setActive(edit);
     this.mode_ = mode || '';
     this.render();
