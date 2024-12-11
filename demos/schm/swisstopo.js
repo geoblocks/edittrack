@@ -37,6 +37,7 @@ export function createMap(target) {
     extent: extent,
     center: [2532661.0, 1151654.0],
     zoom: 10,
+    constrainOnlyCenter: true,
   });
 
   const bgLayer = createSwisstopoLayer('ch.swisstopo.pixelkarte-farbe');

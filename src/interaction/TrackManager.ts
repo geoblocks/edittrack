@@ -24,10 +24,10 @@ import type {Coordinate} from 'ol/coordinate';
 import type {FeatureType} from './TrackData';
 import type {Snapper} from 'src/snapper';
 import { Densifier } from 'src/densifier';
-import {fromExtent} from "ol/geom/Polygon";
 import {Extent} from "ol/extent";
-import {EXTENT as epsg3857Extent} from "ol/proj/epsg3857";
-import {EXTENT as epsg4326Extent} from "ol/proj/epsg4326";
+import {EventsKey} from 'ol/events';
+import RenderEvent from "ol/render/Event";
+import {unByKey} from "ol/Observable";
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -78,14 +78,16 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
+
   /**
-   * Optional layer to display a drawing area mask. drawExtent should be specified to use mask.
-   */
-  drawMaskLayer?: VectorLayer<VectorSource>;
-  /**
-   * Drawing area extent. drawMaskLayer should be specified.
+   * Drawing area extent.
    */
   drawExtent?: Extent;
+
+  /**
+   * Drawing mask color. CSS string
+   */
+  drawMaskColor?: string;
 }
 
 
@@ -127,7 +129,9 @@ export default class TrackManager<POIMeta> {
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
 
-  private drawMaskLayer: VectorLayer<VectorSource>;
+  private drawExtent_: Extent | undefined;
+  private drawMaskColor_: string = 'rgba(241, 245, 249, 1)';
+  private addDrawingMaskKey_: EventsKey | undefined;
 
   constructor(options: Options) {
     this.map_ = options.map;
@@ -148,10 +152,9 @@ export default class TrackManager<POIMeta> {
       trackData: this.trackData_
     });
 
-    this.drawMaskLayer = options.drawMaskLayer;
-    if (options.drawExtent && this.drawMaskLayer) {
-      this.drawMaskLayer.getSource().addFeature(this.calculateMaskFeature(options.drawExtent))
-      this.drawMaskLayer.setVisible(false)
+    this.drawExtent_ = options.drawExtent;
+    if (options.drawMaskColor) {
+      this.drawMaskColor_ = options.drawMaskColor;
     }
 
     this.interaction_ = new TrackInteraction({
@@ -352,6 +355,10 @@ export default class TrackManager<POIMeta> {
       this.map_.once("postrender", () => {
         this.interaction_.addMapInOutEventListeners(this.map_.getViewport());
       });
+
+      if (this.drawExtent_) {
+        this.addDrawingMaskKey_ = this.map_.on('postcompose', (evt) => this.addDrawingMask(evt, this.drawExtent_));
+      }
     } else {
       this.historyManager_.clear();
       if (this.shadowTrackLayer_) {
@@ -360,8 +367,11 @@ export default class TrackManager<POIMeta> {
       if (this.map_?.getViewport()) {
         this.interaction_.removeMapInOutEventListeners(this.map_.getViewport());
       }
+      if (this.addDrawingMaskKey_) {
+        unByKey(this.addDrawingMaskKey_);
+        this.addDrawingMaskKey_ = undefined;
+      }
     }
-    this.drawMaskLayer?.setVisible(edit);
     this.interaction_.setActive(edit);
     this.mode_ = mode || '';
     this.render();
@@ -637,18 +647,35 @@ export default class TrackManager<POIMeta> {
     this.shadowTrackLayer_.getSource().changed();
   }
 
-  private calculateMaskFeature(extent: Extent) {
-    const projection = this.map_.getView().getProjection();
-    // for some projections (like EPSG:2056) extent smaller than visible map
-    let wExtent = projection.getExtent();
-    if (projection.getUnits() === 'm') {
-      wExtent = epsg3857Extent;
-    } else if (projection.getUnits() === 'degrees') {
-      wExtent = epsg4326Extent;
-    }
-    const mask = fromExtent(wExtent);
-    const drawingArea = fromExtent(extent);
-    mask.appendLinearRing(drawingArea.getLinearRing(0));
-    return new Feature(mask);
+ addDrawingMask(event: RenderEvent, extent: Extent) {
+    if (!extent?.length) return;
+    const viewport = event.target.getViewport();
+    const canvases = viewport.getElementsByTagName('canvas');
+    const canvas = canvases.item(canvases.length - 1);
+    const context = canvas.getContext('2d');
+
+    const coordinates = [
+      [extent[0], extent[1]], // Bottom-left
+      [extent[0], extent[3]], // Top-left
+      [extent[2], extent[3]], // Top-right
+      [extent[2], extent[1]], // Bottom-right
+    ];
+
+    const pixelCoordinates = coordinates.map((coord) => this.map_.getPixelFromCoordinate(coord));
+
+    context.beginPath();
+
+    // outer rectangle
+    context.rect(0, 0, canvas.width, canvas.height);
+
+    const width = pixelCoordinates[3][0] - pixelCoordinates[0][0];
+    const height = pixelCoordinates[1][1] - pixelCoordinates[0][1];
+
+    // inner rectangle
+    context.rect(pixelCoordinates[0][0], pixelCoordinates[0][1], width, height);
+
+    context.closePath();
+    context.fillStyle = this.drawMaskColor_;
+    context.fill('evenodd');
   }
 }
