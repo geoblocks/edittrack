@@ -163,7 +163,7 @@ export default class TrackManager<POIMeta> {
       addLastPointCondition: options.addLastPointCondition,
       addControlPointCondition: options.addControlPointCondition,
       hitTolerance: this.hitTolerance_,
-      drawMaskLayer: this.drawMaskLayer,
+      drawExtent: options.drawExtent,
     });
 
     // Hack to test profile synchro

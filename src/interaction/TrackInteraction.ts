@@ -14,6 +14,8 @@ import type {FlatStyleLike} from 'ol/style/flat';
 import type {Pixel} from 'ol/pixel';
 import type {FeatureType} from './TrackData';
 import {Point} from 'ol/geom';
+import {containsCoordinate} from 'ol/extent.js';
+import {Extent} from "ol/extent";
 
 export interface Options {
   map: Map;
@@ -40,16 +42,16 @@ export interface Options {
   hitTolerance: number;
 
   /**
-   * Drawing above this layer will not be possible
+   * Drawing outside extent will not be possible
    */
-  drawMaskLayer?: VectorLayer<VectorSource>;
+  drawExtent?: Extent;
 }
 
 
 export default class TrackInteraction extends Interaction {
 
   private trackLayer_: VectorLayer<VectorSource>;
-  private drawMaskLayer_?: VectorLayer<VectorSource>;
+  private drawExtent_?: Extent;
   pointerOutListener?: () => void;
   pointerOverListener?: () => void;
 
@@ -84,17 +86,16 @@ export default class TrackInteraction extends Interaction {
     });
   }
 
-  maskAtPixel(pixel: Pixel): boolean {
-    if (!this.drawMaskLayer_) return false;
-    return this.getMap().hasFeatureAtPixel(pixel, {
-      layerFilter: l => l === this.drawMaskLayer_
-    });
+  pixelAtDrawingExtent(pixel: Pixel): boolean {
+    if (!this.drawExtent_?.length) return true;
+    const coordinate = this.getMap().getCoordinateFromPixel(pixel);
+    return containsCoordinate(this.drawExtent_, coordinate);
   }
 
   createDrawInteraction(source: VectorSource): DrawPoint {
     const draw = new DrawPoint({
       source: source,
-      condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel) && !this.maskAtPixel(event.pixel)
+      condition: (event) => this.pixelAtDrawingExtent(event.pixel) && this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
     });
     // @ts-ignore too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
@@ -106,9 +107,9 @@ export default class TrackInteraction extends Interaction {
       trackData: trackData,
       source: source,
       style: style,
-      condition: (event) => !this.deleteCondition_(event) && !this.maskAtPixel(event.pixel),
-      addControlPointCondition: (event) => this.userAddControlPointCondition_(event) && !this.maskAtPixel(event.pixel),
-      sketchPointCondition: (event) => !this.maskAtPixel(event.pixel),
+      condition: (event) => this.pixelAtDrawingExtent(event.pixel) && !this.deleteCondition_(event),
+      addControlPointCondition: (event) => this.pixelAtDrawingExtent(event.pixel) && this.userAddControlPointCondition_(event),
+      sketchPointCondition: (event) => this.pixelAtDrawingExtent(event.pixel),
       hitTolerance: hitTolerance,
     });
     // @ts-ignore too complicate to declare proper events
@@ -151,7 +152,7 @@ export default class TrackInteraction extends Interaction {
     super();
 
     this.trackLayer_ = options.trackLayer;
-    this.drawMaskLayer_ = options.drawMaskLayer;
+    this.drawExtent_ = options.drawExtent;
 
     this.pointerOutListener = () => {
       this.modifyTrack_.pointAtCursorFeature.set("type", undefined);

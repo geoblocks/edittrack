@@ -175,8 +175,16 @@ export default class Modify extends PointerInteraction {
 
 
   handleMoveEvent(event: MapBrowserEvent<UIEvent>) {
-    if (event.dragging || !this.sketchPointCondition(event)) {
+    const pointCondition = this.sketchPointCondition(event);
+    if (event.dragging || !pointCondition) {
+      if (!pointCondition && this.pointAtCursorFeature.get('type') === 'sketch') {
+        this.pointAtCursorFeature.set("type", undefined);
+      }
       return;
+    }
+
+    if (pointCondition && this.pointAtCursorFeature.get('type') !== 'sketch') {
+      this.pointAtCursorFeature.set("type", 'sketch');
     }
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
     this.lastPixel_ = event.pixel;
@@ -295,7 +303,11 @@ export default class Modify extends PointerInteraction {
       this.feature_ = null;
       return false;
     }
-    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, event.coordinate));
+    let coordinate = event.coordinate;
+    if (!this.sketchPointCondition(event) && this.pointAtCursorFeature_) {
+      coordinate = this.pointAtCursorFeature_.getGeometry().getCoordinates();
+    }
+    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, coordinate));
     this.dragStarted = false;
 
     this.overlayFeature.setGeometry(null);
