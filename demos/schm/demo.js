@@ -55,6 +55,10 @@ const densifier = new UnsnappedDensifier({ });
     return doubleClick(mapBrowserEvent) && pointType !== 'POI';
   };
 
+  const search = new URLSearchParams(document.location.search);
+
+  const showMask = search.get('drawMask') === 'true';
+
   const trackManager = new TrackManager({
     map: map,
     router: router,
@@ -68,9 +72,10 @@ const densifier = new UnsnappedDensifier({ });
     addLastPointCondition: singleClick,  // we have to use single click otherwise the double click is not fired
     addControlPointCondition: doubleClick,
     hitTolerance: 15,
+    drawExtent: showMask ? [2443048, 1030343, 2894802, 1339995] : undefined,
+    drawMaskColor: showMask ? 'rgba(255, 0, 0, 0.3)' : undefined,
   });
 
-  const search = new URLSearchParams(document.location.search);
   const trackId = search.get('trackId');
   if (trackId) {
     trackManager.restoreFeatures([
@@ -83,6 +88,9 @@ const densifier = new UnsnappedDensifier({ });
   }
 
   trackManager.mode = 'edit';
+  document.getElementById('edit-mode-switch').addEventListener('click', () => {
+    trackManager.mode = trackManager.mode === 'edit' ? '' : 'edit';
+  })
 }
 
 main();

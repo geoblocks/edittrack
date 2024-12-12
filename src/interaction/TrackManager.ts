@@ -24,6 +24,10 @@ import type {Coordinate} from 'ol/coordinate';
 import type {FeatureType} from './TrackData';
 import type {Snapper} from 'src/snapper';
 import { Densifier } from 'src/densifier';
+import {Extent} from "ol/extent";
+import {EventsKey} from 'ol/events';
+import RenderEvent from "ol/render/Event";
+import {unByKey} from "ol/Observable";
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -74,6 +78,16 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
+
+  /**
+   * Drawing area extent.
+   */
+  drawExtent?: Extent;
+
+  /**
+   * Drawing mask color. CSS string
+   */
+  drawMaskColor?: string;
 }
 
 
@@ -115,6 +129,10 @@ export default class TrackManager<POIMeta> {
   private interaction_: TrackInteraction;
   private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
 
+  private drawExtent_: Extent | undefined;
+  private drawMaskColor_: string = 'rgba(241, 245, 249, 1)';
+  private addDrawingMaskKey_: EventsKey | undefined;
+
   constructor(options: Options) {
     this.map_ = options.map;
     this.source_ = options.trackLayer.getSource();
@@ -134,6 +152,11 @@ export default class TrackManager<POIMeta> {
       trackData: this.trackData_
     });
 
+    this.drawExtent_ = options.drawExtent;
+    if (options.drawMaskColor) {
+      this.drawMaskColor_ = options.drawMaskColor;
+    }
+
     this.interaction_ = new TrackInteraction({
       style: options.style,
       trackData: this.trackData_,
@@ -143,6 +166,7 @@ export default class TrackManager<POIMeta> {
       addLastPointCondition: options.addLastPointCondition,
       addControlPointCondition: options.addControlPointCondition,
       hitTolerance: this.hitTolerance_,
+      drawExtent: options.drawExtent,
     });
 
     // Hack to test profile synchro
@@ -331,6 +355,10 @@ export default class TrackManager<POIMeta> {
       this.map_.once("postrender", () => {
         this.interaction_.addMapInOutEventListeners(this.map_.getViewport());
       });
+
+      if (this.drawExtent_) {
+        this.addDrawingMaskKey_ = this.map_.on('postcompose', (evt) => this.addDrawingMask(evt, this.drawExtent_));
+      }
     } else {
       this.historyManager_.clear();
       if (this.shadowTrackLayer_) {
@@ -338,6 +366,10 @@ export default class TrackManager<POIMeta> {
       }
       if (this.map_?.getViewport()) {
         this.interaction_.removeMapInOutEventListeners(this.map_.getViewport());
+      }
+      if (this.addDrawingMaskKey_) {
+        unByKey(this.addDrawingMaskKey_);
+        this.addDrawingMaskKey_ = undefined;
       }
     }
     this.interaction_.setActive(edit);
@@ -613,5 +645,37 @@ export default class TrackManager<POIMeta> {
   render() {
     this.source_.changed();
     this.shadowTrackLayer_.getSource().changed();
+  }
+
+ addDrawingMask(event: RenderEvent, extent: Extent) {
+    if (!extent?.length) return;
+    const viewport = event.target.getViewport();
+    const canvases = viewport.getElementsByTagName('canvas');
+    const canvas = canvases.item(canvases.length - 1);
+    const context = canvas.getContext('2d');
+
+    const coordinates = [
+      [extent[0], extent[1]], // Bottom-left
+      [extent[0], extent[3]], // Top-left
+      [extent[2], extent[3]], // Top-right
+      [extent[2], extent[1]], // Bottom-right
+    ];
+
+    const pixelCoordinates = coordinates.map((coord) => this.map_.getPixelFromCoordinate(coord));
+
+    context.beginPath();
+
+    // outer rectangle
+    context.rect(0, 0, canvas.width, canvas.height);
+
+    const width = pixelCoordinates[3][0] - pixelCoordinates[0][0];
+    const height = pixelCoordinates[1][1] - pixelCoordinates[0][1];
+
+    // inner rectangle
+    context.rect(pixelCoordinates[0][0], pixelCoordinates[0][1], width, height);
+
+    context.closePath();
+    context.fillStyle = this.drawMaskColor_;
+    context.fill('evenodd');
   }
 }

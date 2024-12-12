@@ -14,6 +14,9 @@ import type {FlatStyleLike} from 'ol/style/flat';
 import type {Pixel} from 'ol/pixel';
 import type {FeatureType} from './TrackData';
 import {Point} from 'ol/geom';
+import {containsCoordinate} from 'ol/extent.js';
+import {Extent} from "ol/extent";
+import {Coordinate} from "ol/coordinate.js";
 
 export interface Options {
   map: Map;
@@ -38,12 +41,18 @@ export interface Options {
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
   hitTolerance: number;
+
+  /**
+   * Drawing outside extent will not be possible
+   */
+  drawExtent?: Extent;
 }
 
 
 export default class TrackInteraction extends Interaction {
 
   private trackLayer_: VectorLayer<VectorSource>;
+  private drawExtent_?: Extent;
   pointerOutListener?: () => void;
   pointerOverListener?: () => void;
 
@@ -78,10 +87,15 @@ export default class TrackInteraction extends Interaction {
     });
   }
 
+  pixelAtDrawingExtent(coordinate: Coordinate): boolean {
+    if (!this.drawExtent_?.length) return true;
+    return containsCoordinate(this.drawExtent_, coordinate);
+  }
+
   createDrawInteraction(source: VectorSource): DrawPoint {
     const draw = new DrawPoint({
       source: source,
-      condition: (event) => this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
+      condition: (event) => this.pixelAtDrawingExtent(event.coordinate) && this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
     });
     // @ts-ignore too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
@@ -93,8 +107,9 @@ export default class TrackInteraction extends Interaction {
       trackData: trackData,
       source: source,
       style: style,
-      condition: (event) => !this.deleteCondition_(event),
-      addControlPointCondition: (event) => this.userAddControlPointCondition_(event),
+      condition: (event) => this.pixelAtDrawingExtent(event.coordinate) && !this.deleteCondition_(event),
+      addControlPointCondition: (event) => this.pixelAtDrawingExtent(event.coordinate) && this.userAddControlPointCondition_(event),
+      sketchPointCondition: (event) => this.pixelAtDrawingExtent(event.coordinate),
       hitTolerance: hitTolerance,
     });
     // @ts-ignore too complicate to declare proper events
@@ -137,6 +152,7 @@ export default class TrackInteraction extends Interaction {
     super();
 
     this.trackLayer_ = options.trackLayer;
+    this.drawExtent_ = options.drawExtent;
 
     this.pointerOutListener = () => {
       this.modifyTrack_.pointAtCursorFeature.set("type", undefined);

@@ -36,6 +36,7 @@ export interface Options {
   style: StyleLike | FlatStyleLike;
   condition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
   addControlPointCondition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  sketchPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
   /**
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
@@ -54,6 +55,7 @@ export default class Modify extends PointerInteraction {
   private dragStarted = false;
   private condition_: Options['condition'];
   private addControlPointCondition_: Options['addControlPointCondition'];
+  private sketchPointCondition: Options['sketchPointCondition'];
   private source_: Options['source'];
   private hitTolerance_: Options['hitTolerance'];
   private feature_: Feature<Point|LineString> = null;
@@ -83,7 +85,9 @@ export default class Modify extends PointerInteraction {
 
     this.condition_ = options.condition;
 
-    this.addControlPointCondition_ = options.addControlPointCondition;
+    this.addControlPointCondition_ = options.addControlPointCondition ? options.addControlPointCondition : () => true;
+
+    this.sketchPointCondition = options.sketchPointCondition;
 
     this.source_ = options.source;
 
@@ -171,8 +175,16 @@ export default class Modify extends PointerInteraction {
 
 
   handleMoveEvent(event: MapBrowserEvent<UIEvent>) {
-    if (event.dragging) {
+    const pointCondition = this.sketchPointCondition(event);
+    if (event.dragging || !pointCondition) {
+      if (!pointCondition && this.pointAtCursorFeature.get('type') === 'sketch') {
+        this.pointAtCursorFeature.set("type", undefined);
+      }
       return;
+    }
+
+    if (pointCondition && this.pointAtCursorFeature.get('type') !== 'sketch') {
+      this.pointAtCursorFeature.set("type", 'sketch');
     }
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
     this.lastPixel_ = event.pixel;
@@ -206,6 +218,9 @@ export default class Modify extends PointerInteraction {
   }
 
   handleDragEvent(event: MapBrowserEvent<UIEvent>) {
+    if (!this.sketchPointCondition(event)) {
+      return;
+    }
     this.pointAtCursorFeature_.getGeometry().setCoordinates(event.coordinate);
 
     const type = this.feature_.get('type') as FeatureType;
@@ -288,7 +303,11 @@ export default class Modify extends PointerInteraction {
       this.feature_ = null;
       return false;
     }
-    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, event.coordinate));
+    let coordinate = event.coordinate;
+    if (!this.sketchPointCondition(event) && this.pointAtCursorFeature_) {
+      coordinate = this.pointAtCursorFeature_.getGeometry().getCoordinates();
+    }
+    this.dispatchEvent(new ModifyEvent('modifyend', this.feature_, coordinate));
     this.dragStarted = false;
 
     this.overlayFeature.setGeometry(null);
