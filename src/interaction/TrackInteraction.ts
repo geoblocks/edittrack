@@ -16,6 +16,7 @@ import type {FeatureType} from './TrackData';
 import {Point} from 'ol/geom';
 import {containsCoordinate} from 'ol/extent.js';
 import {Extent} from "ol/extent";
+import {Coordinate} from "ol/coordinate.js";
 
 export interface Options {
   map: Map;
@@ -86,16 +87,15 @@ export default class TrackInteraction extends Interaction {
     });
   }
 
-  pixelAtDrawingExtent(pixel: Pixel): boolean {
+  pixelAtDrawingExtent(coordinate: Coordinate): boolean {
     if (!this.drawExtent_?.length) return true;
-    const coordinate = this.getMap().getCoordinateFromPixel(pixel);
     return containsCoordinate(this.drawExtent_, coordinate);
   }
 
   createDrawInteraction(source: VectorSource): DrawPoint {
     const draw = new DrawPoint({
       source: source,
-      condition: (event) => this.pixelAtDrawingExtent(event.pixel) && this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
+      condition: (event) => this.pixelAtDrawingExtent(event.coordinate) && this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
     });
     // @ts-ignore too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
@@ -107,9 +107,9 @@ export default class TrackInteraction extends Interaction {
       trackData: trackData,
       source: source,
       style: style,
-      condition: (event) => this.pixelAtDrawingExtent(event.pixel) && !this.deleteCondition_(event),
-      addControlPointCondition: (event) => this.pixelAtDrawingExtent(event.pixel) && this.userAddControlPointCondition_(event),
-      sketchPointCondition: (event) => this.pixelAtDrawingExtent(event.pixel),
+      condition: (event) => this.pixelAtDrawingExtent(event.coordinate) && !this.deleteCondition_(event),
+      addControlPointCondition: (event) => this.pixelAtDrawingExtent(event.coordinate) && this.userAddControlPointCondition_(event),
+      sketchPointCondition: (event) => this.pixelAtDrawingExtent(event.coordinate),
       hitTolerance: hitTolerance,
     });
     // @ts-ignore too complicate to declare proper events
