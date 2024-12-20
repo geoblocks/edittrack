@@ -73,10 +73,12 @@ export default class TrackUpdater {
       if (after) {
         geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
       }
+      // wait for snap before equalize coordinates
+      const results = await Promise.all(geometryUpdates);
       this.equalizeCoordinates(pointFrom);
       this.equalizeCoordinates(modifiedControlPoint);
       this.equalizeCoordinates(pointTo);
-      return Promise.all(geometryUpdates);
+      return results;
     }
   }
 
