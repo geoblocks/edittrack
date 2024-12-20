@@ -42,6 +42,8 @@ export default abstract class RouterBase implements Router {
 
     const resultCoordinates = await this.getRoute(pointFromCoordinates, pointToCoordinates);
     if (resultCoordinates.length === 0) {
+      segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
+      segment.set('snapped', false);
       return false;
     }
     const resultFromCoordinates = resultCoordinates[0].slice(0, 2);

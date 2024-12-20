@@ -651,28 +651,38 @@ export default class TrackManager<POIMeta> {
     if (!extent?.length) return;
     const viewport = event.target.getViewport();
     const canvases = viewport.getElementsByTagName('canvas');
+    const frameState = event.frameState;
+    const viewportWidth = Math.round(frameState.size[0] * frameState.pixelRatio);
+    const viewportHeight = Math.round(frameState.size[1] * frameState.pixelRatio);
+
     const canvas = canvases.item(canvases.length - 1);
+
+    const canvasViewportRatio = (canvas.width / viewportWidth) * frameState.pixelRatio;
+    console.assert(
+        canvasViewportRatio === (canvas.height / viewportHeight) * frameState.pixelRatio,
+    );
+
+   const coordinates = [
+     [extent[0], extent[1]], // Bottom-left
+     [extent[0], extent[3]], // Top-left
+     [extent[2], extent[3]], // Top-right
+     [extent[2], extent[1]], // Bottom-right
+   ];
+
+   const pixelCoordinates = coordinates.map((coord) => this.map_.getPixelFromCoordinate(coord));
+
+   const width = (pixelCoordinates[3][0] - pixelCoordinates[0][0]) * canvasViewportRatio;
+   const height = (pixelCoordinates[1][1] - pixelCoordinates[0][1]) * canvasViewportRatio;
+
+
     const context = canvas.getContext('2d');
-
-    const coordinates = [
-      [extent[0], extent[1]], // Bottom-left
-      [extent[0], extent[3]], // Top-left
-      [extent[2], extent[3]], // Top-right
-      [extent[2], extent[1]], // Bottom-right
-    ];
-
-    const pixelCoordinates = coordinates.map((coord) => this.map_.getPixelFromCoordinate(coord));
-
     context.beginPath();
 
     // outer rectangle
     context.rect(0, 0, canvas.width, canvas.height);
 
-    const width = pixelCoordinates[3][0] - pixelCoordinates[0][0];
-    const height = pixelCoordinates[1][1] - pixelCoordinates[0][1];
-
     // inner rectangle
-    context.rect(pixelCoordinates[0][0], pixelCoordinates[0][1], width, height);
+    context.rect(pixelCoordinates[0][0] * canvasViewportRatio, pixelCoordinates[0][1] * canvasViewportRatio, width, height);
 
     context.closePath();
     context.fillStyle = this.drawMaskColor_;
