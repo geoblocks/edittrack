@@ -35,23 +35,23 @@
     }
   },
   "devDependencies": {
-    "@geoblocks/elevation-profile": "0.0.22",
+    "@geoblocks/elevation-profile": "0.0.24",
     "@geoblocks/proj": "0.4.10",
     "@geoblocks/sources": "0.3.4",
-    "@types/chai": "5.0.1",
+    "@types/chai": "5.2.0",
     "@types/mocha": "10.0.10",
-    "@typescript-eslint/eslint-plugin": "8.25.0",
-    "@typescript-eslint/parser": "8.25.0",
+    "@typescript-eslint/eslint-plugin": "8.27.0",
+    "@typescript-eslint/parser": "8.27.0",
     "chai": "5.2.0",
     "eslint": "8.57.1",
     "gh-pages": "6.3.0",
     "mocha": "11.1.0",
     "ol": "10.4.0",
-    "parcel": "2.13.3",
+    "parcel": "2.14.1",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typedoc": "0.27.9",
-    "typescript": "5.7.3"
+    "typedoc": "0.28.1",
+    "typescript": "5.8.2"
   },
   "peerDependencies": {
     "ol": "^6 || ^7 || ^8 || ^9 || ^10"
