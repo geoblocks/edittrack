@@ -282,39 +282,7 @@ export default class TrackManager<POIMeta> {
           this.source_.removeFeature(selected);
           this.onTrackChanged_();
         } else {
-          // control point
-          const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(selected);
-
-          // remove deleted features from source
-          deleted.forEach(f => this.source_.removeFeature(f));
-
-          // add newly created segment to source
-          if (newSegment) {
-            this.source_.addFeature(newSegment);
-          }
-
-          // update adjacent points
-          if (pointBefore || pointAfter) {
-            const geometryUpdates = [];
-            if (pointBefore) {
-              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
-            }
-            if (pointAfter) {
-              geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
-            }
-            Promise.all(geometryUpdates).then(() => {
-              const segmentUpdates = [];
-              if (pointBefore) {
-                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
-              }
-              if (pointAfter) {
-                segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
-              }
-              Promise.all(segmentUpdates).then(() => {
-                this.onTrackChanged_();
-              });
-            });
-          }
+          this.deleteControlPoint(selected);
         }
 
         // unselect deleted feature
@@ -533,6 +501,45 @@ export default class TrackManager<POIMeta> {
     const poi = this.trackData_.getPOIs().find(feature => feature.get('index') === index);
     poi.set('meta', meta);
     this.addManualHistoryEntry();
+  }
+
+  /**
+   * Delete a control point and notify track change listeners.
+   */
+  deleteControlPoint(point: Feature<Point>) {
+    // control point
+    const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(point);
+
+    // remove deleted features from source
+    deleted.forEach(f => this.source_.removeFeature(f));
+
+    // add newly created segment to source
+    if (newSegment) {
+      this.source_.addFeature(newSegment);
+    }
+
+    // update adjacent points
+    if (pointBefore || pointAfter) {
+      const geometryUpdates = [];
+      if (pointBefore) {
+        geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
+      }
+      if (pointAfter) {
+        geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
+      }
+      Promise.all(geometryUpdates).then(() => {
+        const segmentUpdates = [];
+        if (pointBefore) {
+          segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
+        }
+        if (pointAfter) {
+          segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
+        }
+        Promise.all(segmentUpdates).then(() => {
+          this.onTrackChanged_();
+        });
+      });
+    }
   }
 
   /**
