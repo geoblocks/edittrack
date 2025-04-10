@@ -64,15 +64,15 @@ export interface Options {
   /**
    * Condition to remove a point (control point or POI). Default is click.
    */
-  deleteCondition?: (mbe: MapBrowserEvent<UIEvent>, type: string) => boolean;
+  deleteCondition?: (mbe: MapBrowserEvent, type: string) => boolean;
   /**
    * Condition to add a new last point to the track. Default is click.
    */
-  addLastPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  addLastPointCondition?: (mbe: MapBrowserEvent) => boolean;
   /**
    * In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
    */
-  addControlPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  addControlPointCondition?: (mbe: MapBrowserEvent) => boolean;
 
   /**
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.

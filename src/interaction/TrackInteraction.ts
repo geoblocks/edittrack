@@ -27,15 +27,15 @@ export interface Options {
   /**
    * Default is to delete control points and pois on click
    */
-  deleteCondition?: (mbe: MapBrowserEvent<UIEvent>, type: FeatureType) => boolean;
+  deleteCondition?: (mbe: MapBrowserEvent, type: FeatureType) => boolean;
   /**
    * Default is to add a new point on click
    */
-  addLastPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  addLastPointCondition?: (mbe: MapBrowserEvent) => boolean;
   /**
    * In addition to the drag sequence, an optional condition to add a new control point to the track. Default is never.
    */
-  addControlPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  addControlPointCondition?: (mbe: MapBrowserEvent) => boolean;
 
   /**
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
@@ -139,7 +139,7 @@ export default class TrackInteraction extends Interaction {
   }
 
 
-  deleteCondition_(event: MapBrowserEvent<UIEvent>): boolean {
+  deleteCondition_(event: MapBrowserEvent): boolean {
     const point = this.controlPointOrPOIAtPixel(event.pixel);
     if (point) {
       return this.userDeleteCondition_(event, point.get('type'));
