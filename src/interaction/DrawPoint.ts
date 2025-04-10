@@ -7,12 +7,12 @@ import type MapBrowserEvent from 'ol/MapBrowserEvent';
 
 type DrawPointOptions = {
   source: VectorSource;
-  condition: (mapBrowserEvent: MapBrowserEvent<UIEvent>) => boolean;
+  condition: (mapBrowserEvent: MapBrowserEvent) => boolean;
 };
 
 export default class DrawPoint extends PointerInteraction {
   private source: VectorSource;
-  private condition: (mapBrowserEvent: MapBrowserEvent<UIEvent>) => boolean;
+  private condition: (mapBrowserEvent: MapBrowserEvent) => boolean;
 
   constructor(options: DrawPointOptions) {
     super();
@@ -21,7 +21,7 @@ export default class DrawPoint extends PointerInteraction {
     this.condition = options.condition;
   }
 
-  handleEvent(event: MapBrowserEvent<UIEvent>): boolean {
+  handleEvent(event: MapBrowserEvent): boolean {
     if (this.condition(event)) {
       const point = new Feature(new Point(event.coordinate));
       this.dispatchEvent(new DrawEvent('drawend', point));

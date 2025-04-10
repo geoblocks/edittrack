@@ -34,9 +34,9 @@ export interface Options {
   source: VectorSource<Feature>;
   trackData: TrackData;
   style: StyleLike | FlatStyleLike;
-  condition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
-  addControlPointCondition: (mbe: MapBrowserEvent<UIEvent>) => boolean;
-  sketchPointCondition?: (mbe: MapBrowserEvent<UIEvent>) => boolean;
+  condition: (mbe: MapBrowserEvent) => boolean;
+  addControlPointCondition: (mbe: MapBrowserEvent) => boolean;
+  sketchPointCondition?: (mbe: MapBrowserEvent) => boolean;
   /**
    * Pixel tolerance for considering the pointer close enough to a segment for snapping.
    */
@@ -179,7 +179,7 @@ export default class Modify extends PointerInteraction {
   }
 
 
-  handleMoveEvent(event: MapBrowserEvent<UIEvent>) {
+  handleMoveEvent(event: MapBrowserEvent) {
     const pointCondition = this.sketchPointCondition(event);
     if (event.dragging || !pointCondition) {
       if (!pointCondition && this.pointAtCursorFeature.get('type') === 'sketch') {
@@ -196,7 +196,7 @@ export default class Modify extends PointerInteraction {
     this.updateSketchFeature();
   }
 
-  handleEvent(event: MapBrowserEvent<UIEvent>): boolean {
+  handleEvent(event: MapBrowserEvent): boolean {
     const stop = super.handleEvent(event);
     if (this.addControlPointCondition_(event)) {
       const feature = this.getFeatureAtPixel(event.pixel);
@@ -208,7 +208,7 @@ export default class Modify extends PointerInteraction {
     return stop;
   }
 
-  handleDownEvent(event: MapBrowserEvent<UIEvent>): boolean {
+  handleDownEvent(event: MapBrowserEvent): boolean {
     if (!this.condition_(event)) {
       return false;
     }
@@ -222,7 +222,7 @@ export default class Modify extends PointerInteraction {
     return true;
   }
 
-  handleDragEvent(event: MapBrowserEvent<UIEvent>) {
+  handleDragEvent(event: MapBrowserEvent) {
     if (!this.sketchPointCondition(event)) {
       return;
     }
@@ -303,7 +303,7 @@ export default class Modify extends PointerInteraction {
     }
   }
 
-  handleUpEvent(event: MapBrowserEvent<UIEvent>): boolean {
+  handleUpEvent(event: MapBrowserEvent): boolean {
     if (!this.dragStarted) {
       this.feature_ = null;
       return false;
