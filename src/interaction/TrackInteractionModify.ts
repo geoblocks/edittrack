@@ -77,6 +77,7 @@ export default class Modify extends PointerInteraction {
   private involvedFeatures_: Feature<Geometry>[] = [];
   private overlayLineString_: LineString = null;
   private scratchPoint_ = new Point([0, 0]);
+  private highlightedFeature_: Feature | undefined;
 
   constructor(options: Options) {
     super();
@@ -122,6 +123,10 @@ export default class Modify extends PointerInteraction {
     if (this.overlay_) {
       this.overlay_.setVisible(active);
     }
+    if(!active) {
+      this.scratchPoint_.setCoordinates([0, 0])
+      this.highlightedFeature_?.set('sketchHitGeometry', undefined);
+    }
     super.setActive(active);
   }
 
@@ -146,7 +151,7 @@ export default class Modify extends PointerInteraction {
   }
 
   updateSketchFeature() {
-    const feature = this.getFeatureAtPixel(this.lastPixel_);
+    this.highlightedFeature_ = this.getFeatureAtPixel(this.lastPixel_);
     // Adds hit geometries to the hit feature and the sketch feature.
     // The geometry is either the closest point on a line or the point itself
     this.source_.forEachFeature((f) => (f as Feature).set('sketchHitGeometry', undefined));
@@ -154,10 +159,10 @@ export default class Modify extends PointerInteraction {
       'sketchHitGeometry': undefined,
       'subtype': undefined,
     });
-    if (feature) {
-      const type = feature.get('type') as FeatureType;
+    if (this.highlightedFeature_) {
+      const type = this.highlightedFeature_.get('type') as FeatureType;
       const sketchGeometry = this.pointAtCursorFeature_.getGeometry();
-      const featureGeometry = feature.getGeometry();
+      const featureGeometry = this.highlightedFeature_.getGeometry();
       let hitGeometry = null;
       if (type === 'segment') {
         this.scratchPoint_.setCoordinates(featureGeometry.getClosestPoint(sketchGeometry.getCoordinates()));
@@ -165,7 +170,7 @@ export default class Modify extends PointerInteraction {
       } else {
         hitGeometry = featureGeometry;
       }
-      feature.set('sketchHitGeometry', hitGeometry);
+      this.highlightedFeature_.set('sketchHitGeometry', hitGeometry);
       this.pointAtCursorFeature_.setProperties({
         'sketchHitGeometry': sketchGeometry,
         'subtype': type,
