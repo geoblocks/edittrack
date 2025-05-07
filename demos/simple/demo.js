@@ -7,8 +7,9 @@ import {createMap} from './osm';
 import {Overlay} from "ol";
 import {unByKey} from 'ol/Observable';
 import '@geoblocks/elevation-profile';
+import SnappedDensifier from '../../src/densifier/SnappedDensifier'
 
-const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmwander&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
+const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?profile=schmwander&type=json&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
 
 function main() {
@@ -44,6 +45,11 @@ function main() {
   // but it is still possible to pass a custom deleteCondition
   let deleteCondition = altKeyAndOptionallyShift;
   deleteCondition = undefined;
+  const densifier = new SnappedDensifier({
+    optimalPointDistance: 10,
+    maxPointDistance: 80,
+    maxPoints: 9980, // twice the limit for swisstopo calls -> 2 calls
+  });
   const trackManager = new TrackManager({
     map: map,
     router: router,
@@ -53,6 +59,7 @@ function main() {
     style: styleRules,
     deleteCondition: deleteCondition,
     hitTolerance: 10,
+    densifier
   });
 
   window.trackManager = trackManager;
