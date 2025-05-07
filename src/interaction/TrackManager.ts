@@ -194,10 +194,9 @@ export default class TrackManager<POIMeta> {
       }
       if (segment) {
         this.source_.addFeature(segment);
+        if (this.densifier_) this.densifier_.densify(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
         this.updater_.equalizeCoordinates(pointFrom);
-
-        if (this.densifier_) this.densifier_.densify(segment);
         await this.profiler_.computeProfile(segment);
         // FIXME: setZ ?
         this.onTrackChanged_();
@@ -240,7 +239,6 @@ export default class TrackManager<POIMeta> {
           const feature = event.feature as Feature<Point>;
           await this.updater_.updateAdjacentSegmentsGeometries(feature, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(feature, '');
-          await this.updater_.computeAdjacentSegmentsProfile(feature);
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         } else if (type === 'segment') {
@@ -262,7 +260,6 @@ export default class TrackManager<POIMeta> {
 
           await this.updater_.updateAdjacentSegmentsGeometries(controlPoint, this.snapping);
           this.updater_.changeAdjacentSegmentsStyling(controlPoint, '');
-          await this.updater_.computeAdjacentSegmentsProfile(controlPoint);
           this.trackData_.updatePOIIndexes();
           this.onTrackChanged_();
         }
@@ -389,8 +386,6 @@ export default class TrackManager<POIMeta> {
       this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
       await this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
       this.updater_.changeAdjacentSegmentsStyling(point, '');
-
-      await this.updater_.computeAdjacentSegmentsProfile(point);
     }
     this.trackData_.updatePOIIndexes();
     this.onTrackChanged_();
@@ -506,7 +501,7 @@ export default class TrackManager<POIMeta> {
   /**
    * Delete a control point and notify track change listeners.
    */
-  deleteControlPoint(point: Feature<Point>) {
+  async deleteControlPoint(point: Feature<Point>) {
     // control point
     const {deleted, pointBefore, pointAfter, newSegment} = this.trackData_.deleteControlPoint(point);
 
@@ -520,25 +515,13 @@ export default class TrackManager<POIMeta> {
 
     // update adjacent points
     if (pointBefore || pointAfter) {
-      const geometryUpdates = [];
       if (pointBefore) {
-        geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping));
+        await this.updater_.updateAdjacentSegmentsGeometries(pointBefore, this.snapping);
       }
       if (pointAfter) {
-        geometryUpdates.push(this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping));
+        await this.updater_.updateAdjacentSegmentsGeometries(pointAfter, this.snapping);
       }
-      Promise.all(geometryUpdates).then(() => {
-        const segmentUpdates = [];
-        if (pointBefore) {
-          segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointBefore));
-        }
-        if (pointAfter) {
-          segmentUpdates.push(this.updater_.computeAdjacentSegmentsProfile(pointAfter));
-        }
-        Promise.all(segmentUpdates).then(() => {
-          this.onTrackChanged_();
-        });
-      });
+      this.onTrackChanged_();
     }
   }
 

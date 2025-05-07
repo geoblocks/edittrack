@@ -29,22 +29,6 @@ export default class TrackUpdater {
     this.router = options.router;
   }
 
-  computeAdjacentSegmentsProfile(modifiedControlPoint: Feature<Point>): Promise<any> {
-    const promises = [];
-    if (modifiedControlPoint) {
-      const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
-      if (before) {
-        if (this.densifier) this.densifier.densify(before);
-        promises.push(this.profiler.computeProfile(before));
-      }
-      if (after) {
-        if (this.densifier) this.densifier.densify(after);
-        promises.push(this.profiler.computeProfile(after));
-      }
-    }
-    return Promise.all(promises);
-  }
-
   changeAdjacentSegmentsStyling(modifiedControlPoint: Feature<Point>, subtype: string) {
     if (modifiedControlPoint) {
       const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
@@ -60,25 +44,25 @@ export default class TrackUpdater {
   async updateAdjacentSegmentsGeometries(
     modifiedControlPoint: Feature<Point>,
     snapping: boolean
-  ): Promise<any> {
+  ): Promise<void> {
     if (modifiedControlPoint) {
       const {before, after} = this.trackData.getAdjacentSegments(modifiedControlPoint);
       const pointFrom = this.trackData.getControlPointBefore(modifiedControlPoint);
       const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
       modifiedControlPoint.set('snapped', snapping ? undefined : false);
-      const geometryUpdates = [];
       if (before) {
-        geometryUpdates.push(this.router.snapSegment(before, pointFrom, modifiedControlPoint));
+        if (this.densifier) this.densifier.densify(before);
+        if (this.router) await this.router.snapSegment(before, pointFrom, modifiedControlPoint);
+        await this.profiler.computeProfile(before);
       }
       if (after) {
-        geometryUpdates.push(this.router.snapSegment(after, modifiedControlPoint, pointTo));
+        if (this.densifier) this.densifier.densify(after);
+        if (this.router) await this.router.snapSegment(after, modifiedControlPoint, pointTo);
+        await this.profiler.computeProfile(after);
       }
-      // wait for snap before equalize coordinates
-      const results = await Promise.all(geometryUpdates);
       this.equalizeCoordinates(pointFrom);
       this.equalizeCoordinates(modifiedControlPoint);
       this.equalizeCoordinates(pointTo);
-      return results;
     }
   }
 
