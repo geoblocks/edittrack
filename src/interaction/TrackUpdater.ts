@@ -3,8 +3,8 @@ import type Feature from 'ol/Feature.js';
 import type TrackData from './TrackData';
 import type {Router} from '../router/index';
 import type {Profiler} from '../profiler/index';
+import type {Densifier} from '../densifier/index';
 import {equals} from 'ol/coordinate';
-import {Densifier} from 'src/densifier';
 
 type TrackUpdaterOptions = {
   trackData: TrackData;
@@ -51,13 +51,13 @@ export default class TrackUpdater {
       const pointTo = this.trackData.getControlPointAfter(modifiedControlPoint);
       modifiedControlPoint.set('snapped', snapping ? undefined : false);
       if (before) {
-        if (this.densifier) this.densifier.densify(before);
         if (this.router) await this.router.snapSegment(before, pointFrom, modifiedControlPoint);
+        if (this.densifier) this.densifier.densify(before);
         await this.profiler.computeProfile(before);
       }
       if (after) {
-        if (this.densifier) this.densifier.densify(after);
         if (this.router) await this.router.snapSegment(after, modifiedControlPoint, pointTo);
+        if (this.densifier) this.densifier.densify(after);
         await this.profiler.computeProfile(after);
       }
       this.equalizeCoordinates(pointFrom);

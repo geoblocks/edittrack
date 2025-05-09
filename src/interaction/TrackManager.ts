@@ -22,8 +22,8 @@ import {ModifyEvent} from './TrackInteractionModify';
 import {SelectEvent} from 'ol/interaction/Select';
 import type {Coordinate} from 'ol/coordinate';
 import type {FeatureType} from './TrackData';
-import type {Snapper} from 'src/snapper';
-import { Densifier } from 'src/densifier';
+import type {Snapper} from '../snapper/index';
+import type {Densifier} from '../densifier/index';
 import {Extent} from "ol/extent";
 import {EventsKey} from 'ol/events';
 import RenderEvent from "ol/render/Event";
@@ -194,8 +194,8 @@ export default class TrackManager<POIMeta> {
       }
       if (segment) {
         this.source_.addFeature(segment);
-        if (this.densifier_) this.densifier_.densify(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
+        if (this.densifier_) this.densifier_.densify(segment);
         this.updater_.equalizeCoordinates(pointFrom);
         await this.profiler_.computeProfile(segment);
         // FIXME: setZ ?
