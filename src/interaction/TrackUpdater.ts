@@ -52,12 +52,12 @@ export default class TrackUpdater {
       modifiedControlPoint.set('snapped', snapping ? undefined : false);
       if (before) {
         if (this.router) await this.router.snapSegment(before, pointFrom, modifiedControlPoint);
-        if (this.densifier) this.densifier.densify(before);
+        if (this.densifier && !before.get('snapped')) this.densifier.densify(before);
         await this.profiler.computeProfile(before);
       }
       if (after) {
         if (this.router) await this.router.snapSegment(after, modifiedControlPoint, pointTo);
-        if (this.densifier) this.densifier.densify(after);
+        if (this.densifier && !after.get('snapped')) this.densifier.densify(after);
         await this.profiler.computeProfile(after);
       }
       this.equalizeCoordinates(pointFrom);

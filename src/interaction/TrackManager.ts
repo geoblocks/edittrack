@@ -195,7 +195,7 @@ export default class TrackManager<POIMeta> {
       if (segment) {
         this.source_.addFeature(segment);
         await this.router_.snapSegment(segment, pointFrom, pointTo);
-        if (this.densifier_) this.densifier_.densify(segment);
+        if (this.densifier_ && !segment.get('snapped')) this.densifier_.densify(segment);
         this.updater_.equalizeCoordinates(pointFrom);
         await this.profiler_.computeProfile(segment);
         // FIXME: setZ ?
