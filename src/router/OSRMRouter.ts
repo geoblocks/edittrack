@@ -1,5 +1,5 @@
 import {fromLonLat, toLonLat} from 'ol/proj.js';
-import RouterBase, {RouterBaseOptions} from './RouterBase';
+import RouterBase, {RouteInfo, RouterBaseOptions} from './RouterBase';
 import type {Coordinate} from 'ol/coordinate.js';
 
 export const OSM_CH_ROUTED_FOOT_PROFILE_URL = 'https://routing.osm.ch/routed-foot/route/v1/driving';
@@ -27,7 +27,7 @@ export default class OSRMRouter extends RouterBase {
     this.extraParams = options.extraParams;
   }
 
-  async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]> {
+  async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<RouteInfo> {
     const mapProjection = this.getMapProjection();
     const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
 
@@ -44,6 +44,8 @@ export default class OSRMRouter extends RouterBase {
     console.assert(jsonResponse.code === 'Ok');
     console.assert(jsonResponse.routes.length === 1);
     const route = jsonResponse.routes[0];
-    return route.geometry.coordinates.map((cc: number[]) => fromLonLat(cc, mapProjection));
+    return {
+      coordinates: route.geometry.coordinates.map((cc: number[]) => fromLonLat(cc, mapProjection)),
+    };
   }
 }
