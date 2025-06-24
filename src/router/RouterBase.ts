@@ -11,6 +11,17 @@ export type RouterBaseOptions = {
   maxRoutingTolerance?: number;
 };
 
+export type Surface = {
+  start: number;
+  end: number;
+  type: string;
+}
+
+export type RouteInfo = {
+  coordinates: Coordinate[];
+  surfaces?: Surface[]
+}
+
 export default abstract class RouterBase implements Router {
   private map: Map;
   protected maxRoutingTolerance: number;
@@ -24,7 +35,7 @@ export default abstract class RouterBase implements Router {
     return this.map.getView().getProjection()
   }
 
-  abstract getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]>;
+  abstract getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<RouteInfo>;
 
   async snapSegment(segment: Feature<LineString>, pointFrom: Feature<Point>, pointTo: Feature<Point>): Promise<boolean> {
     const pointFromSnapped = pointFrom.get('snapped');
@@ -37,13 +48,17 @@ export default abstract class RouterBase implements Router {
     if (pointFromSnapped == false || pointToSnapped === false) {
       segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
       segment.set('snapped', false);
+      segment.set('surfaces', []);
       return false;
     }
 
-    const resultCoordinates = await this.getRoute(pointFromCoordinates, pointToCoordinates);
+    const routeInfo = await this.getRoute(pointFromCoordinates, pointToCoordinates);
+    const surfaces = routeInfo.surfaces || [];
+    const resultCoordinates = routeInfo.coordinates;
     if (resultCoordinates.length === 0) {
       segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
       segment.set('snapped', false);
+      segment.set('surfaces', surfaces);
       return false;
     }
     const resultFromCoordinates = resultCoordinates[0].slice(0, 2);
@@ -65,6 +80,7 @@ export default abstract class RouterBase implements Router {
       segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
     }
     segment.set('snapped', snapped);
+    segment.set('surfaces', surfaces);
 
     return snapped;
   }

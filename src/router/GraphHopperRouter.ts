@@ -1,6 +1,6 @@
 import {toLonLat} from 'ol/proj.js';
 import PolyLineFormat from 'ol/format/Polyline.js';
-import RouterBase, {RouterBaseOptions} from './RouterBase';
+import RouterBase, {RouteInfo, RouterBaseOptions, Surface} from './RouterBase';
 import type LineString from 'ol/geom/LineString.js';
 import type {Coordinate} from 'ol/coordinate.js';
 
@@ -27,7 +27,7 @@ export default class GraphHopper extends RouterBase {
     this.url = options.url;
   }
 
-  async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<Coordinate[]> {
+  async getRoute(pointFromCoordinates: Coordinate, pointToCoordinates: Coordinate): Promise<RouteInfo> {
     const mapProjection = this.getMapProjection();
     const coordinates = [pointFromCoordinates, pointToCoordinates].map(cc => toLonLat(cc.slice(0, 2), mapProjection));
     const coordinateString = coordinates.map(c => `point=${c.reverse().join(',')}`).join('&');
@@ -41,8 +41,20 @@ export default class GraphHopper extends RouterBase {
       }) as LineString;
       const resultCoordinates = resultGeometry.getCoordinates();
       resultCoordinates.forEach(c => c[2] *= 1000);
-      return resultCoordinates;
+      const surfaces: Surface[] = path.details?.surface?.map((s: [number, number, string]) => {
+        return {
+          start: s[0],
+          end: s[1],
+          type: s[2]
+        }
+      });
+      return {
+        coordinates: resultCoordinates,
+        surfaces: surfaces || []
+      };
     }
-    return [];
+    return {
+      coordinates: []
+    };
   }
 }
