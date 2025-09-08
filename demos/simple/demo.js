@@ -9,7 +9,7 @@ import {unByKey} from 'ol/Observable';
 import '@geoblocks/elevation-profile';
 import SnappedDensifier from '../../src/densifier/SnappedDensifier'
 
-const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?profile=schmwander&type=json&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true&details=surface';
+const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?profile=schmwander&type=json&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 
 
 function main() {

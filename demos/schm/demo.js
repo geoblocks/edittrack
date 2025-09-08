@@ -9,7 +9,7 @@ import {createMap} from './swisstopo';
 import {getTrack, getPOIs} from './track';
 import {doubleClick, singleClick} from 'ol/events/condition';
 
-const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?vehicle=schmneutral&type=json&weighting=fastest&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
+const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?profile=schmwander&type=json&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
 const SNAPPING_URL = 'https://graphhopper-all.schweizmobil.ch/nearest?elevation=true';
 
 
