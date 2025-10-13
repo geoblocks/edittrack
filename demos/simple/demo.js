@@ -105,7 +105,9 @@ function main() {
   document.querySelector('#reverse').addEventListener('click', () => {
     trackManager.reverse();
   });
-
+  document.querySelector('#reverse_no_routing').addEventListener('click', () => {
+    trackManager.reverse(false);
+  });
 
   const elem = document.createElement('div');
   elem.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" id="i_location" width="24" height="24" viewBox="0 0 24 24">\n' +
