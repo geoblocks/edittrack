@@ -374,18 +374,27 @@ export default class TrackManager<POIMeta> {
     }
   }
 
-  async reverse() {
+  // Reverse the track and optionally re-route it.
+  async reverse(reroute: boolean = true) {
     if (!this.trackData_.hasData()) {
       return;
     }
     this.trackData_.reverse();
-    const points = this.trackData_.getControlPoints();
-    for (let i = 1, ii = points.length; i < ii; i += 2) {
-      const point = points[i];
+    if (reroute) {
+      const points = this.trackData_.getControlPoints();
+      for (let i = 1, ii = points.length; i < ii; i += 2) {
+        const point = points[i];
 
-      this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
-      await this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
-      this.updater_.changeAdjacentSegmentsStyling(point, '');
+        this.updater_.changeAdjacentSegmentsStyling(point, 'modifying');
+        await this.updater_.updateAdjacentSegmentsGeometries(point, this.snapping)
+        this.updater_.changeAdjacentSegmentsStyling(point, '');
+      }
+    } else {
+      const segments = this.trackData_.getSegments();
+      for (let i = 0, ii = segments.length; i < ii; i++) {
+        const segment = segments[i];
+        await this.profiler_.computeProfile(segment);
+      }
     }
     this.trackData_.updatePOIIndexes();
     this.onTrackChanged_();
