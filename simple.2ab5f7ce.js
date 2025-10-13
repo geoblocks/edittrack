@@ -207,11 +207,11 @@
       });
     }
   }
-})({"cKyL4":[function(require,module,exports,__globalThis) {
+})({"ffj2a":[function(require,module,exports,__globalThis) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
-var HMR_SERVER_PORT = 41599;
+var HMR_SERVER_PORT = 46287;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "439701173a9199ea";
 var HMR_USE_SSE = false;
@@ -727,7 +727,7 @@ var _observable = require("ol/Observable");
 var _elevationProfile = require("@geoblocks/elevation-profile");
 var _snappedDensifier = require("../../src/densifier/SnappedDensifier");
 var _snappedDensifierDefault = parcelHelpers.interopDefault(_snappedDensifier);
-const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?profile=schmwander&type=json&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true';
+const ROUTING_URL = 'https://graphhopper-all.schweizmobil.ch/route?profile=schmwander&type=json&elevation=true&way_point_max_distance=0&instructions=false&points_encoded=true&details=surface&details=hiking_category&details=structure';
 function main() {
     const { map, trackLayer, shadowTrackLayer } = (0, _osm.createMap)('map');
     const router = new (0, _graphHopperRouterTsDefault.default)({
@@ -6359,6 +6359,6 @@ class SnappedDensifier {
 }
 exports.default = SnappedDensifier;
 
-},{"ol/coordinate":"fqHXJ","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["cKyL4","gXTf0"], "gXTf0", "parcelRequireed82", {})
+},{"ol/coordinate":"fqHXJ","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["ffj2a","gXTf0"], "gXTf0", "parcelRequireed82", {})
 
 //# sourceMappingURL=simple.2ab5f7ce.js.map

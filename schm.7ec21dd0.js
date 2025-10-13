@@ -207,11 +207,11 @@
       });
     }
   }
-})({"43gwF":[function(require,module,exports,__globalThis) {
+})({"g6h0n":[function(require,module,exports,__globalThis) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
-var HMR_SERVER_PORT = 41599;
+var HMR_SERVER_PORT = 46287;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "439701173a9199ea";
 var HMR_USE_SSE = false;
@@ -982,7 +982,12 @@ class TrackManager {
             const segments = this.trackData_.getSegments();
             for(let i = 0, ii = segments.length; i < ii; i++){
                 const segment = segments[i];
+                const geometry = segment.getGeometry();
+                // remove the 'M' component from the coordinates (if present), we will recompute it in the profiler
+                geometry.setCoordinates(segment.getGeometry().getCoordinates().map((c)=>c.slice(0, 3)));
                 await this.profiler_.computeProfile(segment);
+                // reverses the surfaces
+                reverseSurfaces(segment, 'surfaces');
             }
         }
         this.trackData_.updatePOIIndexes();
@@ -1215,6 +1220,17 @@ class TrackManager {
     }
 }
 exports.default = TrackManager;
+function reverseSurfaces(segment, key) {
+    const details = segment.get(key);
+    const length = segment.get('profile').length - 1;
+    const reversed = details.map((detail)=>({
+            start: length - detail.end,
+            end: length - detail.start,
+            type: detail.type
+        }));
+    reversed.reverse();
+    segment.set(key, reversed);
+}
 
 },{"ol/Feature.js":"3qocF","ol/geom/Point.js":"6SybV","./TrackData":"1cMbu","./TrackUpdater":"1jLnW","./TrackInteraction":"7qhE7","./HistoryManager":"71hLi","./closestfinder":"eNDjd","./util":"fIViB","ol/Observable":"eKbGA","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}],"3qocF":[function(require,module,exports,__globalThis) {
 /**
@@ -51214,6 +51230,6 @@ var _extentJs = require("./extent.js");
 }
 exports.default = Overlay;
 
-},{"./MapEventType.js":"lytOT","./Object.js":"N6yIf","./css.js":"b247l","./dom.js":"h98kD","./events.js":"lh4km","./extent.js":"bGUel","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["43gwF"], null, "parcelRequireed82", {})
+},{"./MapEventType.js":"lytOT","./Object.js":"N6yIf","./css.js":"b247l","./dom.js":"h98kD","./events.js":"lh4km","./extent.js":"bGUel","@parcel/transformer-js/src/esmodule-helpers.js":"jnFvT"}]},["g6h0n"], null, "parcelRequireed82", {})
 
 //# sourceMappingURL=schm.7ec21dd0.js.map
