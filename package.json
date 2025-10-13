@@ -1,6 +1,6 @@
 {
   "name": "@geoblocks/edittrack",
-  "version": "1.3.30",
+  "version": "1.3.31",
   "description": "Geoblocks edittrack",
   "scripts": {
     "eslint": "eslint src test demos",
