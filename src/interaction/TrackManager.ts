@@ -28,6 +28,7 @@ import {Extent} from "ol/extent";
 import {EventsKey} from 'ol/events';
 import RenderEvent from "ol/render/Event";
 import {unByKey} from "ol/Observable";
+import type {Surface} from 'src/router/RouterBase';
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -393,7 +394,13 @@ export default class TrackManager<POIMeta> {
       const segments = this.trackData_.getSegments();
       for (let i = 0, ii = segments.length; i < ii; i++) {
         const segment = segments[i];
+        const geometry = segment.getGeometry();
+        // remove the 'M' component from the coordinates (if present), we will recompute it in the profiler
+        geometry.setCoordinates(segment.getGeometry().getCoordinates().map(c => c.slice(0, 3)));
         await this.profiler_.computeProfile(segment);
+
+        // reverses the surfaces
+        reverseSurfaces(segment, 'surfaces');
       }
     }
     this.trackData_.updatePOIIndexes();
@@ -687,4 +694,17 @@ export default class TrackManager<POIMeta> {
     context.fillStyle = this.drawMaskColor_;
     context.fill('evenodd');
   }
+}
+
+
+function reverseSurfaces(segment: Feature<LineString>, key: string) {
+  const details = segment.get(key);
+  const length = segment.get('profile').length - 1;
+  const reversed = details.map((detail: Surface) => ({
+    start: length - detail.end,
+    end: length - detail.start,
+    type: detail.type,
+  }));
+  reversed.reverse();
+  segment.set(key, reversed);
 }
