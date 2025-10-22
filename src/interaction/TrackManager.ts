@@ -699,6 +699,7 @@ export default class TrackManager<POIMeta> {
 
 function reverseSurfaces(segment: Feature<LineString>, key: string) {
   const details = segment.get(key);
+  if (!details) return;
   const length = segment.get('profile').length - 1;
   const reversed = details.map((detail: Surface) => ({
     start: length - detail.end,
