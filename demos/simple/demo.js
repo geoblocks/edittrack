@@ -60,7 +60,8 @@ function main() {
     style: styleRules,
     deleteCondition: deleteCondition,
     hitTolerance: 10,
-    densifier
+    densifier,
+    switchPartOnDrag: true,
   });
 
   window.trackManager = trackManager;
@@ -132,6 +133,14 @@ function main() {
       poiOverlay.setPosition(null);
       trackManager.addPOI(event.coordinate);
     });
+  });
+
+  document.querySelector('#createNewPart').addEventListener('click', () => {
+    trackManager.createNewPart();
+  });
+  document.querySelector('#changeActivePart').addEventListener('click', () => {
+    const nextPart = (trackManager.activePart() + 1) % trackManager.partsCount();
+    trackManager.workOnPart(nextPart);
   });
 }
 
