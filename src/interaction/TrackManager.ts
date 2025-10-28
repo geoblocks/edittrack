@@ -665,6 +665,7 @@ export default class TrackManager<POIMeta> {
    */
   async undo() {
     if (this.mode === 'edit') {
+      const activePartBefore = this.activePart();
       const features = this.historyManager_.undo();
       this.clearInternal_();
       if (features) {
@@ -675,6 +676,9 @@ export default class TrackManager<POIMeta> {
           return clone;
         }
         ));
+        if (this.partExists(activePartBefore)) {
+          this.workOnPart(activePartBefore);
+        }
       }
       this.notifyTrackChangeEventListeners_(false);
     }
@@ -685,6 +689,7 @@ export default class TrackManager<POIMeta> {
    */
   async redo() {
     if (this.mode === 'edit') {
+      const activePartBefore = this.activePart();
       const features = this.historyManager_.redo();
       this.clearInternal_();
       if (features) {
@@ -694,6 +699,9 @@ export default class TrackManager<POIMeta> {
           clone.setId(feature.getId());
           return clone;
         }));
+        if (this.partExists(activePartBefore)) {
+          this.workOnPart(activePartBefore);
+        }
       }
       this.notifyTrackChangeEventListeners_(false);
     }
