@@ -705,8 +705,8 @@ export default class TrackManager<POIMeta> {
     if (this.mode === 'edit') {
       const state = this.historyManager_.undo();
 
-      this.clearInternal_();
       if (state) {
+        this.clearInternal_();
         await this.restoreFeaturesInternal_(state.features.map(feature => {
           // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
@@ -726,8 +726,8 @@ export default class TrackManager<POIMeta> {
   async redo() {
     if (this.mode === 'edit') {
       const state = this.historyManager_.redo();
-      this.clearInternal_();
       if (state) {
+        this.clearInternal_();
         await this.restoreFeaturesInternal_(state.features.map(feature => {
           // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
