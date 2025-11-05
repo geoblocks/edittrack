@@ -787,6 +787,33 @@ export default class TrackManager<POIMeta> {
     context.fill('evenodd');
   }
 
+  deletePart(index: number) {
+    if (!this.partExists(index)) {
+      throw new Error(`TrackManager: part with index ${index} does not exist`);
+    }
+    this.parts.splice(index, 1);
+
+
+    const features = this.source_.getFeatures().filter(f => f.get('part') == index);
+    this.source_.removeFeatures(features);
+
+    // Renumber subsequent parts
+    const length = this.partsCount();
+    for (let i = index; i < length; i++) {
+      this.parts[i].part = i;
+      const features = this.source_.getFeatures().filter(f => f.get('part') == i + 1);
+      features.forEach(f => f.set('part', i));
+
+    }
+
+    if (this.partExists(index)) {
+      this.workOnPart(index);
+    } else {
+      this.createNewPart();
+    }
+    this.notifyTrackChangeEventListeners_();
+  }
+
   createNewPart(): number {
     const index = this.parts.length;
     this.trackData_ = new TrackData(index);

@@ -44,6 +44,12 @@ export default class TrackData {
     return this.part_;
   }
 
+  set part(n: number) {
+    // make sure part is a positive integer
+    console.assert(Number.isInteger(n) && n >= 0);
+    this.part_ = n;
+  }
+
   parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
     const parsed: ParsedFeatures = {
       segments: [],

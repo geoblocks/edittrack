@@ -142,6 +142,10 @@ function main() {
     const nextPart = (trackManager.activePart() + 1) % trackManager.partsCount();
     trackManager.workOnPart(nextPart);
   });
+  document.querySelector('#deleteActivePart').addEventListener('click', () => {
+    const activePart = trackManager.activePart();
+    trackManager.deletePart(activePart);
+  });
 }
 
 main();
