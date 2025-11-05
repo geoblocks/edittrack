@@ -99,6 +99,16 @@ export interface Options {
 }
 
 
+class TrackHistoryEntry {
+  features: Feature<Point | LineString>[];
+  activePart: number;
+
+  constructor(features: Feature<Point | LineString>[], activePart: number) {
+    this.features = features;
+    this.activePart = activePart;
+  }
+}
+
 export default class TrackManager<POIMeta> {
 
   private map_: Map;
@@ -135,7 +145,7 @@ export default class TrackManager<POIMeta> {
   }
   private updater_: TrackUpdater;
   private interaction_: TrackInteraction;
-  private historyManager_ = new HistoryManager<Feature<Point|LineString>[]>();
+  private historyManager_ = new HistoryManager<TrackHistoryEntry>();
   private parts: TrackData[] = [];
 
   private drawExtent_: Extent | undefined;
@@ -334,7 +344,7 @@ export default class TrackManager<POIMeta> {
       nf.setId(f.getId());
       return nf;
     })
-    this.historyManager_.add(clonedFeatures);
+    this.historyManager_.add(new TrackHistoryEntry(clonedFeatures, this.activePart()));
   }
 
   get mode(): TrackMode {
@@ -491,7 +501,7 @@ export default class TrackManager<POIMeta> {
     this.workOnPart(currentPart);
   }
 
-  async restoreFeatures(features: Feature<Point|LineString>[]): Promise<void> {
+  async restoreFeatures(features: Feature<Point | LineString>[]): Promise<void> {
     await this.restoreFeaturesInternal_(features);
     this.onTrackChanged_();
   }
@@ -693,20 +703,18 @@ export default class TrackManager<POIMeta> {
    */
   async undo() {
     if (this.mode === 'edit') {
-      const activePartBefore = this.activePart();
-      const features = this.historyManager_.undo();
+      const state = this.historyManager_.undo();
+
       this.clearInternal_();
-      if (features) {
-        await this.restoreFeaturesInternal_(features.map(feature => {
+      if (state) {
+        await this.restoreFeaturesInternal_(state.features.map(feature => {
           // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
           clone.setId(feature.getId());
           return clone;
         }
         ));
-        if (this.partExists(activePartBefore)) {
-          this.workOnPart(activePartBefore);
-        }
+        this.workOnPart(state.activePart);
       }
       this.notifyTrackChangeEventListeners_(false);
     }
@@ -717,19 +725,16 @@ export default class TrackManager<POIMeta> {
    */
   async redo() {
     if (this.mode === 'edit') {
-      const activePartBefore = this.activePart();
-      const features = this.historyManager_.redo();
+      const state = this.historyManager_.redo();
       this.clearInternal_();
-      if (features) {
-        await this.restoreFeaturesInternal_(features.map(feature => {
+      if (state) {
+        await this.restoreFeaturesInternal_(state.features.map(feature => {
           // we need to clone the features, otherwise they could be changed in the history state from outside
           const clone = feature.clone();
           clone.setId(feature.getId());
           return clone;
         }));
-        if (this.partExists(activePartBefore)) {
-          this.workOnPart(activePartBefore);
-        }
+        this.workOnPart(state.activePart);
       }
       this.notifyTrackChangeEventListeners_(false);
     }
