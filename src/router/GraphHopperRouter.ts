@@ -1,6 +1,6 @@
 import {toLonLat} from 'ol/proj.js';
 import PolyLineFormat from 'ol/format/Polyline.js';
-import RouterBase, {RouteInfo, RouterBaseOptions, Surface} from './RouterBase';
+import RouterBase, {RouteInfo, RouterBaseOptions, RouteDetail} from './RouterBase';
 import type LineString from 'ol/geom/LineString.js';
 import type {Coordinate} from 'ol/coordinate.js';
 
@@ -41,7 +41,21 @@ export default class GraphHopper extends RouterBase {
       }) as LineString;
       const resultCoordinates = resultGeometry.getCoordinates();
       resultCoordinates.forEach(c => c[2] *= 1000);
-      const surfaces: Surface[] = path.details?.surface?.map((s: [number, number, string]) => {
+      const surfaces: RouteDetail[] = path.details?.surface?.map((s: [number, number, string]) => {
+        return {
+          start: s[0],
+          end: s[1],
+          type: s[2]
+        }
+      });
+      const structures: RouteDetail[] = path.details?.structure?.map((s: [number, number, string]) => {
+        return {
+          start: s[0],
+          end: s[1],
+          type: s[2]
+        }
+      });
+      const hiking_categories: RouteDetail[] = path.details?.hiking_category?.map((s: [number, number, string]) => {
         return {
           start: s[0],
           end: s[1],
@@ -50,7 +64,9 @@ export default class GraphHopper extends RouterBase {
       });
       return {
         coordinates: resultCoordinates,
-        surfaces: surfaces || []
+        surfaces: surfaces || [],
+        structures: structures || [],
+        hiking_categories: hiking_categories || [],
       };
     }
     return {

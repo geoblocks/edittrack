@@ -11,7 +11,7 @@ export type RouterBaseOptions = {
   maxRoutingTolerance?: number;
 };
 
-export type Surface = {
+export type RouteDetail = {
   start: number;
   end: number;
   type: string;
@@ -19,7 +19,9 @@ export type Surface = {
 
 export type RouteInfo = {
   coordinates: Coordinate[];
-  surfaces?: Surface[]
+  surfaces?: RouteDetail[]
+  structures?: RouteDetail[];
+  hiking_categories?: RouteDetail[];
 }
 
 export default abstract class RouterBase implements Router {
@@ -49,16 +51,22 @@ export default abstract class RouterBase implements Router {
       segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
       segment.set('snapped', false);
       segment.set('surfaces', []);
+      segment.set('structures', []);
+      segment.set('hiking_categories', []);
       return false;
     }
 
     const routeInfo = await this.getRoute(pointFromCoordinates, pointToCoordinates);
     const surfaces = routeInfo.surfaces || [];
+    const structures = routeInfo.structures || [];
+    const hiking_categories = routeInfo.hiking_categories || [];
     const resultCoordinates = routeInfo.coordinates;
     if (resultCoordinates.length === 0) {
       segment.getGeometry()!.setCoordinates([pointFromCoordinates, pointToCoordinates], 'XY');
       segment.set('snapped', false);
       segment.set('surfaces', surfaces);
+      segment.set('structures', structures);
+      segment.set('hiking_categories', hiking_categories);
       return false;
     }
     const resultFromCoordinates = resultCoordinates[0].slice(0, 2);
@@ -81,6 +89,7 @@ export default abstract class RouterBase implements Router {
     }
     segment.set('snapped', snapped);
     segment.set('surfaces', surfaces);
+    segment.set('structures', structures);
 
     return snapped;
   }

@@ -28,7 +28,7 @@ import {Extent} from "ol/extent";
 import {EventsKey} from 'ol/events';
 import RenderEvent from "ol/render/Event";
 import {unByKey} from "ol/Observable";
-import type {Surface} from 'src/router/RouterBase';
+import type {RouteDetail} from 'src/router/RouterBase';
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
@@ -399,8 +399,10 @@ export default class TrackManager<POIMeta> {
         geometry.setCoordinates(segment.getGeometry().getCoordinates().map(c => c.slice(0, 3)));
         await this.profiler_.computeProfile(segment);
 
-        // reverses the surfaces
-        reverseSurfaces(segment, 'surfaces');
+        // reverses details
+        reverseDetails(segment, 'surfaces');
+        reverseDetails(segment, 'structures');
+        reverseDetails(segment, 'hiking_categories');
       }
     }
     this.trackData_.updatePOIIndexes();
@@ -697,11 +699,11 @@ export default class TrackManager<POIMeta> {
 }
 
 
-function reverseSurfaces(segment: Feature<LineString>, key: string) {
+function reverseDetails(segment: Feature<LineString>, key: string) {
   const details = segment.get(key);
   if (!details) return;
   const length = segment.get('profile').length - 1;
-  const reversed = details.map((detail: Surface) => ({
+  const reversed = details.map((detail: RouteDetail) => ({
     start: length - detail.end,
     end: length - detail.start,
     type: detail.type,
