@@ -28,7 +28,7 @@ export default class SwisstopoProfiler implements Profiler {
   constructor(options: SwisstopoProfilerOptions) {
     this.projection = options.projection;
 
-    console.assert(getProjection('EPSG:2056'), 'Register EPSG:2056 projection first');
+    console.assert(getProjection('EPSG:2056') !== null, 'Register EPSG:2056 projection first');
 
     this.geojsonFormat = new GeoJSONFormat({
       dataProjection: 'EPSG:2056',
