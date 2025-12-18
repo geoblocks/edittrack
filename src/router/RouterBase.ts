@@ -90,6 +90,7 @@ export default abstract class RouterBase implements Router {
     segment.set('snapped', snapped);
     segment.set('surfaces', surfaces);
     segment.set('structures', structures);
+    segment.set('hiking_categories', hiking_categories);
 
     return snapped;
   }
