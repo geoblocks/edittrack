@@ -40,8 +40,8 @@
     "@geoblocks/sources": "0.3.4",
     "@types/chai": "5.2.3",
     "@types/mocha": "10.0.10",
-    "@typescript-eslint/eslint-plugin": "8.55.0",
-    "@typescript-eslint/parser": "8.55.0",
+    "@typescript-eslint/eslint-plugin": "8.56.0",
+    "@typescript-eslint/parser": "8.56.0",
     "chai": "6.2.2",
     "eslint": "8.57.1",
     "gh-pages": "6.3.0",
@@ -50,7 +50,7 @@
     "parcel": "2.16.4",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typedoc": "0.28.16",
+    "typedoc": "0.28.17",
     "typescript": "5.9.3"
   },
   "peerDependencies": {
