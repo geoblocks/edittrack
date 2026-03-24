@@ -31,9 +31,24 @@ interface DeletedControlPoint {
 }
 
 export default class TrackData {
+  private part_: number;
   private segments: Feature<LineString>[] = [];
   private controlPoints: Feature<Point>[] = [];
   private pois: Feature<Point>[] = [];
+
+  constructor(part: number) {
+    this.part_ = part;
+  }
+
+  get part() {
+    return this.part_;
+  }
+
+  set part(n: number) {
+    // make sure part is a positive integer
+    console.assert(Number.isInteger(n) && n >= 0);
+    this.part_ = n;
+  }
 
   parseFeatures(features: Feature<Point|LineString>[]): ParsedFeatures {
     const parsed: ParsedFeatures = {
