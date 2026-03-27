@@ -200,8 +200,8 @@ export default class TrackManager<POIMeta> {
         this.updater_.equalizeCoordinates(pointFrom);
         await this.profiler_.computeProfile(segment);
         // FIXME: setZ ?
-        this.onTrackChanged_();
       }
+      this.onTrackChanged_();
     });
 
 
