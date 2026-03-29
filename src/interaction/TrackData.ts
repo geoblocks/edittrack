@@ -42,20 +42,38 @@ export default class TrackData {
       controlPoints: [],
     };
     const {segments, pois, controlPoints} = parsed;
-
     for (const feature of features) {
       const type = feature.get('type') as FeatureType;
       if (type === 'segment') {
-        console.assert(feature.getGeometry().getType() === 'LineString');
+        const g = feature.getGeometry();
+        if (g.getType() !== 'LineString') {
+          throw new Error('Some segment is not a LineString');
+        };
+        if (g.getLayout() !== 'XYZM') {
+          throw new Error('Some segment is not XYZM');
+        }
         segments.push(feature as Feature<LineString>);
       } else if (type === 'controlPoint') {
-        console.assert(feature.getGeometry().getType() === 'Point');
+        if (feature.getGeometry().getType() !== 'Point') {
+          throw new Error('Some controlPoint is not a Point');
+        };
         controlPoints.push(feature as Feature<Point>);
       } else if (type === 'POI') {
-        console.assert(feature.getGeometry().getType() === 'Point');
+        if (feature.getGeometry().getType() !== 'Point') {
+          throw new Error('Some POI is not a Point');
+        };
         pois.push(feature as Feature<Point>);
       }
     }
+    controlPoints.forEach((p, i) => {
+      const sCoo = (i === controlPoints.length - 1) ? segments[i - 1].getGeometry().getLastCoordinate() : segments[i].getGeometry().getFirstCoordinate()
+      const cCoo = p.getGeometry().getCoordinates();
+      const dx = Math.abs(sCoo[0] - cCoo[0]);
+      const dy = Math.abs(sCoo[1] - cCoo[1]);
+      if (dx > 0.1 || dy > 0.1 ) {
+        console.error(`Control point ${i} is not on segment end ${sCoo} != ${cCoo} (dy=${dx}, dy=${dy})`);
+      }
+    })
 
     return parsed;
   }
