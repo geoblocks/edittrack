@@ -180,7 +180,7 @@ export default class TrackManager<POIMeta> {
 
 
     // Add a control point at the end of the track
-    // @ts-ignore too complicate to declare proper events
+    // @ts-expect-error too complicate to declare proper events
     this.interaction_.on('drawend',
     async (event: DrawEvent) => {
       console.assert(event.feature.getGeometry().getType() === 'Point');
@@ -228,7 +228,7 @@ export default class TrackManager<POIMeta> {
 
     // Move an existing poi, control point or segment
     this.interaction_.on(
-      // @ts-ignore too complicate to declare proper events
+      // @ts-expect-error too complicate to declare proper events
       'modifyend',
       async (event: ModifyEvent) => {
         const type = event.feature.get('type') as FeatureType;
@@ -268,7 +268,7 @@ export default class TrackManager<POIMeta> {
 
     // Delete a control point or a POI
     this.interaction_.on(
-      // @ts-ignore too complicate to declare proper events
+      // @ts-expect-error too complicate to declare proper events
       'select',
       (event: SelectEvent) => {
         event.mapBrowserEvent.stopPropagation();

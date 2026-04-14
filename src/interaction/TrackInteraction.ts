@@ -97,7 +97,7 @@ export default class TrackInteraction extends Interaction {
       source: source,
       condition: (event) => this.pixelAtDrawingExtent(event.coordinate) && this.userAddLastPointCondition_(event) && !this.controlPointOrPOIAtPixel(event.pixel)
     });
-    // @ts-ignore too complicate to declare proper events
+    // @ts-expect-error too complicate to declare proper events
     draw.on('drawend', (evt) => this.dispatchEvent(evt));
     return draw;
   }
@@ -112,11 +112,11 @@ export default class TrackInteraction extends Interaction {
       sketchPointCondition: (event) => this.pixelAtDrawingExtent(event.coordinate),
       hitTolerance: hitTolerance,
     });
-    // @ts-ignore too complicate to declare proper events
+    // @ts-expect-error too complicate to declare proper events
     modify.on('modifystart', () => {
       source.addFeature(modify.overlayFeature);
     });
-    // @ts-ignore too complicate to declare proper events
+    // @ts-expect-error too complicate to declare proper events
     modify.on('modifyend', (evt) => {
       source.removeFeature(modify.overlayFeature);
       this.dispatchEvent(evt);
