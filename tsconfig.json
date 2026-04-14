@@ -3,10 +3,10 @@
     "target": "ES2022",
     "module": "ES2022",
     "lib": ["es2023", "dom"],
-    "baseUrl": "./",
     "skipLibCheck": true,
 
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
+    "rootDir": "./src",
     "outDir": "./lib",
     "inlineSourceMap": true,
 

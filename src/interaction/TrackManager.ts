@@ -28,7 +28,7 @@ import {Extent} from "ol/extent";
 import {EventsKey} from 'ol/events';
 import RenderEvent from "ol/render/Event";
 import {unByKey} from "ol/Observable";
-import type {RouteDetail} from 'src/router/RouterBase';
+import type {RouteDetail} from '../router/RouterBase';
 
 export type TrackMode = 'edit' | '';
 export type TrackSubMode = 'addpoi' | 'editpoi' | '';
