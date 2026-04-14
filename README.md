@@ -26,8 +26,8 @@ The main class is the [TrackManager](https://geoblocks.github.io/edittrack/api/c
 ## Online doc and demos
 
 - [Documentation](https://geoblocks.github.io/edittrack/api/);
-- [simple](https://geoblocks.github.io/edittrack/simple.html);
-- [schm](https://geoblocks.github.io/edittrack/schm.html).
+- [simple](https://geoblocks.github.io/edittrack/simple/simple.html);
+- [schm](https://geoblocks.github.io/edittrack/schm/schm.html).
 
 ## Local development
 
@@ -36,8 +36,8 @@ For local developpement we use a few demos.
 ```bash
 npm install
 npm run start
-open http://localhost:1234/schm/schm.html?trackId=1250755006
-open http://localhost:1234/simple/simple.html
+open http://localhost:5173/schm/schm.html?trackId=1250755006
+open http://localhost:5173/simple/simple.html
 ```
 
 ## Publish a new version to npm
