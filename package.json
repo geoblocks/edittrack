@@ -4,10 +4,8 @@
   "description": "Geoblocks edittrack",
   "scripts": {
     "eslint": "eslint src test demos",
-    "start": "parcel serve demos/*/*.html",
-    "build-demo:simple": "parcel build --target demo demos/simple/simple.html",
-    "build-demo:schm": "parcel build --target demo demos/schm/schm.html",
-    "build-demo": "npm run build-demo:simple && npm run build-demo:schm",
+    "start": "vite",
+    "build-demo": "vite build",
     "prepare": "tsc --pretty",
     "test": "mocha --exit",
     "typecheck": "tsc --pretty --noEmit",
@@ -28,12 +26,6 @@
   "type": "module",
   "module": "lib/index.js",
   "types": "lib/types/index.d.ts",
-  "targets": {
-    "demo": {
-      "context": "browser",
-      "publicUrl": "./"
-    }
-  },
   "devDependencies": {
     "@geoblocks/elevation-profile": "0.0.28",
     "@geoblocks/proj": "0.4.10",
@@ -47,11 +39,10 @@
     "gh-pages": "6.3.0",
     "mocha": "11.7.5",
     "ol": "10.8.0",
-    "parcel": "2.16.4",
     "ts-node": "10.9.2",
-    "tsconfig-paths": "4.2.0",
     "typedoc": "0.28.19",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "vite": "8.0.8"
   },
   "peerDependencies": {
     "ol": "^6 || ^7 || ^8 || ^9 || ^10"
