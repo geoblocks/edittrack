@@ -23,7 +23,7 @@ export default class Fallback implements Profiler {
     const functions = this.profilers.map(profiler => () => profiler.computeProfile(segment));
 
     // All the following will execute "identity" function instead of the real function.
-    // @ts-ignore don't know why TSC is unhappy with this nice code
+    // @ts-expect-error don't know why TSC is unhappy with this nice code
     return functions.reduce((cur, nextFn) => cur.then(val => val, nextFn), Promise.reject());
   }
 }
