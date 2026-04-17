@@ -35,13 +35,13 @@
     "@typescript-eslint/eslint-plugin": "8.58.2",
     "@typescript-eslint/parser": "8.58.2",
     "chai": "6.2.2",
-    "eslint": "10.2.0",
+    "eslint": "10.2.1",
     "gh-pages": "6.3.0",
     "mocha": "11.7.5",
-    "ol": "10.8.0",
+    "ol": "10.9.0",
     "ts-node": "10.9.2",
     "typedoc": "0.28.19",
-    "typescript": "6.0.2",
+    "typescript": "6.0.3",
     "vite": "8.0.8"
   },
   "peerDependencies": {
