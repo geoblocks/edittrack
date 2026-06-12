@@ -32,17 +32,17 @@
     "@geoblocks/sources": "0.3.4",
     "@types/chai": "5.2.3",
     "@types/mocha": "10.0.10",
-    "@typescript-eslint/eslint-plugin": "8.59.1",
-    "@typescript-eslint/parser": "8.59.1",
+    "@typescript-eslint/eslint-plugin": "8.61.0",
+    "@typescript-eslint/parser": "8.61.0",
     "chai": "6.2.2",
-    "eslint": "10.2.1",
+    "eslint": "10.5.0",
     "gh-pages": "6.3.0",
-    "mocha": "11.7.5",
+    "mocha": "11.7.6",
     "ol": "10.9.0",
     "ts-node": "10.9.2",
     "typedoc": "0.28.19",
     "typescript": "6.0.3",
-    "vite": "8.0.10"
+    "vite": "8.0.16"
   },
   "peerDependencies": {
     "ol": "^6 || ^7 || ^8 || ^9 || ^10"
